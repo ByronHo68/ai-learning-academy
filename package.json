@@ -1,48 +1,17 @@
 {
   "name": "ai-learning-academy",
-  "version": "1.0.0",
-  "description": "A bilingual, visual-first AI curriculum with interactive lessons, quizzes, remediation, and spaced review.",
+  "version": "2.0.0",
+  "description": "A zero-dependency bilingual AI learning academy for Node.js 18.18.",
   "private": true,
+  "type": "module",
   "engines": {
-    "node": ">=22.13.0"
+    "node": "18.18.x"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "node scripts/start.mjs",
-    "start:production": "next start",
-    "sites:dev": "vinext dev",
-    "sites:build": "vinext build",
-    "sites:start": "vinext start",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "typecheck": "tsc --noEmit --incremental false",
-    "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "check": "npm run typecheck && npm run lint && npm test"
-  },
-  "dependencies": {
-    "next": "16.2.6",
-    "react": "19.2.6",
-    "react-dom": "19.2.6"
-  },
-  "devDependencies": {
-    "@cloudflare/vite-plugin": "1.37.1",
-    "@cloudflare/workers-types": "4.20260515.1",
-    "@openai/sites-vite-plugin": "^0.1.0 || ^0.2.0",
-    "@rolldown/binding-darwin-arm64": "^1.0.1",
-    "@tailwindcss/postcss": "4.2.1",
-    "@types/node": "22.19.19",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
-    "@vitejs/plugin-react": "6.0.2",
-    "@vitejs/plugin-rsc": "0.5.26",
-    "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
-    "react-server-dom-webpack": "19.2.6",
-    "tailwindcss": "4.2.1",
-    "typescript": "5.9.3",
-    "vinext": "1.0.0-beta.3",
-    "vite": "8.0.13",
-    "wrangler": "4.92.0"
-  },
-  "type": "module"
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.js",
+    "check": "npm test"
+  }
 }

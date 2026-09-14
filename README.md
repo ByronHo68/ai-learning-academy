@@ -1,63 +1,48 @@
 # AI Learning Academy
 
-A portable Node.js/Next.js edition of the bilingual visual AI curriculum. All 13 lessons, 104 quiz questions, explanations, source references, and remediation content are included in the repository. The running app does not need the source PDFs, a database, or a paid API.
+A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a capstone, and browser-local progress.
 
-## Start it
+## Start — no install required
 
-Requirements: Node.js 22.13 or newer and npm 10 or newer.
+Requirement: **Node.js 18.18.x**.
 
 ```bash
-npm install
 npm start
 ```
 
-`npm start` creates a fresh production build and then serves the site at [http://localhost:3000](http://localhost:3000). Pass a different port when needed:
+Open [http://localhost:3000](http://localhost:3000). A different port also works:
 
 ```bash
 npm start -- --port 4000
 ```
 
-For development with live reload:
+There are no dependencies or dev dependencies. You do **not** need to run `npm install`, and the app does not need the source PDFs, a database, an account, environment variables, or a paid API.
+
+You can also start it without npm:
 
 ```bash
-npm run dev
+node server.mjs
 ```
 
-## Content and saved progress
+## Project structure
 
-- Course content is stored in `lib/curriculum.ts` and compiled into the app.
-- Progress, recap notes, quiz attempts, and review dates stay in the learner's browser using local storage.
-- Settings includes progress export/import for moving data between browsers.
-- No secrets or environment variables are required to read the course.
-- `NEXT_PUBLIC_SITE_URL` is optional and only controls canonical/social-preview URLs after deployment. Copy `.env.example` to `.env.local` if you want to set it locally.
+- `site/index.html` — application shell and metadata
+- `site/styles.css` — responsive interface styles
+- `site/app.js` — routing, interactions, quizzes, and local progress
+- `site/curriculum.js` — all lesson, quiz, and source content
+- `server.mjs` — zero-dependency static server using Node built-ins
+- `scripts/build.mjs` — copies the static site to `dist/`
 
-## Push to GitHub
+Progress stays in the learner's browser with local storage. Settings can export/import a versioned JSON backup.
 
-Create an empty GitHub repository. This working folder is already a Git repository, so connect it and push:
+## Commands
 
 ```bash
-git remote add origin https://github.com/YOUR-USERNAME/ai-learning-academy.git
-git push -u origin main
+npm start      # serve at localhost:3000
+npm run build  # create static dist/
+npm test       # validate content and zero-dependency contract
 ```
 
-If you start from the downloadable ZIP instead, initialise it first:
+## Static hosting
 
-```bash
-git init
-git add .
-git commit -m "Initial AI Learning Academy"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/ai-learning-academy.git
-git push -u origin main
-```
-
-The included GitHub Actions workflow checks types, linting, tests, and the production build on every push and pull request.
-
-## Useful commands
-
-```bash
-npm run check             # TypeScript, ESLint, and content/progress tests
-npm run build             # Standard Node/Next.js production build
-npm run start:production  # Serve an existing build without rebuilding
-npm run sites:build       # Build the existing ChatGPT Sites deployment target
-```
+Run `npm run build`, then publish the generated `dist/` folder to GitHub Pages, Cloudflare Pages, Netlify, or any static host. Hash-based routes keep every view working without special redirect configuration.

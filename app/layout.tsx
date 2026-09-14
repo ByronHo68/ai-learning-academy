@@ -1,20 +1,22 @@
 import type { Metadata } from 'next';
 import './globals.css';
 
+const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-academy.byronho680.chatgpt.site';
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://ai-learning-academy.byronho680.chatgpt.site'),
+  metadataBase: new URL(siteOrigin),
   title: 'AI 學習院 | Visual AI Academy',
   description: '用互動視覺、實驗、練習與精準回饋，真正理解 AI。',
   alternates: { canonical: '/' },
   openGraph: {
     title: 'AI 學習院 | Visual AI Academy',
     description: '13 個互動主題，由安全 request 行到可靠 AI 系統。',
-    url: 'https://ai-learning-academy.byronho680.chatgpt.site',
+    url: siteOrigin,
     siteName: 'AI 學習院',
     locale: 'zh_HK',
     type: 'website',
     images: [{
-      url: 'https://ai-learning-academy.byronho680.chatgpt.site/og.png',
+      url: new URL('/og.png', siteOrigin).toString(),
       width: 1200,
       height: 630,
       alt: 'AI 學習院 — Visual AI Academy',
@@ -24,7 +26,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'AI 學習院 | Visual AI Academy',
     description: '13 個互動主題，由安全 request 行到可靠 AI 系統。',
-    images: ['https://ai-learning-academy.byronho680.chatgpt.site/og.png'],
+    images: [new URL('/og.png', siteOrigin).toString()],
   },
 };
 

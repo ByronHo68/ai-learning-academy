@@ -1,14 +1,19 @@
 {
-  "name": "sites-project",
-  "version": "0.1.0",
+  "name": "ai-learning-academy",
+  "version": "1.0.0",
+  "description": "A bilingual, visual-first AI curriculum with interactive lessons, quizzes, remediation, and spaced review.",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vinext dev",
-    "build": "vinext build",
-    "start": "vinext start",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "node scripts/start.mjs",
+    "start:production": "next start",
+    "sites:dev": "vinext dev",
+    "sites:build": "vinext build",
+    "sites:start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "tsc --noEmit --incremental false",
     "test": "node --experimental-strip-types --test tests/*.test.ts",

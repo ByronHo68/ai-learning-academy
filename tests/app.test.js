@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sources, topics, validateCurriculum } from '../site/curriculum.js';
+import { conceptDetails } from '../site/concepts.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -20,6 +21,20 @@ test('all 13 lessons and 104 questions validate', () => {
   }
 });
 
+test('every topic has detailed metaphors, real examples, steps, and code', () => {
+  for (const topic of topics) {
+    const details = conceptDetails[topic.id];
+    assert.ok(Array.isArray(details) && details.length >= 3, `${topic.id} needs three concept labs`);
+    for (const detail of details) {
+      assert.ok(detail.explanation.zh.length > 40);
+      assert.ok(detail.metaphor.zh.length > 2);
+      assert.ok(detail.example.zh.length > 20);
+      assert.ok(detail.code.split('\n').length >= 4);
+      assert.ok(detail.steps.length >= 3);
+    }
+  }
+});
+
 test('package has no dependencies and targets Node 18.18', async () => {
   const pkg = JSON.parse(await readFile(resolve(root, 'package.json'), 'utf8'));
   assert.equal(pkg.engines.node, '18.18.x');
@@ -31,7 +46,7 @@ test('package has no dependencies and targets Node 18.18', async () => {
 test('plain browser application contains every required learning surface', async () => {
   const application = await readFile(resolve(root, 'site/app.js'), 'utf8');
   const html = await readFile(resolve(root, 'site/index.html'), 'utf8');
-  for (const token of ['visualLab', 'quizTab', 'reviewPage', 'assessmentPage', 'glossaryPage', 'settingsPage', 'localStorage', 'prefers-reduced-motion']) {
+  for (const token of ['conceptWorkshop', 'copy-code', 'visualLab', 'quizTab', 'reviewPage', 'assessmentPage', 'glossaryPage', 'settingsPage', 'localStorage', 'prefers-reduced-motion']) {
     assert.ok(application.includes(token), `missing ${token}`);
   }
   assert.ok(html.includes('type="module"'));

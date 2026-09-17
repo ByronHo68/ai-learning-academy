@@ -1,49 +1,67 @@
-# AI Learning Academy
+# AI Learning Academy — Rich Animated Edition
 
-A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 39 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a capstone, and browser-local progress. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
+The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 39 expanded concept workshops. Every core concept has its own deep explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
 
-## Start — no install required
+This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/plain-node18`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/plain-node18) branch.
 
-Requirement: **Node.js 18.18.x**.
+## Start it
+
+Requirements: Node.js 22.13 or newer and npm 10 or newer.
 
 ```bash
+npm install
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000). A different port also works:
+`npm start` creates a fresh production build and then serves the site at [http://localhost:3000](http://localhost:3000). Pass a different port when needed:
 
 ```bash
 npm start -- --port 4000
 ```
 
-There are no dependencies or dev dependencies. You do **not** need to run `npm install`, and the app does not need the source PDFs, a database, an account, environment variables, or a paid API.
-
-You can also start it without npm:
+For development with live reload:
 
 ```bash
-node server.mjs
+npm run dev
 ```
 
-## Project structure
+## Content and saved progress
 
-- `site/index.html` — application shell and metadata
-- `site/styles.css` — responsive interface styles
-- `site/app.js` — routing, interactions, quizzes, and local progress
-- `site/curriculum.js` — all lesson, quiz, and source content
-- `site/concepts.js` — 39 detailed concept/metaphor/example/code workshops
-- `server.mjs` — zero-dependency static server using Node built-ins
-- `scripts/build.mjs` — copies the static site to `dist/`
+- Course content is stored in `lib/curriculum.ts` and compiled into the app.
+- Expanded metaphors, examples, steps, and code are stored in `lib/concepts.ts`.
+- Motion respects the learner's `prefers-reduced-motion` system setting.
+- Progress, recap notes, quiz attempts, and review dates stay in the learner's browser using local storage.
+- Settings includes progress export/import for moving data between browsers.
+- No secrets or environment variables are required to read the course.
+- `NEXT_PUBLIC_SITE_URL` is optional and only controls canonical/social-preview URLs after deployment. Copy `.env.example` to `.env.local` if you want to set it locally.
 
-Progress stays in the learner's browser with local storage. Settings can export/import a versioned JSON backup.
+## Push to GitHub
 
-## Commands
+Create an empty GitHub repository. This working folder is already a Git repository, so connect it and push:
 
 ```bash
-npm start      # serve at localhost:3000
-npm run build  # create static dist/
-npm test       # validate content and zero-dependency contract
+git remote add origin https://github.com/YOUR-USERNAME/ai-learning-academy.git
+git push -u origin main
 ```
 
-## Static hosting
+If you start from the downloadable ZIP instead, initialise it first:
 
-Run `npm run build`, then publish the generated `dist/` folder to GitHub Pages, Cloudflare Pages, Netlify, or any static host. Hash-based routes keep every view working without special redirect configuration.
+```bash
+git init
+git add .
+git commit -m "Initial AI Learning Academy"
+git branch -M main
+git remote add origin https://github.com/YOUR-USERNAME/ai-learning-academy.git
+git push -u origin main
+```
+
+The included GitHub Actions workflow checks types, linting, tests, and the production build on `main`, both `codex/*` editions, and pull requests.
+
+## Useful commands
+
+```bash
+npm run check             # TypeScript, ESLint, and content/progress tests
+npm run build             # Standard Node/Next.js production build
+npm run start:production  # Serve an existing build without rebuilding
+npm run sites:build       # Build the existing ChatGPT Sites deployment target
+```

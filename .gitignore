@@ -11,13 +11,10 @@
 # testing
 /coverage
 
-# output from the previous framework edition
+# next.js
 /.next/
 /.vinext/
-/.wrangler/
 /out/
-next-env.d.ts
-*.tsbuildinfo
 
 # misc
 .DS_Store
@@ -29,8 +26,16 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local environment
+.env*
+!.env.example
+
 # deployment and generated files
+.vercel
+next-env.d.ts
 /dist/
+/.wrangler/
 /outputs/
 /work/
 /screenshots/
+*.tsbuildinfo

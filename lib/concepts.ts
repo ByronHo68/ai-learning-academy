@@ -1,10 +1,24 @@
-const c = (zh, en) => ({ zh, en });
+import type { Copy } from './curriculum';
 
-const concept = (title, explanation, metaphorTitle, metaphor, example, language, codeTitle, code, steps) => ({
+export type ConceptDetail = {
+  title: Copy;
+  explanation: Copy;
+  metaphorTitle: Copy;
+  metaphor: Copy;
+  example: Copy;
+  language: string;
+  codeTitle: Copy;
+  code: string;
+  steps: Copy[];
+};
+
+const c = (zh: string, en: string): Copy => ({ zh, en });
+
+const concept = (title: Copy, explanation: Copy, metaphorTitle: Copy, metaphor: Copy, example: Copy, language: string, codeTitle: Copy, code: string, steps: Copy[]): ConceptDetail => ({
   title, explanation, metaphorTitle, metaphor, example, language, codeTitle, code, steps,
 });
 
-export const conceptDetails = {
+export const conceptDetails: Record<string, ConceptDetail[]> = {
   t1: [
     concept(c('信任邊界', 'Trust boundaries'), c('每次資料由一個控制範圍進入另一個範圍，都要重新驗證身份、形狀、大小與權限。Frontend 提交嘅 role、price 或 userId 都只係聲稱，唔係事實。', 'Whenever data crosses into a new control boundary, re-check identity, shape, size, and authorization. A role, price, or userId submitted by the frontend is only a claim—not a fact.'), c('機場轉機', 'Airport transfer'), c('每過一個關口都要再驗證登機證同護照；你唔會因為上一個機場檢查過，就容許任何人直接入駕駛艙。', 'Every checkpoint verifies your boarding pass again; a previous airport check does not grant access to the cockpit.'), c('退款表單只提交 orderId 同 reason；backend 由 session 取得 customerId，再查訂單擁有者。', 'A refund form submits only orderId and reason; the backend derives customerId from the session and checks ownership.'), 'JavaScript', c('Server-side boundary check', 'Server-side boundary check'), [
       "function authorizeRefund(session, body, orders) {",
@@ -369,6 +383,6 @@ export const conceptDetails = {
   ],
 };
 
-export function detailsForTopic(topicId) {
+export function detailsForTopic(topicId: string): ConceptDetail[] {
   return conceptDetails[topicId] || [];
 }

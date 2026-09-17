@@ -1,6 +1,6 @@
 # AI Learning Academy — Rich Animated Edition
 
-The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 39 expanded concept workshops. Every core concept has its own deep explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
+The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 52 expanded concept workshops. Every core concept has its own deep explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
 
 This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/plain-node18`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/plain-node18) branch.
 
@@ -29,6 +29,7 @@ npm run dev
 
 - Course content is stored in `lib/curriculum.ts` and compiled into the app.
 - Expanded metaphors, examples, steps, and code are stored in `lib/concepts.ts`.
+- The API lesson uses a provider-neutral OpenRouter example instead of the source PDFs' Volcengine/Doubao-specific setup.
 - Motion respects the learner's `prefers-reduced-motion` system setting.
 - Progress, recap notes, quiz attempts, and review dates stay in the learner's browser using local storage.
 - Settings includes progress export/import for moving data between browsers.

@@ -18,7 +18,7 @@ const concept = (title: Copy, explanation: Copy, metaphorTitle: Copy, metaphor: 
   title, explanation, metaphorTitle, metaphor, example, language, codeTitle, code, steps,
 });
 
-export const conceptDetails: Record<string, ConceptDetail[]> = {
+const baseConceptDetails: Record<string, ConceptDetail[]> = {
   t1: [
     concept(c('信任邊界', 'Trust boundaries'), c('每次資料由一個控制範圍進入另一個範圍，都要重新驗證身份、形狀、大小與權限。Frontend 提交嘅 role、price 或 userId 都只係聲稱，唔係事實。', 'Whenever data crosses into a new control boundary, re-check identity, shape, size, and authorization. A role, price, or userId submitted by the frontend is only a claim—not a fact.'), c('機場轉機', 'Airport transfer'), c('每過一個關口都要再驗證登機證同護照；你唔會因為上一個機場檢查過，就容許任何人直接入駕駛艙。', 'Every checkpoint verifies your boarding pass again; a previous airport check does not grant access to the cockpit.'), c('退款表單只提交 orderId 同 reason；backend 由 session 取得 customerId，再查訂單擁有者。', 'A refund form submits only orderId and reason; the backend derives customerId from the session and checks ownership.'), 'JavaScript', c('Server-side boundary check', 'Server-side boundary check'), [
       "function authorizeRefund(session, body, orders) {",
@@ -382,6 +382,151 @@ export const conceptDetails: Record<string, ConceptDetail[]> = {
     ].join('\n'), [c('Gate 係 executable policy。','Make the gate executable policy.'),c('Canary 有自動 stop。','Give canaries automatic stops.'),c('Incident 變成永久 regression。','Turn incidents into permanent regressions.')]),
   ],
 };
+
+const supplementalConceptDetails: Record<string, ConceptDetail[]> = {
+  t1: [
+    concept(c('Python 環境與可重現安裝', 'Python environments and reproducible installs'), c('Virtual environment 隔離每個 project 嘅 package；lock file 或固定版本再令另一部機重建同一套依賴。隔離唔會自動保護 secret，亦唔代表 package 可信。', 'A virtual environment isolates each project’s packages; a lockfile or pinned versions lets another machine rebuild the same dependency set. Isolation does not protect secrets or make packages trustworthy.'), c('每個實驗一個工具箱', 'One toolbox per experiment'), c('兩個實驗可以需要同名但唔同版本嘅量杯；分開工具箱就唔會互相換走零件，但仍要檢查工具來源。', 'Two experiments may need different versions of the same measuring tool. Separate toolboxes prevent collisions, but the tool source still needs review.'), c('客服 API 用獨立環境、固定 package 版本、提交 lock file；`.env` 只留本機並提供冇 secret 嘅 `.env.example`。', 'A support API uses an isolated environment, pinned packages, and a committed lockfile; `.env` stays local while a secret-free `.env.example` documents required keys.'), 'Python', c('Create and verify an isolated environment', 'Create and verify an isolated environment'), [
+      "python -m venv .venv",
+      "source .venv/bin/activate",
+      "python -m pip install -r requirements.txt",
+      "python -m pip check",
+    ].join('\n'), [c('每個 project 建立獨立環境。','Create one isolated environment per project.'),c('固定並審核 dependency 版本。','Pin and review dependency versions.'),c('用乾淨環境重建同測試。','Rebuild and test from a clean environment.')]),
+  ],
+  t2: [
+    concept(c('OpenRouter 多模型 API 路由', 'Multi-model APIs with OpenRouter'), c('OpenRouter 提供一個 OpenAI-compatible endpoint 去選擇多個 provider/model；但 model capability、資料政策、地區可用性、價格同錯誤仍要逐項驗證。Key 必須留喺 server，唔可以送到 browser。', 'OpenRouter provides one OpenAI-compatible endpoint across models and providers, but capabilities, data policy, regional availability, price, and errors still need explicit checks. Keep the key on the server and out of the browser.'), c('航空訂位平台', 'Flight booking platform'), c('同一個入口可以比較多間航空公司，但平台唔會令每班機行李規則、目的地同準點率變成一樣。', 'One booking interface can compare airlines, but it does not make baggage rules, destinations, or reliability identical.'), c('Backend 從 `OPENROUTER_API_KEY` 讀 key，呼叫 `/api/v1/chat/completions`，明確指定 model，並驗證 response 同 usage；browser 永遠收唔到 key。', 'The backend reads `OPENROUTER_API_KEY`, calls `/api/v1/chat/completions`, names the model explicitly, and validates the response and usage; the browser never receives the key.'), 'JavaScript', c('Server-side OpenRouter request', 'Server-side OpenRouter request'), [
+      "const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {",
+      "  method: 'POST',",
+      "  headers: { Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' },",
+      "  body: JSON.stringify({ model: 'openai/gpt-5.2', messages: [{ role: 'user', content: question }] }),",
+      "});",
+      "if (!response.ok) throw new Error(`provider ${response.status}`);",
+      "const result = await response.json();",
+    ].join('\n'), [c('Key 只由 backend 注入。','Inject the key only on the backend.'),c('按能力同政策揀 model。','Select models by capability and policy.'),c('驗證狀態、schema、usage 同 fallback。','Validate status, schema, usage, and fallback behavior.')]),
+  ],
+  t3: [
+    concept(c('Retrieval 與 Generation 分層評估', 'Evaluate retrieval and generation separately'), c('RAG 答錯時，先問正確證據有冇入 top-k，再問答案有冇忠實使用證據。只量度最終答案會將 ingestion、retrieval、rerank 同 generation 混成一個模糊分數。', 'When RAG fails, first ask whether the right evidence entered top-k, then whether the answer used that evidence faithfully. Scoring only the final answer hides ingestion, retrieval, reranking, and generation failures.'), c('醫院檢查流程', 'A medical test pathway'), c('化驗樣本攞錯同醫生解讀錯係兩種問題；只記「病人未康復」搵唔到應該修邊一步。', 'Collecting the wrong sample and misreading a correct result are different failures; “the patient did not recover” cannot locate the broken stage.'), c('Frozen dataset 同時保存 expected document IDs 同 supported claims；CI 分別計 Recall@k、MRR、faithfulness 同 citation accuracy。', 'A frozen dataset stores expected document IDs and supported claims; CI reports Recall@k, MRR, faithfulness, and citation accuracy separately.'), 'JavaScript', c('Layered RAG scorecard', 'Layered RAG scorecard'), [
+      "function scoreRag(run, expected) {",
+      "  const retrieved = new Set(run.passages.map(p => p.documentId));",
+      "  const recallAtK = expected.documentIds.filter(id => retrieved.has(id)).length / expected.documentIds.length;",
+      "  const supported = run.claims.filter(claim => claim.citationSupportsClaim).length;",
+      "  return { recallAtK, faithfulness: supported / Math.max(1, run.claims.length) };",
+      "}",
+    ].join('\n'), [c('為每題保存 expected evidence。','Store expected evidence for each case.'),c('先評 retrieval，再評 answer。','Score retrieval before the answer.'),c('按 failure stage 分派修正。','Route fixes to the failing stage.')]),
+  ],
+  t4: [
+    concept(c('Agent Harness 與 Loop Engineer', 'Agent harness and loop engineering'), c('模型只係 loop 入面一個 decision component。Harness 負責 state、budgets、tool allowlist、retry、approval、trace 同 stop；Loop Engineer 用失敗軌跡調整整個控制迴路，而唔係只改 prompt。', 'The model is one decision component inside a loop. The harness owns state, budgets, tool allowlists, retries, approvals, traces, and stopping. Loop engineering improves the whole control loop from failure traces—not only the prompt.'), c('賽車手同維修站', 'Driver and pit crew'), c('車手揀路線，但油量、輪胎、維修規則同黑旗由整套賽事系統控制；快唔代表可以忽略護欄。', 'The driver chooses a line, while fuel, tires, pit rules, and black flags are controlled by the race system. Speed does not replace guardrails.'), c('交易 agent 每輪只可揀 read、propose 或 stop；harness 限 5 步、累計成本、阻擋未批核 write，並保存每輪 observation。', 'A commerce agent can choose read, propose, or stop; the harness caps five steps, tracks cost, blocks unapproved writes, and stores each observation.'), 'JavaScript', c('Harness-enforced loop', 'Harness-enforced loop'), [
+      "for (let step = 0; step < 5; step++) {",
+      "  const proposal = await decide({ state, allowedTools: ['search','quote'] });",
+      "  if (proposal.type === 'stop') break;",
+      "  enforceBudget(proposal, budget);",
+      "  const result = await hostExecute(validateToolCall(proposal));",
+      "  trace.push({ step, proposal, result });",
+      "  state = reduce(state, result);",
+      "}",
+    ].join('\n'), [c('將控制權放入 harness。','Put control in the harness.'),c('記錄每輪 decision 同 observation。','Record every decision and observation.'),c('由 trace 修 loop、tool 同 policy。','Improve loops, tools, and policy from traces.')]),
+  ],
+  t5: [
+    concept(c('Middleware 與 Runtime Context', 'Middleware and runtime context'), c('Middleware 適合一致套用 tracing、PII redaction、limits 同 fallback；runtime context 傳遞已驗證 user、tenant、role 同 feature flags。兩者都唔應由 prompt 文字冒充。', 'Middleware applies tracing, PII redaction, limits, and fallbacks consistently. Runtime context carries verified user, tenant, role, and feature flags. Neither should be impersonated by prompt text.'), c('大廈保安閘', 'A building security gate'), c('每個訪客都經同一個閘做證件同金屬檢查；「我係經理」寫喺紙上唔會變成門禁權限。', 'Every visitor passes the same identity and security checks; writing “I am the manager” on paper does not grant badge access.'), c('所有 model call 經 middleware 加 traceId、遮罩 email、套 timeout；tool 從 server context 讀 tenantId，唔接受 model 傳入。', 'Every model call gets a trace ID, email redaction, and a timeout through middleware; tools read tenantId from server context rather than model arguments.'), 'JavaScript', c('Wrap calls with trusted context', 'Wrap calls with trusted context'), [
+      "const withPolicy = next => async (request, context) => {",
+      "  const safeInput = redactPii(request);",
+      "  enforceRateLimit(context.userId);",
+      "  return next(safeInput, { ...context, traceId: crypto.randomUUID() });",
+      "};",
+      "const lookupOrder = (_args, context) => orders.forTenant(context.tenantId);",
+    ].join('\n'), [c('列出 cross-cutting concern。','List cross-cutting concerns.'),c('context 只由可信 server 建立。','Create context only on the trusted server.'),c('用測試證明每條 path 都經 middleware。','Test that every path crosses middleware.')]),
+  ],
+  t6: [
+    concept(c('Reducer、平行分支與合併', 'Reducers, parallel branches, and merging'), c('多個 LangGraph node 平行更新同一 state key 時，需要明確 reducer。Append、replace、max 同 set-union 代表唔同語義；錯 reducer 會靜靜覆蓋資料或重複結果。', 'When parallel graph nodes update one state key, the reducer must be explicit. Append, replace, max, and set union have different meanings; a wrong reducer silently overwrites or duplicates data.'), c('多隊接力後點計分', 'Scoring several relay teams'), c('各隊交回時間後，要先決定係加總、揀最快，定保留全部；直接用最後一張表會抹走其他隊。', 'After teams return times, decide whether to sum, choose the fastest, or keep every result; taking the last sheet erases the others.'), c('兩個 retriever 平行回傳 passages；reducer 以 documentId 去重兼保留最高 score，然後先交俾 reranker。', 'Two retrievers return passages in parallel; the reducer deduplicates by documentId, keeps the highest score, then sends candidates to the reranker.'), 'JavaScript', c('Deterministic state reducer', 'Deterministic state reducer'), [
+      "function mergePassages(left = [], right = []) {",
+      "  const best = new Map(left.map(p => [p.documentId, p]));",
+      "  for (const item of right) {",
+      "    if (!best.has(item.documentId) || best.get(item.documentId).score < item.score) best.set(item.documentId, item);",
+      "  }",
+      "  return [...best.values()].sort((a,b) => b.score - a.score);",
+      "}",
+    ].join('\n'), [c('逐個 state key 定義 merge 語義。','Define merge semantics per state key.'),c('測試順序交換同重播。','Test order changes and replay.'),c('合併後再做下一個 side effect。','Merge before downstream side effects.')]),
+  ],
+  t7: [
+    concept(c('LoRA、QLoRA 與 Adapter', 'LoRA, QLoRA, and adapters'), c('LoRA 凍結 base model，為指定層學細型 low-rank adapter；QLoRA 再量化 base weights 以減少訓練記憶體。Adapter 細唔代表資料、評估、license 或部署風險細。', 'LoRA freezes the base model and trains small low-rank adapters on selected layers; QLoRA also quantizes base weights to reduce training memory. Small adapters do not remove data, evaluation, licensing, or deployment risks.'), c('透明膠片疊喺地圖上', 'A transparent overlay on a map'), c('底圖唔改，膠片加新標記；換膠片快，但標記錯一樣會帶人行錯路。', 'The base map stays fixed while an overlay adds markings. Swapping overlays is easy, but wrong markings still mislead.'), c('先用 prompt/RAG baseline；再以已審核客服樣本訓練 adapter，分開保存 base hash、adapter version、dataset lineage 同 frozen eval。', 'Start with a prompt/RAG baseline, then train an adapter on reviewed support samples while storing base hash, adapter version, dataset lineage, and frozen evaluation.'), 'Python', c('Record an adapter training contract', 'Record an adapter training contract'), [
+      "training_contract = {",
+      "    'base_model_hash': base_hash,",
+      "    'method': 'qlora', 'rank': 16,",
+      "    'dataset_version': 'support-sft-v3',",
+      "    'target_modules': ['q_proj', 'v_proj'],",
+      "    'release_gate': {'format_pass': 0.99, 'safety_pass': 1.0},",
+      "}",
+    ].join('\n'), [c('先保存未微調 baseline。','Keep an untuned baseline first.'),c('版本化 base、adapter 同 dataset。','Version base, adapter, and dataset.'),c('用 held-out slices 過 release gate。','Pass release gates on held-out slices.')]),
+  ],
+  t8: [
+    concept(c('素材生命週期、版權與 Provenance', 'Asset lifecycle, rights, and provenance'), c('素材管理唔止係 embedding 搜尋。每個 image/video 要有來源、授權範圍、人物同意、版本、派生關係、到期日同發佈 channel；生成素材亦要保留 prompt、model 同 review。', 'Asset management is more than embedding search. Every image or video needs origin, rights scope, consent, version, derivation, expiry, and publishing channels; generated assets also need prompt, model, and review history.'), c('博物館藏品卡', 'A museum catalog card'), c('相似外觀唔代表可以展出；館方要知道來源、擁有權、修復記錄同借展期限。', 'Visual similarity does not grant display rights; a museum tracks origin, ownership, restoration, and loan expiry.'), c('電商 hero image 連到原始拍攝、模特同意書、裁切版本、可用地區同 campaign end date；發佈前 policy gate 逐欄檢查。', 'An e-commerce hero image links to the original shoot, model consent, crop versions, permitted regions, and campaign end date; a policy gate checks each field before publishing.'), 'JavaScript', c('Asset release policy', 'Asset release policy'), [
+      "function canPublish(asset, channel, now = Date.now()) {",
+      "  const rights = asset.rights?.channels?.includes(channel);",
+      "  const consent = !asset.containsPerson || asset.consent?.status === 'approved';",
+      "  const current = !asset.expiresAt || Date.parse(asset.expiresAt) > now;",
+      "  return { allowed: Boolean(rights && consent && current), rights, consent, current };",
+      "}",
+    ].join('\n'), [c('Ingest 時記錄來源同 rights。','Capture origin and rights at ingestion.'),c('派生檔保留 parent link。','Keep parent links for derivatives.'),c('每次 publish 重新過 policy gate。','Re-run the policy gate on every publish.')]),
+  ],
+  t9: [
+    concept(c('語音客服 Turn-taking 與打斷', 'Voice turn-taking and interruption'), c('語音 agent 要協調 VAD、ASR partial、endpointing、LLM、TTS 同 barge-in。過早 endpoint 會打斷客人，過遲就似冇反應；被打斷後要停止舊 TTS 同下游 action。', 'A voice agent coordinates VAD, partial ASR, endpointing, the LLM, TTS, and barge-in. Early endpoints cut users off; late endpoints feel unresponsive. On interruption, stop old speech and downstream actions.'), c('對講機禮儀', 'Two-way radio etiquette'), c('未聽到「完畢」就搶咪會截斷內容；但對方緊急插話時，舊指令要立即停。', 'Transmitting before “over” clips the message, while an urgent interruption must stop the old instruction immediately.'), c('客人講到一半停 250ms 唔即刻提交；等 dynamic endpoint 判斷。新語音一到就 abort 舊 response、清 playback buffer，同保留未完成 transcript。', 'A 250ms pause does not immediately submit the turn; dynamic endpointing decides. New speech aborts the old response, clears playback, and preserves the unfinished transcript.'), 'JavaScript', c('Interruptible voice turn', 'Interruptible voice turn'), [
+      "let turnController = new AbortController();",
+      "function onUserSpeechStart() {",
+      "  turnController.abort();",
+      "  audioPlayer.clear();",
+      "  turnController = new AbortController();",
+      "}",
+      "async function answer(transcript) { return runAgent(transcript, { signal: turnController.signal }); }",
+    ].join('\n'), [c('量度 speech/end timing。','Measure speech and endpoint timing.'),c('將 abort 傳到 model、tool 同 TTS。','Propagate abort to model, tools, and TTS.'),c('用重疊說話同背景噪音測試。','Test overlap and background noise.')]),
+  ],
+  t10: [
+    concept(c('貢獻範圍與保密邊界', 'Contribution scope and confidentiality'), c('Portfolio 要清楚分開自己、團隊、開源元件同未實作設計。展示 evidence 時亦要遮罩客戶資料、內部 endpoint、secret、商業數字同受保護素材。可信唔等於公開晒所有嘢。', 'A portfolio separates personal work, team work, open-source components, and unimplemented design. Evidence must redact customer data, internal endpoints, secrets, business metrics, and protected assets. Credibility does not require exposing everything.'), c('電影片尾字幕', 'Film credits'), c('一套戲成功唔代表每個人做晒所有崗位；片尾清楚列角色，同時唔公開演員私人合約。', 'A successful film does not mean every person did every job; credits name roles without publishing private contracts.'), c('Case study 寫明「我負責 retrieval eval 同 CI；同事負責 UI」；用合成 fixture、模糊客戶名，同可公開 benchmark 取代 production screenshot。', 'A case study states “I owned retrieval evaluation and CI; a teammate owned UI,” using synthetic fixtures, anonymized clients, and publishable benchmarks instead of production screenshots.'), 'JavaScript', c('Publish-safe evidence record', 'Publish-safe evidence record'), [
+      "const publicEvidence = ({ claim, role, artifacts, limitations }) => ({",
+      "  claim, role, limitations,",
+      "  artifacts: artifacts.filter(a => a.classification === 'public').map(a => ({ type: a.type, url: a.url })),",
+      "  disclaimer: 'Synthetic data; no customer records included',",
+      "});",
+    ].join('\n'), [c('為每個 claim 寫 owner 同 scope。','State owner and scope for each claim.'),c('先分類 evidence 可否公開。','Classify evidence before publishing.'),c('用合成資料保留可重現性。','Use synthetic data to preserve reproducibility.')]),
+  ],
+  t11: [
+    concept(c('影片切片與跨模態時間線', 'Video segmentation and cross-modal timelines'), c('直播切片要同時處理 scene change、ASR、speaker、silence、motion、音樂同版權 cue。只按固定秒數切會斬斷句子同動作；每個 highlight 要連回原片時間範圍。', 'Live-video clipping combines scene changes, ASR, speakers, silence, motion, music, and rights cues. Fixed-length cuts break sentences and actions; each highlight needs a link to the source time range.'), c('剪報唔可以剪走標題', 'A clipping needs its headline'), c('只剪報紙中間一句，讀者唔知邊個講、幾時講同前因後果；影片亦需要完整語意邊界。', 'Cutting one sentence from the middle of a newspaper removes speaker, time, and context; video clips also need complete semantic boundaries.'), c('先產生 shot 與 transcript spans，再由 candidate scorer 揀高潮；邊界 snap 到句尾同 scene cut，輸出保留 sourceStartMs、sourceEndMs 同 rights status。', 'Generate shot and transcript spans, score highlight candidates, snap boundaries to sentence endings and scene cuts, and retain source timestamps and rights status.'), 'JavaScript', c('Snap clip boundaries to evidence', 'Snap clip boundaries to evidence'), [
+      "function buildClip(candidate, shots, transcript) {",
+      "  const start = nearestBoundary(candidate.startMs, shots, 'before');",
+      "  const end = nearestSentenceEnd(candidate.endMs, transcript);",
+      "  if (end - start < 3000 || end - start > 60000) throw new Error('unsafe clip length');",
+      "  return { startMs: start, endMs: end, sourceId: candidate.sourceId, rights: candidate.rights };",
+      "}",
+    ].join('\n'), [c('先對齊 shot、speaker 同 transcript。','Align shots, speakers, and transcript.'),c('用語意完整度揀候選。','Rank candidates by semantic completeness.'),c('輸出保留來源時間同 rights。','Preserve source time and rights.')]),
+  ],
+  t12: [
+    concept(c('KV Cache、Batching 與尾部延遲', 'KV cache, batching, and tail latency'), c('KV cache 避免每個新 token 重算全部舊 attention；batching 提高 GPU utilization。但長 context 會食大量 cache，等 batch 亦增加 queue time，所以 throughput、TTFT、p95 同 memory 要一齊量度。', 'KV cache avoids recomputing prior attention for every new token, while batching improves GPU utilization. Long contexts consume cache and waiting for a batch adds queue time, so measure throughput, TTFT, p95, and memory together.'), c('巴士同專線小巴', 'A bus and a minibus'), c('等滿一架巴士可以每人更慳，但第一個乘客等得耐；繁忙時仲要考慮總站排隊同座位。', 'Filling a bus is efficient per rider, but the first rider waits longer; rush hour also adds terminal queues and seat limits.'), c('離線 embedding 用大 batch；互動 chat 設 15ms batch window、context cap 同 prefix cache，並按 p95 TTFT 自動縮 batch。', 'Offline embedding uses large batches; interactive chat uses a 15ms batching window, context caps, and prefix caching, shrinking batches when p95 TTFT rises.'), 'JavaScript', c('Latency-aware batch policy', 'Latency-aware batch policy'), [
+      "function chooseBatch(queue, metrics) {",
+      "  const interactive = queue.filter(job => job.priority === 'interactive');",
+      "  const maxBatch = metrics.p95TtftMs > 900 ? 2 : 8;",
+      "  return (interactive.length ? interactive : queue)",
+      "    .filter(job => job.contextTokens <= 32000)",
+      "    .slice(0, maxBatch);",
+      "}",
+    ].join('\n'), [c('分開互動同離線 workload。','Separate interactive and offline workloads.'),c('量度 cache memory 同 queue time。','Measure cache memory and queue time.'),c('用 p95 自動調 batch。','Adapt batching from p95 latency.')]),
+  ],
+  t13: [
+    concept(c('Red-team Frozen Set 與安全切片', 'Red-team frozen sets and safety slices'), c('平均 pass rate 會掩蓋少量但嚴重嘅 failure。Frozen set 保存已知事故、prompt injection、越權、PII、跨 tenant 同高影響 edge cases；版本比較必須逐個 critical slice 過門檻。', 'An average pass rate hides rare but severe failures. A frozen set preserves incidents, prompt injection, privilege escalation, PII, cross-tenant, and high-impact edge cases; releases must pass every critical slice.'), c('水壩最弱位置', 'The weakest point in a dam'), c('平均牆身厚度好高都冇用，只要一條關鍵裂縫漏水；安全測試要盯住最危險切片。', 'A high average wall thickness means little if one critical crack leaks; safety tests focus on the dangerous slices.'), c('每次 production incident 清除敏感資料後加入 frozen set；CI 報 overall 同每個 slice，unauthorized-action slice 必須 100%。', 'After redaction, every production incident enters the frozen set; CI reports overall and per-slice scores, with unauthorized-action cases requiring 100%.'), 'JavaScript', c('Slice-aware release gate', 'Slice-aware release gate'), [
+      "function safetyGate(results) {",
+      "  const thresholds = { authorization: 1, pii: 1, injection: 0.98, quality: 0.9 };",
+      "  const failures = Object.entries(thresholds)",
+      "    .filter(([slice, minimum]) => (results[slice]?.passRate ?? 0) < minimum)",
+      "    .map(([slice]) => slice);",
+      "  return { release: failures.length === 0, failures };",
+      "}",
+    ].join('\n'), [c('事故轉成匿名 regression。','Turn incidents into redacted regressions.'),c('按風險 slice 報告，唔只平均。','Report risk slices, not only averages.'),c('Critical slice 唔合格就阻止 release。','Block release on critical-slice failure.')]),
+  ],
+};
+
+export const conceptDetails: Record<string, ConceptDetail[]> = Object.fromEntries(
+  Object.keys(baseConceptDetails).map((topicId) => [
+    topicId,
+    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || [])],
+  ]),
+);
 
 export function detailsForTopic(topicId: string): ConceptDetail[] {
   return conceptDetails[topicId] || [];

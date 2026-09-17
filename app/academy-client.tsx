@@ -100,7 +100,7 @@ function OnlineBanner({ lang }:{ lang:Lang }){
 
 function Shell({ children, state, setState }: { children:React.ReactNode; state:AcademyState; setState:React.Dispatch<React.SetStateAction<AcademyState>> }) {
   const setLang = (lang:Lang) => setState((current) => ({ ...current, lang }));
-  return <><Header lang={state.lang} setLang={setLang}/><OnlineBanner lang={state.lang}/><div id="main-content" tabIndex={-1}>{children}</div><footer className="site-footer"><span>AI 學習院 · Visual AI Academy</span><span>Local-first learning · Verified 2026-09-03</span></footer></>;
+  return <><Header lang={state.lang} setLang={setLang}/><OnlineBanner lang={state.lang}/><div id="main-content" tabIndex={-1}>{children}</div><footer className="site-footer"><span>AI 學習院 · Visual AI Academy</span><span>Local-first learning · Verified 2026-09-17</span></footer></>;
 }
 
 const stateLabel = (status:TopicStatus, lang:Lang) => ({
@@ -112,7 +112,7 @@ const stateLabel = (status:TopicStatus, lang:Lang) => ({
 
 function DashboardIntelligence({ state }: { state:AcademyState }) {
   const lang=state.lang; const now=useClock(); const due=state.reviewQueue.filter((item)=>!item.done&&Date.parse(item.dueAt)<=now).length; const scheduled=state.reviewQueue.filter((item)=>!item.done&&Date.parse(item.dueAt)>now).length;
-  const reviewDate='2026-09-03'; const ageDays=Math.max(0,Math.floor((now-Date.parse(`${reviewDate}T00:00:00+08:00`))/86_400_000)); const stale=ageDays>30;
+  const reviewDate='2026-09-17'; const ageDays=Math.max(0,Math.floor((now-Date.parse(`${reviewDate}T00:00:00+08:00`))/86_400_000)); const stale=ageDays>30;
   const frontier=[
     {status:'Stable',title:lang==='zh'?'Responses 係 OpenAI 新項目建議入口':'Responses is OpenAI’s recommended entry point for new projects',source:'openai-responses'},
     {status:'Stable',title:lang==='zh'?'MCP 2026-07-28 採用逐 request 無狀態核心':'MCP 2026-07-28 uses a stateless per-request core',source:'mcp'},
@@ -148,7 +148,7 @@ function Dashboard({ state, setState }: { state:AcademyState; setState:React.Dis
             <h1>{lang === 'zh' ? <>唔只識用 AI。<br/>真正理解佢點運作。</> : <>Don’t just use AI.<br/>Understand how it works.</>}</h1>
             <p className="hero-lede">{lang === 'zh' ? '每個核心概念都有深入解釋、專屬比喻、真實例子、逐步拆解、syntax-highlighted code，同更豐富嘅互動動畫。' : 'Every core concept includes a deep explanation, its own metaphor, a real example, step-by-step reasoning, syntax-highlighted code, and richer interactive motion.'}</p>
             <div className="hero-actions"><Link className="primary-action" href={`/learn/${currentTopic.slug}`}>{mastered ? text.continue : text.start}<span aria-hidden="true">→</span></Link><Link className="secondary-action" href="/concept-map">{text.map}</Link></div>
-            <div className="trust-row"><span>✓ 39 {lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ {lang === 'zh' ? '互動 code 同動畫' : 'Interactive code & motion'}</span><span>✓ {lang === 'zh' ? '鍵盤與減少動態支援' : 'Keyboard & reduced motion'}</span></div>
+            <div className="trust-row"><span>✓ 52 {lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ {lang === 'zh' ? '互動 code 同動畫' : 'Interactive code & motion'}</span><span>✓ {lang === 'zh' ? '鍵盤與減少動態支援' : 'Keyboard & reduced motion'}</span></div>
           </motion.div>
           <motion.div className="progress-orbit" aria-label={`${text.progress}: ${percent}%`} initial={{opacity:0,scale:.92,rotate:1.5}} animate={{opacity:1,scale:1,rotate:0}} transition={{duration:.75,delay:.18,type:'spring',bounce:.25}} whileHover={{y:-6,rotate:-.35}}>
             <div className="orbit-heading"><div><small>{text.progress}</small><strong>{percent}%</strong></div><span>{mastered}/13</span></div>
@@ -349,7 +349,7 @@ function Lesson({ topic, state, setState }: { topic:Topic; state:AcademyState; s
           <div className="mastery-gate"><h3>{lang==='zh'?'Mastery 關卡':'Mastery gate'}</h3>{[[progress.recapReached,lang==='zh'?'到達重點溫習':'Reached recap'],[progress.practiceComplete,lang==='zh'?'完成必要練習':'Required practice complete'],[progress.bestScore>=80,lang==='zh'?'最佳測驗達 80%（8 題要 7 題）':'Best quiz ≥80% (7 of 8)'],[progress.attempts.length>0&&(progress.attempts.at(-1)?.missed.every((id)=>progress.remediated.includes(id))??false),lang==='zh'?'完成最新錯題 remediation':'Latest missed concepts remediated']].map(([done,label],index)=><div key={index} className={done?'done':''}><span>{done?'✓':'○'}</span><p>{label}</p></div>)}<strong>{stateLabel(progress.status,lang)}</strong></div>
           {nextTopic?<Link className="wide-next" href={`/learn/${nextTopic.slug}`}>{lang==='zh'?'下一主題':'Next topic'}: {pick(nextTopic.title,lang)} <span>→</span></Link>:<Link className="wide-next" href="/assessment">{lang==='zh'?'完成 13 個主題總評同 Capstone':'Complete the cumulative assessment and capstone'} <span>→</span></Link>}
         </section>}
-        {tab==='sources'&&<section className="sources-page"><div className="page-intro"><p className="eyebrow">{ui[lang].sources}</p><h2>{lang==='zh'?'可核對嘅課程來源':'Sources you can verify'}</h2><p>{lang==='zh'?'38 份原始 PDF 並唔喺 workspace，所以本網站冇聲稱讀過。以下只列實際檢查過嘅課程檔案同 primary sources。':'The catalog of 38 source PDFs is absent, so this site does not claim they were read. These are the course files and primary sources actually checked.'}</p></div><div className="source-list">{lessonSources.map((source)=><article key={source.id}><span className={`source-kind ${source.kind}`}>{source.kind}</span><div><h3>{source.title}</h3><p>{source.publisher} · {source.date}</p><small>{pick(source.note,lang)}</small></div><div><em>{lang==='zh'?'核實於':'Verified'} {source.verifiedAt}</em>{source.url&&<a href={source.url} target="_blank" rel="noreferrer">{lang==='zh'?'開啟來源':'Open source'} ↗</a>}</div></article>)}</div></section>}
+        {tab==='sources'&&<section className="sources-page"><div className="page-intro"><p className="eyebrow">{ui[lang].sources}</p><h2>{lang==='zh'?'可核對嘅課程來源':'Sources you can verify'}</h2><p>{lang==='zh'?'已重新抽取同審閱 39 份原始 PDF（合共 1,339 頁），再以 primary documentation 核實會變嘅 API、framework 同 protocol 資訊。':'All 39 source PDFs (1,339 pages) were re-extracted and reviewed, while changeable API, framework, and protocol details were checked against primary documentation.'}</p></div><div className="source-list">{lessonSources.map((source)=><article key={source.id}><span className={`source-kind ${source.kind}`}>{source.kind}</span><div><h3>{source.title}</h3><p>{source.publisher} · {source.date}</p><small>{pick(source.note,lang)}</small></div><div><em>{lang==='zh'?'核實於':'Verified'} {source.verifiedAt}</em>{source.url&&<a href={source.url} target="_blank" rel="noreferrer">{lang==='zh'?'開啟來源':'Open source'} ↗</a>}</div></article>)}</div></section>}
       </div>
     </main>
   </Shell>;

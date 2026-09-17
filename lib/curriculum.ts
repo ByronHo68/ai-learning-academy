@@ -85,8 +85,10 @@ export const pick = (copy: Copy, lang: Lang) => copy[lang];
 export const sources: Source[] = [
   { id: 'course-prompt', title: 'Interactive AI Learning Website Prompt', publisher: 'Workspace', date: '2026-09-03', verifiedAt: '2026-09-03', note: c('13 個主題嘅產品與課堂合約。', 'Product and lesson contract for all 13 topics.'), kind: 'course' },
   { id: 'course-pdf', title: 'AI內容學習路線與雙語Quiz指南', publisher: 'Workspace', date: '2026-09-03', verifiedAt: '2026-09-03', note: c('49 頁課程、測驗、溫習節奏與發佈關卡。', '49-page source course, assessment cadence, and release gates.'), kind: 'course' },
+  { id: 'course-corpus', title: 'PDF按主题整理 Source Corpus', publisher: 'Workspace', date: '39 PDFs · 1,339 pages', verifiedAt: '2026-09-17', note: c('已重新抽取同審閱 AI 基礎、LLM API、RAG、Agent、LangChain、LangGraph、微調、項目同面試素材。', 'Re-extracted and reviewed the AI foundations, LLM API, RAG, agent, framework, fine-tuning, project, and interview source set.'), kind: 'course' },
   { id: 'openai-responses', title: 'Migrate to the Responses API', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/migrate-to-responses', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('Responses、Items、工具與多輪狀態。', 'Responses, typed Items, tools, and multi-turn state.'), kind: 'official' },
   { id: 'openai-structured', title: 'Structured Outputs', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/structured-outputs', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('Schema adherence、拒絕與不完整輸出處理。', 'Schema adherence plus refusal and incomplete-output handling.'), kind: 'official' },
+  { id: 'openrouter', title: 'OpenRouter Quickstart', publisher: 'OpenRouter', url: 'https://openrouter.ai/docs/quickstart', date: 'Living documentation', verifiedAt: '2026-09-17', note: c('OpenAI-compatible endpoint、server-side key、多模型選擇同 provider routing。', 'OpenAI-compatible endpoint, server-side key handling, model choice, and provider routing.'), kind: 'official' },
   { id: 'openai-realtime', title: 'Realtime API', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/realtime', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('WebRTC、WebSocket、SIP 同即時媒體流程。', 'WebRTC, WebSocket, SIP, and realtime media flows.'), kind: 'official' },
   { id: 'mcp', title: 'Model Context Protocol Specification 2026-07-28', publisher: 'MCP Project', url: 'https://modelcontextprotocol.io/specification/2026-07-28', date: '2026-07-28', verifiedAt: '2026-09-03', note: c('無狀態核心、逐次能力協商、stdio 與 Streamable HTTP。', 'Stateless core, per-request capability negotiation, stdio and Streamable HTTP.'), kind: 'standard' },
   { id: 'a2a', title: 'Agent2Agent Protocol Specification 1.0', publisher: 'A2A Project', url: 'https://a2a-protocol.org/latest/specification/', date: '2026-03-12', verifiedAt: '2026-09-03', note: c('Agent Card、Task、Message、Artifact 同協作狀態。', 'Agent Cards, Tasks, Messages, Artifacts, and collaboration state.'), kind: 'standard' },
@@ -168,7 +170,7 @@ const buildTopic = (seed: TopicSeed): Topic => {
     remediationSectionId: remediationFor(seed.id,coverage),
     misconceptionTags: coverage === 'misconception' ? [`${seed.id}-m1`] : [],
   }));
-  return { ...base, orientation, vocabulary, misconceptions, examples, quiz };
+  return { ...base, sourceIds:Array.from(new Set([...base.sourceIds,'course-corpus'])), orientation, vocabulary, misconceptions, examples, quiz };
 };
 
 const commonRecap = (ideas: string[]): Topic['recap'] => ({
@@ -226,7 +228,7 @@ const seeds: TopicSeed[] = [
     exampleSeed:[['下一字預測','比較「香港天氣很」後面幾個候選 token 機率。'],['Schema extraction','將發票抽成 typed fields，拒絕缺失日期。'],['有根據答案','只根據獲准文件回答並附引用。'],['Hallucination + injection','缺資料仍猜答案；文件內又叫模型忽略政策。'],['排序名單','普通 sort function 更精確，唔需要模型。']],
     practice:practice('t2-p1','想要較穩定而非創意嘅分類輸出，先改邊個？',['提高 temperature','降低 temperature 並驗證 schema','同時任意調 temperature 同 top-p'],1,'降低隨機性可以提升重現性，但分類仍需 frozen eval 同 schema 驗證。'),
     recap:commonRecap(['Training 改 weights；inference 唔改。','機率唔等於真確。','Structured Outputs 管形狀，唔保證語義。','Streaming 改感知延遲，唔必然減總工作。']),
-    current:{verifiedAt:'2026-09-03',status:'evolving',text:c('Responses 支援 typed Items、工具同文字/圖片/檔案輸入；模型 ID、context 同功能矩陣會變，所以課堂唔釘死單一型號。','Responses supports typed Items, tools, and text/image/file input; model IDs and capability matrices change, so the lesson avoids pinning one model.'),sourceIds:['openai-responses','openai-structured']},sourceIds:['course-pdf','openai-responses','openai-structured'],
+    current:{verifiedAt:'2026-09-17',status:'evolving',text:c('課堂而家用 OpenRouter provider-neutral 範例。OpenRouter 提供 OpenAI-compatible endpoint，但 model 能力、資料政策、地區、價格同 routing 仍會變；key 只可留喺 backend。','The lesson now uses a provider-neutral OpenRouter example. OpenRouter offers an OpenAI-compatible endpoint, while model capabilities, data policy, region, pricing, and routing still vary; keep the key on the backend.'),sourceIds:['openrouter','openai-structured']},sourceIds:['course-pdf','openrouter','openai-structured'],
     quizSeed:[
       ['concept',1,'Inference 時 model weights 通常點？','保持固定','每答一句就自動重新訓練','推理唔會默默更新 weights。','由 browser 隨機刪除','同 browser 無關。','Training 更新 weights；inference 用固定 weights 計算。','長對話之後，weights 有冇被 conversation 改寫？'],
       ['concept',2,'TTFT 量度咩？','Request 到第一個 token','完整答案最後一個 token','呢個係 total latency。','每秒處理 request 數','呢個係 throughput。','TTFT 聚焦第一個可見輸出。','Voice app 第一段 transcript 出現時間係咪 TTFT？'],

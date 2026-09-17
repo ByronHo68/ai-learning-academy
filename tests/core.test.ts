@@ -27,12 +27,12 @@ test('all thirteen lesson contracts and 104 quiz questions validate',()=>{
   }
 });
 
-test('all thirteen topics have three complete concept workshops',()=>{
+test('all thirteen topics have four complete concept workshops',()=>{
   assert.deepEqual(Object.keys(conceptDetails).sort(),topics.map((topic)=>topic.id).sort());
-  assert.equal(Object.values(conceptDetails).flat().length,39);
+  assert.equal(Object.values(conceptDetails).flat().length,52);
   for(const topic of topics){
     const details=conceptDetails[topic.id];
-    assert.equal(details.length,3);
+    assert.equal(details.length,4);
     for(const detail of details){
       assert.ok(detail.explanation.zh.length>30);
       assert.ok(detail.metaphor.zh.length>18);
@@ -41,6 +41,16 @@ test('all thirteen topics have three complete concept workshops',()=>{
       assert.ok(detail.code.includes('\n'));
     }
   }
+});
+
+test('provider lesson uses OpenRouter instead of the source PDFs Volcengine setup',()=>{
+  const openRouter=sources.find((source)=>source.id==='openrouter');
+  assert.equal(openRouter?.url,'https://openrouter.ai/docs/quickstart');
+  const apiTopic=topics.find((topic)=>topic.id==='t2');
+  assert.ok(apiTopic?.sourceIds.includes('openrouter'));
+  const lesson=JSON.stringify(conceptDetails.t2);
+  assert.match(lesson,/OPENROUTER_API_KEY/);
+  assert.doesNotMatch(lesson,/ARK_API_KEY|volcengine|火山引擎/iu);
 });
 
 test('80 percent mastery boundary uses seven of eight and every gate',()=>{

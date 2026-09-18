@@ -38,6 +38,13 @@ node server.mjs
 
 Progress stays in the learner's browser with local storage. Settings can export/import a versioned JSON backup.
 
+## PDF guide and review record
+
+- [Bilingual AI learning roadmap and quiz guide](docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf) — the consolidated 49-page guide.
+- [Complete PDF corpus review](docs/PDF_CORPUS_REVIEW.md) — the 39-file, 1,339-page manifest, generated concept map, and OpenRouter migration notes.
+
+The raw topic PDFs are intentionally excluded because parts of the source set contain credential-like strings and potentially private or licensed material.
+
 ## Commands
 
 ```bash

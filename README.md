@@ -36,6 +36,13 @@ npm run dev
 - No secrets or environment variables are required to read the course.
 - `NEXT_PUBLIC_SITE_URL` is optional and only controls canonical/social-preview URLs after deployment. Copy `.env.example` to `.env.local` if you want to set it locally.
 
+## PDF guide and review record
+
+- [Bilingual AI learning roadmap and quiz guide](docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf) — the consolidated 49-page guide.
+- [Complete PDF corpus review](docs/PDF_CORPUS_REVIEW.md) — the 39-file, 1,339-page manifest, generated concept map, and OpenRouter migration notes.
+
+The raw topic PDFs are intentionally excluded because parts of the source set contain credential-like strings and potentially private or licensed material.
+
 ## Push to GitHub
 
 Create an empty GitHub repository. This working folder is already a Git repository, so connect it and push:

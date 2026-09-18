@@ -1,6 +1,6 @@
 # AI Learning Academy
 
-A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 39 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a capstone, and browser-local progress. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
+A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 52 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a capstone, and browser-local progress. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
 
 ## Start — no install required
 
@@ -18,6 +18,8 @@ npm start -- --port 4000
 
 There are no dependencies or dev dependencies. You do **not** need to run `npm install`, and the app does not need the source PDFs, a database, an account, environment variables, or a paid API.
 
+The API lesson now uses OpenRouter as a provider-neutral example. Its sample keeps `OPENROUTER_API_KEY` on the server; the learning site itself never calls a paid API.
+
 You can also start it without npm:
 
 ```bash
@@ -30,7 +32,7 @@ node server.mjs
 - `site/styles.css` — responsive interface styles
 - `site/app.js` — routing, interactions, quizzes, and local progress
 - `site/curriculum.js` — all lesson, quiz, and source content
-- `site/concepts.js` — 39 detailed concept/metaphor/example/code workshops
+- `site/concepts.js` — 52 detailed concept/metaphor/example/code workshops
 - `server.mjs` — zero-dependency static server using Node built-ins
 - `scripts/build.mjs` — copies the static site to `dist/`
 

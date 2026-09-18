@@ -22,9 +22,10 @@ test('all 13 lessons and 104 questions validate', () => {
 });
 
 test('every topic has detailed metaphors, real examples, steps, and code', () => {
+  assert.equal(Object.values(conceptDetails).flat().length, 52);
   for (const topic of topics) {
     const details = conceptDetails[topic.id];
-    assert.ok(Array.isArray(details) && details.length >= 3, `${topic.id} needs three concept labs`);
+    assert.ok(Array.isArray(details) && details.length === 4, `${topic.id} needs four concept labs`);
     for (const detail of details) {
       assert.ok(detail.explanation.zh.length > 40);
       assert.ok(detail.metaphor.zh.length > 2);
@@ -33,6 +34,16 @@ test('every topic has detailed metaphors, real examples, steps, and code', () =>
       assert.ok(detail.steps.length >= 3);
     }
   }
+});
+
+test('API lesson uses OpenRouter and removes the old mainland-China provider', async () => {
+  const curriculum = await readFile(resolve(root, 'site/curriculum.js'), 'utf8');
+  const concepts = await readFile(resolve(root, 'site/concepts.js'), 'utf8');
+  const apiTopic = topics.find((topic) => topic.id === 't2');
+  assert.ok(sources.some((source) => source.id === 'openrouter' && source.url === 'https://openrouter.ai/docs/quickstart'));
+  assert.ok(apiTopic.sourceIds.includes('openrouter'));
+  assert.ok(concepts.includes('OPENROUTER_API_KEY'));
+  assert.doesNotMatch(`${curriculum}\n${concepts}`, /ARK_API_KEY|volcengine|火山引擎|豆包|doubao|方舟/i);
 });
 
 test('package has no dependencies and targets Node 18.18', async () => {

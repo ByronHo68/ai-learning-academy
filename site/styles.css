@@ -551,6 +551,16 @@ label:has(input:checked) .radio-ui { border: 6px solid var(--teal); }
 .capstone-lab label { color: var(--ink); }
 .capstone-lab fieldset > p { margin: 9px 0 0; padding: 9px; border-radius: 8px; color: #ffd9d1; background: #5b3738; font-size: 9px; line-height: 1.5; }
 .capstone-lab fieldset > p.correct { color: #c9f5df; background: #205b49; }
+.production-build { margin-top: 14px; padding: clamp(22px,4vw,36px); border: 1px solid #9fcac2; border-radius: 18px; background: linear-gradient(145deg,#f1faf7,#ffffff 72%); }
+.production-build h2 { margin: 6px 0 10px; color: var(--navy); font-size: clamp(24px,3vw,36px); letter-spacing: -.035em; }
+.production-build > p:not(.eyebrow) { max-width: 800px; color: #415d61; line-height: 1.7; font-size: 11px; }
+.production-build ol { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin: 24px 0; padding: 0; list-style: none; }
+.production-build li { display: flex; gap: 13px; padding: 16px; border: 1px solid #d8e9e3; border-radius: 11px; background: #fff; }
+.production-build li span { color: var(--teal); font: 900 10px ui-monospace,monospace; }
+.production-build li p { margin: 0; color: var(--navy); font-size: 10px; line-height: 1.6; }
+.production-build-gate { padding: 19px; border-radius: 12px; color: #fff; background: var(--navy); }
+.production-build-gate b { font-size: 11px; }
+.production-build-gate p { margin: 7px 0 0; color: #d1e7e5; font-size: 10px; line-height: 1.7; }
 .capstone-result { margin-top: 12px; padding: 15px; display: grid; grid-template-columns: 33px 1fr; gap: 10px; border: 1px solid #94695f; border-radius: 11px; background: #4b3436; }
 .capstone-result.complete { border-color: #4c9474; background: #164e40; }
 .capstone-result > span { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; color: var(--navy); background: var(--amber); font-weight: 900; }
@@ -695,7 +705,7 @@ label:has(input:checked) .radio-ui { border: 6px solid var(--teal); }
   .source-list article { grid-template-columns: 62px 1fr; }
   .source-list article > div:last-child { grid-column: 2; text-align: left; }
   .review-columns, .concept-map, .glossary-grid, .settings-grid { grid-template-columns: 1fr; }
-  .assessment-overview, .capstone-lab > div { grid-template-columns: 1fr; }
+  .assessment-overview, .capstone-lab > div, .production-build ol { grid-template-columns: 1fr; }
   .assessment-progress { grid-template-columns: repeat(7,1fr); }
   .cumulative-list article { grid-template-columns: 27px 1fr; }
   .cumulative-list a { grid-column: 2; }

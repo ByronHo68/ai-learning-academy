@@ -22,10 +22,11 @@ test('all 13 lessons and 104 questions validate', () => {
 });
 
 test('every topic has detailed metaphors, real examples, steps, and code', () => {
-  assert.equal(Object.values(conceptDetails).flat().length, 52);
+  assert.equal(Object.values(conceptDetails).flat().length, 59);
+  assert.equal(conceptDetails.t13.length, 6);
   for (const topic of topics) {
     const details = conceptDetails[topic.id];
-    assert.ok(Array.isArray(details) && details.length === 4, `${topic.id} needs four concept labs`);
+    assert.ok(Array.isArray(details) && details.length >= 4 && details.length <= 6, `${topic.id} needs four to six concept labs`);
     for (const detail of details) {
       assert.ok(detail.explanation.zh.length > 40);
       assert.ok(detail.metaphor.zh.length > 2);
@@ -63,6 +64,17 @@ test('plain browser application contains every required learning surface', async
   assert.ok(html.includes('type="module"'));
   assert.ok(!application.includes('OPENAI_API_KEY'));
   assert.ok(!application.includes('sk-'));
+  assert.ok(application.includes('productionBuildBrief'));
+  assert.ok(application.includes('human code review'));
+});
+
+test('production sources and Node 18 browser module are bundled', async () => {
+  const production = await readFile(resolve(root, 'site/production-track.js'), 'utf8');
+  assert.ok(production.includes('Provider fallback is a policy decision'));
+  assert.ok(production.includes('Canary releases, rollback, and incident runbooks'));
+  assert.ok(sources.some((source) => source.id === 'openrouter-fallback'));
+  assert.ok(sources.some((source) => source.id === 'aws-genai-ops'));
+  assert.ok(topics.find((topic) => topic.id === 't2').sourceIds.includes('openrouter-fallback'));
 });
 
 test('dated claims map to known sources with valid URLs', () => {

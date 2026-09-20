@@ -1,3 +1,5 @@
+import { productionConceptDetails } from './production-track.js';
+
 const c = (zh, en) => ({ zh, en });
 
 const concept = (title, explanation, metaphorTitle, metaphor, example, language, codeTitle, code, steps) => ({
@@ -510,7 +512,7 @@ const supplementalConceptDetails = {
 export const conceptDetails = Object.fromEntries(
   Object.keys(baseConceptDetails).map((topicId) => [
     topicId,
-    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || [])],
+    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...(productionConceptDetails[topicId] || [])],
   ]),
 );
 

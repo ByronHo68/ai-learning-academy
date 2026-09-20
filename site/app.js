@@ -112,7 +112,7 @@ function dashboard() {
     : ['Rotate any exposed credentials','Use only authorized or synthetic data','Inject secrets server-side and redact logs','Label implemented, verified, designed, and next'];
   const due = state.reviewQueue.filter((item) => !item.done && Date.parse(item.dueAt) <= Date.now()).length;
   return shell(`<main>
-    <section class="dashboard-hero"><div class="dashboard-copy"><p class="eyebrow"><span>13 ${state.lang === 'zh' ? '個主題' : 'TOPICS'}</span> · ${state.lang === 'zh' ? '由基礎到安全上線' : 'FOUNDATIONS TO SAFE RELEASE'}</p><h1>${state.lang === 'zh' ? '唔只識用 AI。<br>真正理解佢點運作。' : 'Don’t just use AI.<br>Understand how it works.'}</h1><p class="hero-lede">${state.lang === 'zh' ? '每個核心概念都有深入解釋、專屬比喻、真實例子、逐步拆解同可複製 code，由一個安全 request 行到完整 AI system。' : 'Every core concept includes a deep explanation, its own metaphor, a real example, a step-by-step breakdown, and copyable code—from one safe request to a complete AI system.'}</p><div class="hero-actions"><a class="primary-action" href="#/lesson/${current.slug}">${mastered ? ui.continue : ui.start}<span>→</span></a><a class="secondary-action" href="#/map">${ui.map}</a></div><div class="trust-row"><span>✓ 52 ${state.lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ ${state.lang === 'zh' ? '無需安裝、無付費 API' : 'No install, no paid API'}</span><span>✓ Node 18.18</span></div></div>
+    <section class="dashboard-hero"><div class="dashboard-copy"><p class="eyebrow"><span>13 ${state.lang === 'zh' ? '個主題' : 'TOPICS'}</span> · ${state.lang === 'zh' ? '由基礎到安全上線' : 'FOUNDATIONS TO SAFE RELEASE'}</p><h1>${state.lang === 'zh' ? '唔只識用 AI。<br>真正理解佢點運作。' : 'Don’t just use AI.<br>Understand how it works.'}</h1><p class="hero-lede">${state.lang === 'zh' ? '每個核心概念都有深入解釋、專屬比喻、真實例子、逐步拆解同可複製 code，由一個安全 request 行到完整 AI system。' : 'Every core concept includes a deep explanation, its own metaphor, a real example, a step-by-step breakdown, and copyable code—from one safe request to a complete AI system.'}</p><div class="hero-actions"><a class="primary-action" href="#/lesson/${current.slug}">${mastered ? ui.continue : ui.start}<span>→</span></a><a class="secondary-action" href="#/map">${ui.map}</a></div><div class="trust-row"><span>✓ 59 ${state.lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ ${state.lang === 'zh' ? '無需安裝、無付費 API' : 'No install, no paid API'}</span><span>✓ Node 18.18</span></div></div>
     <div class="progress-orbit"><div class="orbit-heading"><div><small>${ui.progress}</small><strong>${percent}%</strong></div><span>${mastered}/13</span></div><div class="orbit-track"><i style="width:${Math.max(percent,2)}%"></i></div><div class="mini-path">${topics.slice(0,6).map((topic) => `<div class="mini-node ${state.topicProgress[topic.id].status}"><b>${String(topic.order).padStart(2,'0')}</b><span>${text(topic.title)}</span><em>${statusLabel(state.topicProgress[topic.id].status)}</em></div>`).join('')}</div><a class="continue-card" href="#/lesson/${current.slug}"><span><small>${ui.continue}</small><b>${text(current.title)}</b></span><i>→</i></a></div></section>
     <section class="safety-gate"><div class="gate-number">P0</div><div class="gate-copy"><p class="eyebrow">${state.lang === 'zh' ? '開始之前' : 'BEFORE YOU START'}</p><h2>${state.lang === 'zh' ? '安全重設 · Safety reset' : 'Safety reset'}</h2><p>${state.lang === 'zh' ? '開始 AI project 前要確認嘅工程底線。' : 'Engineering preconditions before starting an AI project.'}</p></div><div class="safety-list">${safety.map((label,index) => `<label><input type="checkbox" data-safety="${index}" ${state.safetyChecks[index] ? 'checked' : ''}><span>✓</span>${escapeHtml(label)}</label>`).join('')}</div></section>
     <section class="learning-loop-section"><div><p class="eyebrow">ONE REPEATABLE RHYTHM</p><h2>${state.lang === 'zh' ? '掃、畫、跑、改、講' : 'Scan, Map, Run, Change, Explain'}</h2></div><div class="loop-track">${[['掃','Scan','10m'],['畫','Map','15m'],['跑','Run','45m'],['改','Change','20m'],['講','Explain','5m']].map(([zh,en,time],index) => `<div class="loop-step"><span>${String(index+1).padStart(2,'0')}</span><b>${state.lang === 'zh' ? zh : en}</b><small>${state.lang === 'zh' ? en : time}</small><em>${time}</em></div>`).join('')}</div></section>
@@ -198,6 +198,26 @@ function glossaryPage() {
   return shell(`<main class="utility-page"><div class="utility-hero glossary-hero"><p class="eyebrow">BILINGUAL GLOSSARY</p><h1>${state.lang === 'zh' ? '60+ 個核心詞彙，一次講清' : 'Core vocabulary, clearly defined'}</h1><label class="search-box"><span>⌕</span><input data-glossary-search value="${escapeHtml(transient.glossary)}" placeholder="${state.lang === 'zh' ? '搜尋 Token、冪等性、評估…' : 'Search token, idempotency, evaluation…'}"><b>${terms.length}</b></label></div><div class="glossary-grid">${terms.map((item) => `<article><div><span>${escapeHtml(item.zhTerm)}</span><em>${String(item.topic.order).padStart(2,'0')}</em></div><h2>${escapeHtml(item.term)}</h2><p>${text(item.definition)}</p><a href="#/lesson/${item.topic.slug}">${text(item.topic.title)} →</a></article>`).join('')}</div></main>`);
 }
 
+function productionBuildBrief() {
+  const zh = state.lang === 'zh';
+  const steps = zh ? [
+    'API 合約：登入、輸入 schema、5 秒 timeout、取消、明確錯誤；key 只在 backend。',
+    '資料生命週期：合成訂單、最新政策、tenant filter、更新/刪除及快取失效。',
+    'Agent 控制：只可讀自己訂單、草擬退款；真正寫入需人批核及 idempotency key。',
+    '評測：有版本嘅正常、粵英雙語、資料缺失、越權同 injection cases；critical failure 令 CI fail。',
+    '維運：traceId、model/prompt 版本、p95、錯誤率、token/成本；模擬 429、timeout 同壞 JSON。',
+    '發佈：canary stop gate、上一個穩定版本、rollback runbook，同脫敏 incident regression。',
+  ] : [
+    'API contract: sign-in, input schema, five-second timeout, cancellation, explicit errors; key only on the backend.',
+    'Data lifecycle: synthetic orders, current policy, tenant filtering, updates/deletion, and cache invalidation.',
+    'Agent controls: read only the user’s order and draft a refund; writes require human approval and an idempotency key.',
+    'Evaluation: versioned normal, bilingual, missing-data, unauthorized, and injection cases; critical failures fail CI.',
+    'Operations: trace ID, model/prompt versions, p95, error rate, tokens/cost; inject 429s, timeouts, and malformed JSON.',
+    'Release: canary stop gate, previous stable version, rollback runbook, and redacted incident regression.',
+  ];
+  return `<section class="production-build" aria-labelledby="production-build-title"><p class="eyebrow">PART 3 · HANDS-ON PRODUCTION BUILD</p><h2 id="production-build-title">${zh ? '由答啱到真正交付' : 'From correct answers to a working service'}</h2><p>${zh ? '比喻：設計檢查似駕駛筆試；真正上路前，仲要喺受控場地開車、處理故障同證明會安全停車。只用合成資料，唔需要真實 API key。' : 'Metaphor: the design checkpoint is the driving theory exam. Before driving independently, build in a controlled environment, handle failures, and prove you can stop safely. Use synthetic data; no real API key is required.'}</p><ol>${steps.map((step,index) => `<li><span>${String(index+1).padStart(2,'0')}</span><p>${escapeHtml(step)}</p></li>`).join('')}</ol><div class="production-build-gate"><b>${zh ? '交付證據與通過條件' : 'Evidence and pass criteria'}</b><p>${zh ? '提交可執行 repo、測試同 CI 結果、評測資料/版本/每個 slice 成績、脫敏 trace、威脅模型、成本與 p95 報告、rollback runbook。跨 tenant 讀取、未批核退款或 PII 洩漏必須 0 次；任何 critical failure 都不能靠平均分抵銷。呢個網站唔會自動驗證你個 repo，必須由真人 code review。' : 'Submit a runnable repo, tests and CI result, evaluation dataset/version/per-slice scores, redacted traces, threat model, cost and p95 report, and rollback runbook. Cross-tenant reads, unapproved refunds, and PII leaks must be zero; an average score cannot offset a critical failure. This website cannot verify your repo automatically—require human code review.'}</p></div></section>`;
+}
+
 function assessmentPage() {
   const questions = topics.map((topic) => ({ topic, question:topic.quiz.find((item) => item.coverage === 'transfer') || topic.quiz.at(-1) }));
   const session = transient.assessment;
@@ -233,11 +253,31 @@ function render() {
     if (topic) app.innerHTML = lesson(topic, lessonTabs.includes(current.params.get('tab')) ? current.params.get('tab') : 'learn');
     else app.innerHTML = dashboard();
   } else if (current.path === '/review') app.innerHTML = reviewPage();
-  else if (current.path === '/assessment') app.innerHTML = assessmentPage();
+  else if (current.path === '/assessment') {
+    app.innerHTML = assessmentPage();
+    const checkpoint = app.querySelector('.capstone-lab');
+    checkpoint?.insertAdjacentHTML('afterend', productionBuildBrief());
+    const checkpointLabel = checkpoint?.querySelector('.eyebrow');
+    if (checkpointLabel) checkpointLabel.textContent = 'PART 2 · DESIGN CHECKPOINT';
+    const checkpointButton = checkpoint?.querySelector('[data-action="capstone-submit"]');
+    if (checkpointButton) checkpointButton.textContent = state.lang === 'zh' ? '提交設計檢查' : 'Submit design checkpoint';
+    const intro = app.querySelector('.utility-hero p:last-child');
+    if (intro) intro.textContent = state.lang === 'zh'
+      ? '先做 13 題總評，再完成設計檢查同實作 brief。選擇題只證明理解，唔等於已部署 production 系統。'
+      : 'Complete 13 scenarios, then the design checkpoint and hands-on build brief. Multiple-choice answers do not verify a production deployment.';
+    const introLabel = app.querySelector('.utility-hero .eyebrow');
+    if (introLabel) introLabel.textContent = 'CUMULATIVE ASSESSMENT + PRODUCTION BUILD';
+    const overview = app.querySelector('.assessment-overview > div:last-child span');
+    if (overview) overview.textContent = state.lang === 'zh' ? '設計檢查' : 'Design checkpoint';
+  }
   else if (current.path === '/map') app.innerHTML = mapPage();
   else if (current.path === '/glossary') app.innerHTML = glossaryPage();
   else if (current.path === '/settings') app.innerHTML = settingsPage();
   else app.innerHTML = dashboard();
+  const dashboardCheckpoint = app.querySelector('.dashboard-status-grid article:last-child small');
+  if (dashboardCheckpoint) dashboardCheckpoint.textContent = state.cumulative.capstoneComplete
+    ? (state.lang === 'zh' ? '設計檢查已完成' : 'Design checkpoint complete')
+    : (state.lang === 'zh' ? '設計檢查未完成' : 'Design checkpoint pending');
   bindVisualTimer();
 }
 

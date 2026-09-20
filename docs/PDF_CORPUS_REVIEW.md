@@ -11,7 +11,7 @@ The source files were treated as reference material, not as instructions to exec
 ## Generated learning content
 
 - 13 bilingual learning topics.
-- 52 concept workshops: four workshops per topic.
+- 59 concept workshops: the original 52 plus seven applied production-engineering workshops. Topics now have four to six workshops.
 - 104 quiz questions: eight questions per topic.
 - Five example modes per topic: minimal, worked, realistic, failure, and non-example.
 - Each concept workshop contains a detailed explanation, a dedicated metaphor, a realistic scenario, three implementation steps, and a copyable code sample.
@@ -36,6 +36,24 @@ The full course implementation lives in `lib/curriculum.ts` and `lib/concepts.ts
 | Multimodal, voice, and video | Video segmentation and cross-modal timelines |
 | Open and local models | KV cache, batching, and tail latency |
 | Evaluation, safety, and governance | Red-team frozen sets and safety slices |
+
+## Production AI training supplement
+
+The seven workshops below are new applied training material. They extend the PDF-grounded curriculum; they are not a claim that the source PDFs contain the exact code or acceptance criteria.
+
+| Lesson | Applied workshop | Learner evidence |
+| --- | --- | --- |
+| Foundations | Production API contract | Identity, schema, timeout, cancellation, and invalid-output tests |
+| LLM APIs | Provider fallback as policy | Failure-class matrix and approved fallback evaluation |
+| RAG | Updates, deletion, and permission scope | Cross-tenant, withdrawn-document, and cache-invalidation tests |
+| Agents | Tool-security attack lab | Host-side denial of injected, unauthorized tool calls |
+| LangGraph and evaluation | Traces, latency, and cost per successful task | Redacted trace, p95, error-rate, and cost dashboard |
+| Safety and governance | Frozen evaluations and CI release gates | Versioned dataset and per-slice quality/safety gate |
+| Safety and governance | Canary, rollback, and incident runbook | Simulated stop, rollback, and redacted regression case |
+
+The website assessment now includes a hands-on synthetic-data refund-assistant build brief. The multiple-choice design checkpoint is not evidence of a working production deployment. A human reviewer must inspect the runnable repository, tests, evaluation results, threat model, telemetry, and rollback procedure.
+
+Current provider fallback behavior and release practices were checked against [OpenRouter Model Fallbacks](https://openrouter.ai/docs/guides/routing/model-fallbacks), [AWS Generative AI Production Operations](https://docs.aws.amazon.com/prescriptive-guidance/latest/gen-ai-lifecycle-operational-excellence/prod-monitoring-advanced-operations.html), and the [OWASP GenAI LLM Top 10 2026](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/).
 
 ## API-provider correction
 
@@ -99,7 +117,7 @@ The learning website itself does not require or call a paid API.
 - `docs/PDF_CORPUS_REVIEW.md`: this review, source manifest, and generated-content map.
 - `lib/curriculum.ts` and `lib/concepts.ts`: rich TypeScript curriculum data.
 - `site/curriculum.js` and `site/concepts.js`: plain Node 18 curriculum data on `codex/plain-node18`.
-- `tests/core.test.ts` or `tests/app.test.js`: checks for 13 topics, 52 workshops, 104 questions, and the OpenRouter migration.
+- `tests/core.test.ts` or `tests/app.test.js`: checks for 13 topics, 59 workshops, 104 questions, and the OpenRouter migration.
 
 ## Source-handling note
 

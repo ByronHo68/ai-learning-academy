@@ -1,6 +1,6 @@
 # AI Learning Academy
 
-A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 52 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a capstone, and browser-local progress. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
+A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 59 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a production build brief, and browser-local progress. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
 
 ## Start — no install required
 
@@ -32,7 +32,8 @@ node server.mjs
 - `site/styles.css` — responsive interface styles
 - `site/app.js` — routing, interactions, quizzes, and local progress
 - `site/curriculum.js` — all lesson, quiz, and source content
-- `site/concepts.js` — 52 detailed concept/metaphor/example/code workshops
+- `site/concepts.js` — base concept/metaphor/example/code workshops
+- `site/production-track.js` — seven applied production-engineering workshops
 - `server.mjs` — zero-dependency static server using Node built-ins
 - `scripts/build.mjs` — copies the static site to `dist/`
 

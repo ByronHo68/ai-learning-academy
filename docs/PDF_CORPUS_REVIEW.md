@@ -37,6 +37,24 @@ The full course implementation lives in `lib/curriculum.ts` and `lib/concepts.ts
 | Open and local models | KV cache, batching, and tail latency |
 | Evaluation, safety, and governance | Red-team frozen sets and safety slices |
 
+## Production AI training supplement
+
+The seven workshops below are new applied training material. They extend the PDF-grounded curriculum; they are not a claim that the source PDFs contain the exact code or acceptance criteria.
+
+| Lesson | Applied workshop | Learner evidence |
+| --- | --- | --- |
+| Foundations | Production API contract | Identity, schema, timeout, cancellation, and invalid-output tests |
+| LLM APIs | Provider fallback as policy | Failure-class matrix and approved fallback evaluation |
+| RAG | Updates, deletion, and permission scope | Cross-tenant, withdrawn-document, and cache-invalidation tests |
+| Agents | Tool-security attack lab | Host-side denial of injected, unauthorized tool calls |
+| LangGraph and evaluation | Traces, latency, and cost per successful task | Redacted trace, p95, error-rate, and cost dashboard |
+| Safety and governance | Frozen evaluations and CI release gates | Versioned dataset and per-slice quality/safety gate |
+| Safety and governance | Canary, rollback, and incident runbook | Simulated stop, rollback, and redacted regression case |
+
+The website assessment now includes a hands-on synthetic-data refund-assistant build brief. The multiple-choice design checkpoint is not evidence of a working production deployment. A human reviewer must inspect the runnable repository, tests, evaluation results, threat model, telemetry, and rollback procedure.
+
+Current provider fallback behavior and release practices were checked against [OpenRouter Model Fallbacks](https://openrouter.ai/docs/guides/routing/model-fallbacks), [AWS Generative AI Production Operations](https://docs.aws.amazon.com/prescriptive-guidance/latest/gen-ai-lifecycle-operational-excellence/prod-monitoring-advanced-operations.html), and the [OWASP GenAI LLM Top 10 2026](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/).
+
 ## API-provider correction
 
 The source API lesson used Volcengine/Doubao-specific setup, including `ARK_API_KEY` and a regional Volcengine endpoint. The generated course replaces that provider-specific example with OpenRouter:

@@ -1,4 +1,5 @@
 import type { Copy } from './curriculum';
+import { productionConceptDetails } from './production-track.js';
 
 export type ConceptDetail = {
   title: Copy;
@@ -524,7 +525,7 @@ const supplementalConceptDetails: Record<string, ConceptDetail[]> = {
 export const conceptDetails: Record<string, ConceptDetail[]> = Object.fromEntries(
   Object.keys(baseConceptDetails).map((topicId) => [
     topicId,
-    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || [])],
+    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...((productionConceptDetails as Record<string, ConceptDetail[]>)[topicId] || [])],
   ]),
 );
 

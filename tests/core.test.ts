@@ -27,12 +27,12 @@ test('all thirteen lesson contracts and 104 quiz questions validate',()=>{
   }
 });
 
-test('all thirteen topics have four complete concept workshops',()=>{
+test('all thirteen topics include complete concepts and seven production workshops',()=>{
   assert.deepEqual(Object.keys(conceptDetails).sort(),topics.map((topic)=>topic.id).sort());
-  assert.equal(Object.values(conceptDetails).flat().length,52);
+  assert.equal(Object.values(conceptDetails).flat().length,59);
   for(const topic of topics){
     const details=conceptDetails[topic.id];
-    assert.equal(details.length,4);
+    assert.ok(details.length>=4 && details.length<=6);
     for(const detail of details){
       assert.ok(detail.explanation.zh.length>30);
       assert.ok(detail.metaphor.zh.length>18);
@@ -41,6 +41,8 @@ test('all thirteen topics have four complete concept workshops',()=>{
       assert.ok(detail.code.includes('\n'));
     }
   }
+  assert.deepEqual(['t1','t2','t3','t4','t6'].map((id)=>conceptDetails[id].length),[5,5,5,5,5]);
+  assert.equal(conceptDetails.t13.length,6);
 });
 
 test('provider lesson uses OpenRouter instead of the source PDFs Volcengine setup',()=>{

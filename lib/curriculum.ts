@@ -89,6 +89,8 @@ export const sources: Source[] = [
   { id: 'openai-responses', title: 'Migrate to the Responses API', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/migrate-to-responses', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('Responses、Items、工具與多輪狀態。', 'Responses, typed Items, tools, and multi-turn state.'), kind: 'official' },
   { id: 'openai-structured', title: 'Structured Outputs', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/structured-outputs', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('Schema adherence、拒絕與不完整輸出處理。', 'Schema adherence plus refusal and incomplete-output handling.'), kind: 'official' },
   { id: 'openrouter', title: 'OpenRouter Quickstart', publisher: 'OpenRouter', url: 'https://openrouter.ai/docs/quickstart', date: 'Living documentation', verifiedAt: '2026-09-17', note: c('OpenAI-compatible endpoint、server-side key、多模型選擇同 provider routing。', 'OpenAI-compatible endpoint, server-side key handling, model choice, and provider routing.'), kind: 'official' },
+  { id: 'openrouter-fallback', title: 'Model Fallbacks', publisher: 'OpenRouter', url: 'https://openrouter.ai/docs/guides/routing/model-fallbacks', date: 'Living documentation', verifiedAt: '2026-09-20', note: c('Fallback 可由 rate limit、故障、context 錯誤同 moderation refusal 觸發；正式環境需另外審核政策。', 'Fallback can follow rate limits, outages, context errors, and moderation refusals; production policy needs separate review.'), kind: 'official' },
+  { id: 'aws-genai-ops', title: 'Generative AI Production Operations', publisher: 'AWS Prescriptive Guidance', url: 'https://docs.aws.amazon.com/prescriptive-guidance/latest/gen-ai-lifecycle-operational-excellence/prod-monitoring-advanced-operations.html', date: 'Living documentation', verifiedAt: '2026-09-20', note: c('CI 評測、安全 gate、canary、觀察指標同 rollback 操作。', 'CI evaluations, security gates, canaries, operational metrics, and rollback.'), kind: 'official' },
   { id: 'openai-realtime', title: 'Realtime API', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/realtime', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('WebRTC、WebSocket、SIP 同即時媒體流程。', 'WebRTC, WebSocket, SIP, and realtime media flows.'), kind: 'official' },
   { id: 'mcp', title: 'Model Context Protocol Specification 2026-07-28', publisher: 'MCP Project', url: 'https://modelcontextprotocol.io/specification/2026-07-28', date: '2026-07-28', verifiedAt: '2026-09-03', note: c('無狀態核心、逐次能力協商、stdio 與 Streamable HTTP。', 'Stateless core, per-request capability negotiation, stdio and Streamable HTTP.'), kind: 'standard' },
   { id: 'a2a', title: 'Agent2Agent Protocol Specification 1.0', publisher: 'A2A Project', url: 'https://a2a-protocol.org/latest/specification/', date: '2026-03-12', verifiedAt: '2026-09-03', note: c('Agent Card、Task、Message、Artifact 同協作狀態。', 'Agent Cards, Tasks, Messages, Artifacts, and collaboration state.'), kind: 'standard' },
@@ -170,7 +172,9 @@ const buildTopic = (seed: TopicSeed): Topic => {
     remediationSectionId: remediationFor(seed.id,coverage),
     misconceptionTags: coverage === 'misconception' ? [`${seed.id}-m1`] : [],
   }));
-  return { ...base, sourceIds:Array.from(new Set([...base.sourceIds,'course-corpus'])), orientation, vocabulary, misconceptions, examples, quiz };
+  const productionSources = ['t1','t2','t3','t4','t6','t13'].includes(seed.id) ? ['aws-genai-ops'] : [];
+  if (seed.id === 't2') productionSources.push('openrouter-fallback');
+  return { ...base, sourceIds:Array.from(new Set([...base.sourceIds,'course-corpus',...productionSources])), orientation, vocabulary, misconceptions, examples, quiz };
 };
 
 const commonRecap = (ideas: string[]): Topic['recap'] => ({

@@ -1,6 +1,6 @@
 # AI Learning Academy — Rich Animated Edition
 
-The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 61 expanded concept workshops, including nine applied production-engineering labs. The newest labs distinguish Deep Agents context offloading, summarization, and subagent delegation, then connect LangSmith traces to offline regression and online monitoring. Every core concept has its own deep explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
+The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 65 expanded concept workshops, including thirteen applied production-engineering labs. The newest code-corpus labs cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent contract tests, and durable long-running AI jobs, alongside Deep Agents context management and LangSmith evaluation loops. Every core concept has its own deep explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
 
 This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/plain-node18`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/plain-node18) branch.
 

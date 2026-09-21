@@ -6,11 +6,11 @@ const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-acad
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin),
   title: 'AI 學習院 | Visual AI Academy',
-  description: '用 61 個概念工作坊、專屬比喻、可執行 code、互動視覺與精準回饋，真正理解 AI。',
+  description: '用 65 個概念工作坊、專屬比喻、可執行 code、互動視覺與精準回饋，真正理解 AI。',
   alternates: { canonical: '/' },
   openGraph: {
     title: 'AI 學習院 | Visual AI Academy',
-    description: '13 個互動主題、61 個概念工作坊，由安全 request 行到可靠 AI 系統。',
+    description: '13 個互動主題、65 個概念工作坊，由安全 request 行到可靠 AI 系統。',
     url: siteOrigin,
     siteName: 'AI 學習院',
     locale: 'zh_HK',
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'AI 學習院 | Visual AI Academy',
-    description: '13 個互動主題、61 個概念工作坊，由安全 request 行到可靠 AI 系統。',
+    description: '13 個互動主題、65 個概念工作坊，由安全 request 行到可靠 AI 系統。',
     images: [new URL('/og.png', siteOrigin).toString()],
   },
 };

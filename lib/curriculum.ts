@@ -86,6 +86,11 @@ export const sources: Source[] = [
   { id: 'course-prompt', title: 'Interactive AI Learning Website Prompt', publisher: 'Workspace', date: '2026-09-03', verifiedAt: '2026-09-03', note: c('13 個主題嘅產品與課堂合約。', 'Product and lesson contract for all 13 topics.'), kind: 'course' },
   { id: 'course-pdf', title: 'AI內容學習路線與雙語Quiz指南', publisher: 'Workspace', date: '2026-09-03', verifiedAt: '2026-09-03', note: c('49 頁課程、測驗、溫習節奏與發佈關卡。', '49-page source course, assessment cadence, and release gates.'), kind: 'course' },
   { id: 'course-corpus', title: 'PDF按主题整理 Source Corpus', publisher: 'Workspace', date: '39 PDFs · 1,339 pages', verifiedAt: '2026-09-17', note: c('已重新抽取同審閱 AI 基礎、LLM API、RAG、Agent、LangChain、LangGraph、微調、項目同面試素材。', 'Re-extracted and reviewed the AI foundations, LLM API, RAG, agent, framework, fine-tuning, project, and interview source set.'), kind: 'course' },
+  { id: 'code-corpus', title: '懂王AI代码 Source Corpus', publisher: 'Workspace', date: '32 ZIP repositories · 1,055 extractable files', verifiedAt: '2026-09-21', note: c('審閱新舊版本中可抽取嘅 agent loop、GraphRAG、MCP gateway、長任務 pipeline 同測試；壓縮檔內文字只作參考，唔當執行指令。', 'Reviewed extractable agent-loop, GraphRAG, MCP-gateway, long-job pipeline, and test implementations across old and new archives; archive text was reference material, not executable instruction.'), kind: 'course' },
+  { id: 'code-graphrag', title: '懂王AI代码 · GraphRAG', publisher: 'Workspace', date: 'Local source review', verifiedAt: '2026-09-21', note: c('Entity/relation extraction、community、local/global routing 同 provenance 改善點。', 'Entity/relation extraction, communities, local/global routing, and provenance improvements.'), kind: 'course' },
+  { id: 'code-mcp-gateway', title: '懂王AI代码 · MCP Agent Gateway', publisher: 'Workspace', date: 'Local source review', verifiedAt: '2026-09-21', note: c('API key middleware、project quota、tool routing、tenant memory/RAG isolation；課堂改成 current protocol-neutral 安全 pattern。', 'API-key middleware, project quotas, tool routing, and tenant-isolated memory/RAG; the lesson converts these into current protocol-neutral security patterns.'), kind: 'course' },
+  { id: 'code-agent-loop', title: '懂王AI代码 · Agent Loop', publisher: 'Workspace', date: 'Local source review', verifiedAt: '2026-09-21', note: c('Bounded loop、tool registry、trace、mock provider 同 offline contract testing。', 'Bounded loops, tool registries, traces, mock providers, and offline contract testing.'), kind: 'course' },
+  { id: 'code-ai-slice', title: '懂王AI代码 · AI Slice', publisher: 'Workspace', date: 'Local source review', verifiedAt: '2026-09-21', note: c('持久化 task status、SSE progress、retry cleanup 同多階段媒體 pipeline。', 'Durable task status, SSE progress, retry cleanup, and multi-stage media pipelines.'), kind: 'course' },
   { id: 'openai-responses', title: 'Migrate to the Responses API', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/migrate-to-responses', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('Responses、Items、工具與多輪狀態。', 'Responses, typed Items, tools, and multi-turn state.'), kind: 'official' },
   { id: 'openai-structured', title: 'Structured Outputs', publisher: 'OpenAI', url: 'https://developers.openai.com/api/docs/guides/structured-outputs', date: 'Living documentation', verifiedAt: '2026-09-03', note: c('Schema adherence、拒絕與不完整輸出處理。', 'Schema adherence plus refusal and incomplete-output handling.'), kind: 'official' },
   { id: 'openrouter', title: 'OpenRouter Quickstart', publisher: 'OpenRouter', url: 'https://openrouter.ai/docs/quickstart', date: 'Living documentation', verifiedAt: '2026-09-17', note: c('OpenAI-compatible endpoint、server-side key、多模型選擇同 provider routing。', 'OpenAI-compatible endpoint, server-side key handling, model choice, and provider routing.'), kind: 'official' },
@@ -175,8 +180,13 @@ const buildTopic = (seed: TopicSeed): Topic => {
     remediationSectionId: remediationFor(seed.id,coverage),
     misconceptionTags: coverage === 'misconception' ? [`${seed.id}-m1`] : [],
   }));
-  const productionSources = ['t1','t2','t3','t4','t6','t13'].includes(seed.id) ? ['aws-genai-ops'] : [];
+  const productionSources = ['t1','t2','t3','t4','t5','t6','t8','t13'].includes(seed.id) ? ['aws-genai-ops'] : [];
   if (seed.id === 't2') productionSources.push('openrouter-fallback');
+  if (seed.id === 't3') productionSources.push('code-graphrag');
+  if (seed.id === 't4') productionSources.push('code-mcp-gateway');
+  if (seed.id === 't5') productionSources.push('code-agent-loop');
+  if (seed.id === 't8') productionSources.push('code-ai-slice');
+  if (['t3','t4','t5','t8'].includes(seed.id)) productionSources.push('code-corpus');
   return { ...base, sourceIds:Array.from(new Set([...base.sourceIds,'course-corpus',...productionSources])), orientation, vocabulary, misconceptions, examples, quiz };
 };
 

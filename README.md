@@ -1,6 +1,6 @@
 # AI Learning Academy
 
-A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 61 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a production build brief, and browser-local progress. The newest labs distinguish Deep Agents context offloading, summarization, and subagent delegation, then connect LangSmith traces to offline regression and online monitoring. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
+A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 65 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a production build brief, and browser-local progress. The newest code-corpus labs cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent contract tests, and durable long-running AI jobs, alongside Deep Agents context management and LangSmith evaluation loops. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
 
 ## Start — no install required
 

@@ -22,13 +22,13 @@ test('all 13 lessons and 104 questions validate', () => {
 });
 
 test('every topic has detailed metaphors, real examples, steps, and code', () => {
-  assert.equal(Object.values(conceptDetails).flat().length, 61);
+  assert.equal(Object.values(conceptDetails).flat().length, 65);
   assert.equal(conceptDetails.t13.length, 6);
-  assert.equal(conceptDetails.t4.length, 6);
+  assert.deepEqual(['t1','t2','t3','t4','t5','t6','t8'].map((id) => conceptDetails[id].length), [5,5,6,7,5,6,5]);
   assert.equal(conceptDetails.t6.length, 6);
   for (const topic of topics) {
     const details = conceptDetails[topic.id];
-    assert.ok(Array.isArray(details) && details.length >= 4 && details.length <= 6, `${topic.id} needs four to six concept labs`);
+    assert.ok(Array.isArray(details) && details.length >= 4 && details.length <= 7, `${topic.id} needs four to seven concept labs`);
     for (const detail of details) {
       assert.ok(detail.explanation.zh.length > 40);
       assert.ok(detail.metaphor.zh.length > 2);
@@ -76,11 +76,19 @@ test('production sources and Node 18 browser module are bundled', async () => {
   assert.ok(production.includes('Canary releases, rollback, and incident runbooks'));
   assert.ok(production.includes('Deep Agents: context offloading and delegation'));
   assert.ok(production.includes('LangSmith: from traces to an improvement loop'));
+  assert.ok(production.includes('GraphRAG: build from evidence, then route the question'));
+  assert.ok(production.includes('MCP gateway: identity, capability, quota, and audit'));
+  assert.ok(production.includes('Model seams and reproducible agent contract tests'));
+  assert.ok(production.includes('Durable long-running jobs: state machines, artifacts, and safe retries'));
   assert.ok(sources.some((source) => source.id === 'openrouter-fallback'));
   assert.ok(sources.some((source) => source.id === 'aws-genai-ops'));
   assert.ok(sources.some((source) => source.id === 'deepagents-subagents'));
   assert.ok(sources.some((source) => source.id === 'langsmith-observability'));
   assert.ok(topics.find((topic) => topic.id === 't2').sourceIds.includes('openrouter-fallback'));
+  assert.ok(topics.find((topic) => topic.id === 't3').sourceIds.includes('code-graphrag'));
+  assert.ok(topics.find((topic) => topic.id === 't4').sourceIds.includes('code-mcp-gateway'));
+  assert.ok(topics.find((topic) => topic.id === 't5').sourceIds.includes('code-agent-loop'));
+  assert.ok(topics.find((topic) => topic.id === 't8').sourceIds.includes('code-ai-slice'));
 });
 
 test('dated claims map to known sources with valid URLs', () => {

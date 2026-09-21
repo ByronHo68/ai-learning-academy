@@ -11,7 +11,7 @@ The source files were treated as reference material, not as instructions to exec
 ## Generated learning content
 
 - 13 bilingual learning topics.
-- 59 concept workshops: the original 52 plus seven applied production-engineering workshops. Topics now have four to six workshops.
+- 61 concept workshops: the original 52 plus nine applied production-engineering workshops. Topics now have four to six workshops.
 - 104 quiz questions: eight questions per topic.
 - Five example modes per topic: minimal, worked, realistic, failure, and non-example.
 - Each concept workshop contains a detailed explanation, a dedicated metaphor, a realistic scenario, three implementation steps, and a copyable code sample.
@@ -39,7 +39,7 @@ The full course implementation lives in `lib/curriculum.ts` and `lib/concepts.ts
 
 ## Production AI training supplement
 
-The seven workshops below are new applied training material. They extend the PDF-grounded curriculum; they are not a claim that the source PDFs contain the exact code or acceptance criteria.
+The nine workshops below are new applied training material. They extend the PDF-grounded curriculum; they are not a claim that the source PDFs contain the exact code or acceptance criteria.
 
 | Lesson | Applied workshop | Learner evidence |
 | --- | --- | --- |
@@ -47,13 +47,15 @@ The seven workshops below are new applied training material. They extend the PDF
 | LLM APIs | Provider fallback as policy | Failure-class matrix and approved fallback evaluation |
 | RAG | Updates, deletion, and permission scope | Cross-tenant, withdrawn-document, and cache-invalidation tests |
 | Agents | Tool-security attack lab | Host-side denial of injected, unauthorized tool calls |
+| Agents | Deep Agents context offload and delegation | Decision between filesystem offload, summarization, synchronous/async subagents, plus a narrow handoff contract |
 | LangGraph and evaluation | Traces, latency, and cost per successful task | Redacted trace, p95, error-rate, and cost dashboard |
+| LangGraph and evaluation | LangSmith observability-to-evaluation loop | Versioned runs/traces/threads, governed dataset promotion, offline regression, and sampled online monitoring |
 | Safety and governance | Frozen evaluations and CI release gates | Versioned dataset and per-slice quality/safety gate |
 | Safety and governance | Canary, rollback, and incident runbook | Simulated stop, rollback, and redacted regression case |
 
 The website assessment now includes a hands-on synthetic-data refund-assistant build brief. The multiple-choice design checkpoint is not evidence of a working production deployment. A human reviewer must inspect the runnable repository, tests, evaluation results, threat model, telemetry, and rollback procedure.
 
-Current provider fallback behavior and release practices were checked against [OpenRouter Model Fallbacks](https://openrouter.ai/docs/guides/routing/model-fallbacks), [AWS Generative AI Production Operations](https://docs.aws.amazon.com/prescriptive-guidance/latest/gen-ai-lifecycle-operational-excellence/prod-monitoring-advanced-operations.html), and the [OWASP GenAI LLM Top 10 2026](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/).
+Current provider fallback, agent-harness, observability, evaluation, and release practices were checked against [OpenRouter Model Fallbacks](https://openrouter.ai/docs/guides/routing/model-fallbacks), [Deep Agents Overview](https://docs.langchain.com/oss/javascript/deepagents/overview), [Deep Agents Subagents](https://docs.langchain.com/oss/javascript/deepagents/subagents), [LangSmith Observability Concepts](https://docs.langchain.com/langsmith/observability-concepts), [LangSmith Evaluation Types](https://docs.langchain.com/langsmith/evaluation-types), [AWS Generative AI Production Operations](https://docs.aws.amazon.com/prescriptive-guidance/latest/gen-ai-lifecycle-operational-excellence/prod-monitoring-advanced-operations.html), and the [OWASP GenAI LLM Top 10 2026](https://genai.owasp.org/resource/owasp-genai-llm-top-10-2026/).
 
 ## API-provider correction
 
@@ -117,7 +119,7 @@ The learning website itself does not require or call a paid API.
 - `docs/PDF_CORPUS_REVIEW.md`: this review, source manifest, and generated-content map.
 - `lib/curriculum.ts` and `lib/concepts.ts`: rich TypeScript curriculum data.
 - `site/curriculum.js` and `site/concepts.js`: plain Node 18 curriculum data on `codex/plain-node18`.
-- `tests/core.test.ts` or `tests/app.test.js`: checks for 13 topics, 59 workshops, 104 questions, and the OpenRouter migration.
+- `tests/core.test.ts` or `tests/app.test.js`: checks for 13 topics, 61 workshops, 104 questions, and the OpenRouter migration.
 
 ## Source-handling note
 

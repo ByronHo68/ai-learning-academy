@@ -22,8 +22,10 @@ test('all 13 lessons and 104 questions validate', () => {
 });
 
 test('every topic has detailed metaphors, real examples, steps, and code', () => {
-  assert.equal(Object.values(conceptDetails).flat().length, 59);
+  assert.equal(Object.values(conceptDetails).flat().length, 61);
   assert.equal(conceptDetails.t13.length, 6);
+  assert.equal(conceptDetails.t4.length, 6);
+  assert.equal(conceptDetails.t6.length, 6);
   for (const topic of topics) {
     const details = conceptDetails[topic.id];
     assert.ok(Array.isArray(details) && details.length >= 4 && details.length <= 6, `${topic.id} needs four to six concept labs`);
@@ -72,8 +74,12 @@ test('production sources and Node 18 browser module are bundled', async () => {
   const production = await readFile(resolve(root, 'site/production-track.js'), 'utf8');
   assert.ok(production.includes('Provider fallback is a policy decision'));
   assert.ok(production.includes('Canary releases, rollback, and incident runbooks'));
+  assert.ok(production.includes('Deep Agents: context offloading and delegation'));
+  assert.ok(production.includes('LangSmith: from traces to an improvement loop'));
   assert.ok(sources.some((source) => source.id === 'openrouter-fallback'));
   assert.ok(sources.some((source) => source.id === 'aws-genai-ops'));
+  assert.ok(sources.some((source) => source.id === 'deepagents-subagents'));
+  assert.ok(sources.some((source) => source.id === 'langsmith-observability'));
   assert.ok(topics.find((topic) => topic.id === 't2').sourceIds.includes('openrouter-fallback'));
 });
 

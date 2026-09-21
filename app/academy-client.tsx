@@ -148,7 +148,7 @@ function Dashboard({ state, setState }: { state:AcademyState; setState:React.Dis
             <h1>{lang === 'zh' ? <>唔只識用 AI。<br/>真正理解佢點運作。</> : <>Don’t just use AI.<br/>Understand how it works.</>}</h1>
             <p className="hero-lede">{lang === 'zh' ? '每個核心概念都有深入解釋、專屬比喻、真實例子、逐步拆解、syntax-highlighted code，同更豐富嘅互動動畫。' : 'Every core concept includes a deep explanation, its own metaphor, a real example, step-by-step reasoning, syntax-highlighted code, and richer interactive motion.'}</p>
             <div className="hero-actions"><Link className="primary-action" href={`/learn/${currentTopic.slug}`}>{mastered ? text.continue : text.start}<span aria-hidden="true">→</span></Link><Link className="secondary-action" href="/concept-map">{text.map}</Link></div>
-            <div className="trust-row"><span>✓ 59 {lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ {lang === 'zh' ? '互動 code 同動畫' : 'Interactive code & motion'}</span><span>✓ {lang === 'zh' ? '鍵盤與減少動態支援' : 'Keyboard & reduced motion'}</span></div>
+            <div className="trust-row"><span>✓ 61 {lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ {lang === 'zh' ? '互動 code 同動畫' : 'Interactive code & motion'}</span><span>✓ {lang === 'zh' ? '鍵盤與減少動態支援' : 'Keyboard & reduced motion'}</span></div>
           </motion.div>
           <motion.div className="progress-orbit" aria-label={`${text.progress}: ${percent}%`} initial={{opacity:0,scale:.92,rotate:1.5}} animate={{opacity:1,scale:1,rotate:0}} transition={{duration:.75,delay:.18,type:'spring',bounce:.25}} whileHover={{y:-6,rotate:-.35}}>
             <div className="orbit-heading"><div><small>{text.progress}</small><strong>{percent}%</strong></div><span>{mastered}/13</span></div>

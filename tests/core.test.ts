@@ -27,9 +27,9 @@ test('all thirteen lesson contracts and 104 quiz questions validate',()=>{
   }
 });
 
-test('all thirteen topics include complete concepts and seven production workshops',()=>{
+test('all thirteen topics include complete concepts and nine production workshops',()=>{
   assert.deepEqual(Object.keys(conceptDetails).sort(),topics.map((topic)=>topic.id).sort());
-  assert.equal(Object.values(conceptDetails).flat().length,59);
+  assert.equal(Object.values(conceptDetails).flat().length,61);
   for(const topic of topics){
     const details=conceptDetails[topic.id];
     assert.ok(details.length>=4 && details.length<=6);
@@ -41,8 +41,10 @@ test('all thirteen topics include complete concepts and seven production worksho
       assert.ok(detail.code.includes('\n'));
     }
   }
-  assert.deepEqual(['t1','t2','t3','t4','t6'].map((id)=>conceptDetails[id].length),[5,5,5,5,5]);
+  assert.deepEqual(['t1','t2','t3','t4','t6'].map((id)=>conceptDetails[id].length),[5,5,5,6,6]);
   assert.equal(conceptDetails.t13.length,6);
+  assert.match(JSON.stringify(conceptDetails.t4),/context offloading and delegation/i);
+  assert.match(JSON.stringify(conceptDetails.t6),/trace[\s\S]*dataset[\s\S]*offline regression/i);
 });
 
 test('provider lesson uses OpenRouter instead of the source PDFs Volcengine setup',()=>{

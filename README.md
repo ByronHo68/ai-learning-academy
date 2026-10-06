@@ -33,6 +33,7 @@ node server.mjs
 - `site/app.js` — routing, interactions, quizzes, and local progress
 - `site/curriculum.js` — all lesson, quiz, and source content
 - `site/concepts.js` — base concept/metaphor/example/code workshops
+- `site/everyday-examples.js` — two bilingual everyday scenarios for every concept (160 total), each explaining how familiar activities connect to the technical idea
 - `site/production-track.js` — thirteen applied production-engineering workshops
 - `site/markdown-track.js` — fifteen workshops derived from the complete Markdown-corpus review
 - `server.mjs` — zero-dependency static server using Node built-ins

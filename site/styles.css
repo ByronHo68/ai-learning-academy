@@ -777,6 +777,19 @@ label:has(input:checked) .radio-ui { border: 6px solid var(--teal); }
 .vocabulary-grid h3 { margin: 6px 0; color: var(--navy); font-size: 15px; }
 .vocabulary-grid p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.6; }
 .concept-workshop { margin-top: 56px; }
+.everyday-examples { margin-bottom: 18px; }
+.everyday-examples > header { padding: 8px 0 14px; }
+.everyday-examples > header .eyebrow { margin: 0 0 7px; color: var(--teal); }
+.everyday-examples h3 { margin: 0; color: var(--navy); font-size: 19px; line-height: 1.4; }
+.everyday-examples > header > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.everyday-example-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 12px; }
+.everyday-example-grid > article { min-width: 0; padding: 18px; display: flex; flex-direction: column; align-items: flex-start; border: 1px solid #bcded3; border-radius: 14px; background: #f7fcf9; overflow-wrap: anywhere; }
+.everyday-example-number { padding: 5px 8px; border-radius: 6px; color: #075f50; background: #dbf1e6; font: 800 10px ui-monospace,monospace; }
+.everyday-example-grid h4 { margin: 12px 0 0; color: var(--navy); font-size: 16px; line-height: 1.5; }
+.everyday-example-grid > article > p { margin: 9px 0 16px; color: #415c59; font-size: 13px; line-height: 1.85; }
+.everyday-connection { width: 100%; margin-top: auto; padding: 13px; border-radius: 10px; color: #285b52; background: #e5f3ec; }
+.everyday-connection b { display: block; color: #075f50; font-size: 11px; }
+.everyday-connection p { margin: 6px 0 0; font-size: 12px; line-height: 1.8; }
 .concept-workshop > header { padding: clamp(24px,4vw,38px); display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; border-radius: 20px 20px 0 0; color: white; background: linear-gradient(135deg,var(--navy),#0d4d55); }
 .concept-workshop > header h2 { max-width: 760px; margin: 0; font-size: clamp(27px,3.3vw,40px); line-height: 1.12; letter-spacing: -.045em; }
 .concept-workshop > header p:last-child { max-width: 740px; margin: 14px 0 0; color: #bed4d7; font-size: 11px; line-height: 1.75; }

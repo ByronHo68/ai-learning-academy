@@ -1,5 +1,6 @@
 import { productionConceptDetails } from './production-track.js';
 import { markdownConceptDetails } from './markdown-track.js';
+import { dailyExamplesForConcept } from './everyday-examples.js';
 
 const c = (zh, en) => ({ zh, en });
 
@@ -513,7 +514,8 @@ const supplementalConceptDetails = {
 export const conceptDetails = Object.fromEntries(
   Object.keys(baseConceptDetails).map((topicId) => [
     topicId,
-    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...(productionConceptDetails[topicId] || []), ...(markdownConceptDetails[topicId] || [])],
+    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...(productionConceptDetails[topicId] || []), ...(markdownConceptDetails[topicId] || [])]
+      .map((detail) => ({ ...detail, dailyExamples: dailyExamplesForConcept(detail.title.en) })),
   ]),
 );
 

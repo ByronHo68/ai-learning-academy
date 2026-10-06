@@ -37,6 +37,25 @@ test('every topic has detailed metaphors, real examples, steps, and code', () =>
   }
 });
 
+test('every concept has two distinct bilingual everyday scenarios with an explicit connection', () => {
+  const stories = { zh: new Set(), en: new Set() };
+  for (const detail of Object.values(conceptDetails).flat()) {
+    assert.equal(detail.dailyExamples.length, 2, detail.title.en);
+    assert.equal(new Set(detail.dailyExamples.map((item) => item.title.en)).size, 2);
+    for (const example of detail.dailyExamples) {
+      for (const lang of ['zh', 'en']) {
+        assert.ok(example.title[lang].trim().length > 0);
+        assert.ok(example.story[lang].trim().length > 20, detail.title.en);
+        assert.ok(example.connection[lang].trim().length > 20, detail.title.en);
+        assert.notEqual(example.story[lang], example.connection[lang]);
+        stories[lang].add(example.story[lang]);
+      }
+    }
+  }
+  assert.equal(stories.zh.size, 160);
+  assert.equal(stories.en.size, 160);
+});
+
 test('API lesson uses OpenRouter and removes the old mainland-China provider', async () => {
   const curriculum = await readFile(resolve(root, 'site/curriculum.js'), 'utf8');
   const concepts = await readFile(resolve(root, 'site/concepts.js'), 'utf8');
@@ -58,7 +77,7 @@ test('package has no dependencies and targets Node 18.18', async () => {
 test('plain browser application contains every required learning surface', async () => {
   const application = await readFile(resolve(root, 'site/app.js'), 'utf8');
   const html = await readFile(resolve(root, 'site/index.html'), 'utf8');
-  for (const token of ['conceptWorkshop', 'copy-code', 'visualLab', 'quizTab', 'reviewPage', 'assessmentPage', 'glossaryPage', 'settingsPage', 'localStorage', 'prefers-reduced-motion']) {
+  for (const token of ['conceptWorkshop', 'everydayExamplesSection(detail)', 'everyday-example-grid', 'copy-code', 'visualLab', 'quizTab', 'reviewPage', 'assessmentPage', 'glossaryPage', 'settingsPage', 'localStorage', 'prefers-reduced-motion']) {
     assert.ok(application.includes(token), `missing ${token}`);
   }
   assert.ok(html.includes('type="module"'));

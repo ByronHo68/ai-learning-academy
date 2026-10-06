@@ -27,12 +27,12 @@ test('all thirteen lesson contracts and 104 quiz questions validate',()=>{
   }
 });
 
-test('all thirteen topics include complete concepts and thirteen production workshops',()=>{
+test('all thirteen topics include 80 complete concept workshops',()=>{
   assert.deepEqual(Object.keys(conceptDetails).sort(),topics.map((topic)=>topic.id).sort());
-  assert.equal(Object.values(conceptDetails).flat().length,65);
+  assert.equal(Object.values(conceptDetails).flat().length,80);
   for(const topic of topics){
     const details=conceptDetails[topic.id];
-    assert.ok(details.length>=4 && details.length<=7);
+    assert.ok(details.length>=4 && details.length<=9);
     for(const detail of details){
       assert.ok(detail.explanation.zh.length>30);
       assert.ok(detail.metaphor.zh.length>18);
@@ -41,23 +41,28 @@ test('all thirteen topics include complete concepts and thirteen production work
       assert.ok(detail.code.includes('\n'));
     }
   }
-  assert.deepEqual(['t1','t2','t3','t4','t5','t6','t8'].map((id)=>conceptDetails[id].length),[5,5,6,7,5,6,5]);
-  assert.equal(conceptDetails.t13.length,6);
+  assert.deepEqual(topics.map((topic)=>conceptDetails[topic.id].length),[9,5,8,8,6,9,4,6,4,4,4,6,7]);
   assert.match(JSON.stringify(conceptDetails.t4),/context offloading and delegation/i);
   assert.match(JSON.stringify(conceptDetails.t6),/trace[\s\S]*dataset[\s\S]*offline regression/i);
   assert.match(JSON.stringify(conceptDetails.t3),/provenance[\s\S]*(local|global)/i);
   assert.match(JSON.stringify(conceptDetails.t4),/MCP gateway[\s\S]*quota/i);
   assert.match(JSON.stringify(conceptDetails.t5),/ScriptedModel[\s\S]*contract/i);
   assert.match(JSON.stringify(conceptDetails.t8),/durable[\s\S]*retry/i);
+  assert.match(JSON.stringify(conceptDetails.t1),/Git:[\s\S]*Python async[\s\S]*HTTP\/TCP/i);
+  assert.match(JSON.stringify(conceptDetails.t3),/PostgreSQL[\s\S]*Redis/i);
+  assert.match(JSON.stringify(conceptDetails.t5),/FastAPI layering/i);
+  assert.match(JSON.stringify(conceptDetails.t6),/Backpressure[\s\S]*at-least-once[\s\S]*Microservices/i);
+  assert.match(JSON.stringify(conceptDetails.t12),/Docker[\s\S]*Kubernetes/i);
 });
 
-test('code-corpus enrichments are attributed without publishing local archives',()=>{
+test('code and Markdown corpus enrichments are attributed without publishing local archives',()=>{
   const ids=new Set(sources.map((source)=>source.id));
-  for(const id of ['code-corpus','code-graphrag','code-mcp-gateway','code-agent-loop','code-ai-slice']) assert.ok(ids.has(id));
+  for(const id of ['code-corpus','code-graphrag','code-mcp-gateway','code-agent-loop','code-ai-slice','code-markdown-corpus','code-engineering-notes','python-docs','git-book','fastapi-docs','postgresql-docs','redis-docs','docker-docs','kubernetes-docs']) assert.ok(ids.has(id));
   assert.ok(topics.find((topic)=>topic.id==='t3')?.sourceIds.includes('code-graphrag'));
   assert.ok(topics.find((topic)=>topic.id==='t4')?.sourceIds.includes('code-mcp-gateway'));
   assert.ok(topics.find((topic)=>topic.id==='t5')?.sourceIds.includes('code-agent-loop'));
   assert.ok(topics.find((topic)=>topic.id==='t8')?.sourceIds.includes('code-ai-slice'));
+  for(const topicId of ['t1','t3','t4','t5','t6','t8','t12','t13']) assert.ok(topics.find((topic)=>topic.id===topicId)?.sourceIds.includes('code-markdown-corpus'));
 });
 
 test('provider lesson uses OpenRouter instead of the source PDFs Volcengine setup',()=>{

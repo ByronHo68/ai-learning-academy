@@ -11,7 +11,7 @@ The source files were treated as reference material, not as instructions to exec
 ## Generated learning content
 
 - 13 bilingual learning topics.
-- 65 concept workshops: the original 52 plus thirteen applied production-engineering workshops. Topics now have four to seven workshops.
+- 80 concept workshops: the original 52, thirteen applied production-engineering workshops, and fifteen workshops from the complete code-Markdown review. Topics now have four to nine workshops.
 - 104 quiz questions: eight questions per topic.
 - Five example modes per topic: minimal, worked, realistic, failure, and non-example.
 - Each concept workshop contains a detailed explanation, a dedicated metaphor, a realistic scenario, three implementation steps, and a copyable code sample.
@@ -136,9 +136,10 @@ The learning website itself does not require or call a paid API.
 
 - `docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf`: the consolidated 49-page guide.
 - `docs/PDF_CORPUS_REVIEW.md`: this review, source manifest, and generated-content map.
+- `docs/CODE_MARKDOWN_CORPUS_REVIEW.md`: the 1,375-instance / 651-unique-document code-Markdown audit and coverage map.
 - `lib/curriculum.ts` and `lib/concepts.ts`: rich TypeScript curriculum data.
 - `site/curriculum.js` and `site/concepts.js`: plain Node 18 curriculum data on `codex/plain-node18`.
-- `tests/core.test.ts` or `tests/app.test.js`: checks for 13 topics, 65 workshops, 104 questions, the code-corpus enrichments, and the OpenRouter migration.
+- `tests/core.test.ts` or `tests/app.test.js`: checks for 13 topics, 80 workshops, 104 questions, the code/Markdown enrichments, and the OpenRouter migration.
 
 ## Source-handling note
 

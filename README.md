@@ -1,6 +1,6 @@
 # AI Learning Academy — Rich Animated Edition
 
-The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 65 expanded concept workshops, including thirteen applied production-engineering labs. The newest code-corpus labs cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent contract tests, and durable long-running AI jobs, alongside Deep Agents context management and LangSmith evaluation loops. Every core concept has its own deep explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
+The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 80 expanded concept workshops. Fifteen engineering workshops come from a complete 651-unique-document Markdown corpus review, covering Git, Python async, networking, FastAPI, PostgreSQL, Redis, queues, microservices, media delivery, Docker, Kubernetes, and safe deployment. The production labs also cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent tests, durable jobs, Deep Agents, and LangSmith. Every workshop has its own explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
 
 This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/plain-node18`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/plain-node18) branch.
 
@@ -29,7 +29,7 @@ npm run dev
 
 - Course content is stored in `lib/curriculum.ts` and compiled into the app.
 - Expanded metaphors, examples, steps, and code are stored in `lib/concepts.ts`.
-- Seven production labs cover API contracts, provider fallback policy, RAG data lifecycle, tool security, telemetry and cost, evaluation gates, and incident-ready releases. Their data lives in `lib/production-track.js`.
+- Thirteen production labs live in `lib/production-track.js`; fifteen Markdown-derived engineering labs live in `lib/markdown-track.js`.
 - The API lesson uses a provider-neutral OpenRouter example instead of the source PDFs' Volcengine/Doubao-specific setup.
 - Motion respects the learner's `prefers-reduced-motion` system setting.
 - Progress, recap notes, quiz attempts, and review dates stay in the learner's browser using local storage.
@@ -41,6 +41,7 @@ npm run dev
 
 - [Bilingual AI learning roadmap and quiz guide](docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf) — the consolidated 49-page guide.
 - [Complete PDF corpus review](docs/PDF_CORPUS_REVIEW.md) — the 39-file, 1,339-page manifest, generated concept map, and OpenRouter migration notes.
+- [Complete code-Markdown corpus review](docs/CODE_MARKDOWN_CORPUS_REVIEW.md) — 1,375 instances, 651 unique documents, exclusions, source map, and the fifteen added engineering workshops.
 
 The raw topic PDFs are intentionally excluded because parts of the source set contain credential-like strings and potentially private or licensed material.
 

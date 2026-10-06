@@ -1,4 +1,5 @@
 import { productionConceptDetails } from './production-track.js';
+import { markdownConceptDetails } from './markdown-track.js';
 
 const c = (zh, en) => ({ zh, en });
 
@@ -512,7 +513,7 @@ const supplementalConceptDetails = {
 export const conceptDetails = Object.fromEntries(
   Object.keys(baseConceptDetails).map((topicId) => [
     topicId,
-    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...(productionConceptDetails[topicId] || [])],
+    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...(productionConceptDetails[topicId] || []), ...(markdownConceptDetails[topicId] || [])],
   ]),
 );
 

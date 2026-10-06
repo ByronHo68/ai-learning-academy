@@ -1,6 +1,6 @@
 # AI Learning Academy
 
-A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 65 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a production build brief, and browser-local progress. The newest code-corpus labs cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent contract tests, and durable long-running AI jobs, alongside Deep Agents context management and LangSmith evaluation loops. Every core concept has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
+A zero-dependency, bilingual AI curriculum built with plain HTML, CSS, and JavaScript. It includes all 13 lessons, 80 detailed concept workshops, 104 quiz questions, interactive visual walkthroughs, remediation, spaced review, a cumulative assessment, a production build brief, and browser-local progress. Fifteen engineering workshops come from a complete 651-unique-document Markdown corpus review, covering Git, Python async, networking, FastAPI, PostgreSQL, Redis, queues, microservices, media delivery, Docker, Kubernetes, and safe deployment. Every workshop has a deeper explanation, its own metaphor, a realistic example, an implementation sequence, and copyable code.
 
 ## Start — no install required
 
@@ -33,7 +33,8 @@ node server.mjs
 - `site/app.js` — routing, interactions, quizzes, and local progress
 - `site/curriculum.js` — all lesson, quiz, and source content
 - `site/concepts.js` — base concept/metaphor/example/code workshops
-- `site/production-track.js` — seven applied production-engineering workshops
+- `site/production-track.js` — thirteen applied production-engineering workshops
+- `site/markdown-track.js` — fifteen workshops derived from the complete Markdown-corpus review
 - `server.mjs` — zero-dependency static server using Node built-ins
 - `scripts/build.mjs` — copies the static site to `dist/`
 
@@ -43,6 +44,7 @@ Progress stays in the learner's browser with local storage. Settings can export/
 
 - [Bilingual AI learning roadmap and quiz guide](docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf) — the consolidated 49-page guide.
 - [Complete PDF corpus review](docs/PDF_CORPUS_REVIEW.md) — the 39-file, 1,339-page manifest, generated concept map, and OpenRouter migration notes.
+- [Complete code-Markdown corpus review](docs/CODE_MARKDOWN_CORPUS_REVIEW.md) — 1,375 instances, 651 unique documents, exclusions, source map, and the fifteen added engineering workshops.
 
 The raw topic PDFs are intentionally excluded because parts of the source set contain credential-like strings and potentially private or licensed material.
 

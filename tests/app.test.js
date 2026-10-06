@@ -22,13 +22,11 @@ test('all 13 lessons and 104 questions validate', () => {
 });
 
 test('every topic has detailed metaphors, real examples, steps, and code', () => {
-  assert.equal(Object.values(conceptDetails).flat().length, 65);
-  assert.equal(conceptDetails.t13.length, 6);
-  assert.deepEqual(['t1','t2','t3','t4','t5','t6','t8'].map((id) => conceptDetails[id].length), [5,5,6,7,5,6,5]);
-  assert.equal(conceptDetails.t6.length, 6);
+  assert.equal(Object.values(conceptDetails).flat().length, 80);
+  assert.deepEqual(topics.map((topic) => conceptDetails[topic.id].length), [9,5,8,8,6,9,4,6,4,4,4,6,7]);
   for (const topic of topics) {
     const details = conceptDetails[topic.id];
-    assert.ok(Array.isArray(details) && details.length >= 4 && details.length <= 7, `${topic.id} needs four to seven concept labs`);
+    assert.ok(Array.isArray(details) && details.length >= 4 && details.length <= 9, `${topic.id} needs four to nine concept labs`);
     for (const detail of details) {
       assert.ok(detail.explanation.zh.length > 40);
       assert.ok(detail.metaphor.zh.length > 2);
@@ -72,6 +70,7 @@ test('plain browser application contains every required learning surface', async
 
 test('production sources and Node 18 browser module are bundled', async () => {
   const production = await readFile(resolve(root, 'site/production-track.js'), 'utf8');
+  const markdown = await readFile(resolve(root, 'site/markdown-track.js'), 'utf8');
   assert.ok(production.includes('Provider fallback is a policy decision'));
   assert.ok(production.includes('Canary releases, rollback, and incident runbooks'));
   assert.ok(production.includes('Deep Agents: context offloading and delegation'));
@@ -80,6 +79,10 @@ test('production sources and Node 18 browser module are bundled', async () => {
   assert.ok(production.includes('MCP gateway: identity, capability, quota, and audit'));
   assert.ok(production.includes('Model seams and reproducible agent contract tests'));
   assert.ok(production.includes('Durable long-running jobs: state machines, artifacts, and safe retries'));
+  assert.match(markdown, /Git:[\s\S]*Python async[\s\S]*HTTP\/TCP/);
+  assert.match(markdown, /PostgreSQL[\s\S]*Redis[\s\S]*FastAPI layering/);
+  assert.match(markdown, /Backpressure[\s\S]*at-least-once[\s\S]*Microservices/);
+  assert.match(markdown, /Docker[\s\S]*Kubernetes[\s\S]*rollback-ready release/);
   assert.ok(sources.some((source) => source.id === 'openrouter-fallback'));
   assert.ok(sources.some((source) => source.id === 'aws-genai-ops'));
   assert.ok(sources.some((source) => source.id === 'deepagents-subagents'));
@@ -89,6 +92,7 @@ test('production sources and Node 18 browser module are bundled', async () => {
   assert.ok(topics.find((topic) => topic.id === 't4').sourceIds.includes('code-mcp-gateway'));
   assert.ok(topics.find((topic) => topic.id === 't5').sourceIds.includes('code-agent-loop'));
   assert.ok(topics.find((topic) => topic.id === 't8').sourceIds.includes('code-ai-slice'));
+  for (const topicId of ['t1','t3','t4','t5','t6','t8','t12','t13']) assert.ok(topics.find((topic) => topic.id === topicId).sourceIds.includes('code-markdown-corpus'));
 });
 
 test('dated claims map to known sources with valid URLs', () => {

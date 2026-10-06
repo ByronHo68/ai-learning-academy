@@ -148,7 +148,7 @@ function Dashboard({ state, setState }: { state:AcademyState; setState:React.Dis
             <h1>{lang === 'zh' ? <>唔只識用 AI。<br/>真正理解佢點運作。</> : <>Don’t just use AI.<br/>Understand how it works.</>}</h1>
             <p className="hero-lede">{lang === 'zh' ? '每個核心概念都有深入解釋、專屬比喻、真實例子、逐步拆解、syntax-highlighted code，同更豐富嘅互動動畫。' : 'Every core concept includes a deep explanation, its own metaphor, a real example, step-by-step reasoning, syntax-highlighted code, and richer interactive motion.'}</p>
             <div className="hero-actions"><Link className="primary-action" href={`/learn/${currentTopic.slug}`}>{mastered ? text.continue : text.start}<span aria-hidden="true">→</span></Link><Link className="secondary-action" href="/concept-map">{text.map}</Link></div>
-            <div className="trust-row"><span>✓ 80 {lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ {lang === 'zh' ? '651 份獨立 Markdown 已審閱' : '651 unique Markdown documents reviewed'}</span><span>✓ {lang === 'zh' ? '鍵盤與減少動態支援' : 'Keyboard & reduced motion'}</span></div>
+            <div className="trust-row"><span>✓ 80 {lang === 'zh' ? '個概念工作坊' : 'concept workshops'}</span><span>✓ {lang === 'zh' ? '160 個生活例子' : '160 everyday examples'}</span><span>✓ {lang === 'zh' ? '鍵盤與減少動態支援' : 'Keyboard & reduced motion'}</span></div>
           </motion.div>
           <motion.div className="progress-orbit" aria-label={`${text.progress}: ${percent}%`} initial={{opacity:0,scale:.92,rotate:1.5}} animate={{opacity:1,scale:1,rotate:0}} transition={{duration:.75,delay:.18,type:'spring',bounce:.25}} whileHover={{y:-6,rotate:-.35}}>
             <div className="orbit-heading"><div><small>{text.progress}</small><strong>{percent}%</strong></div><span>{mastered}/13</span></div>
@@ -284,13 +284,23 @@ function RichCodeExample({ detail, lang, index }:{ detail:ConceptDetail; lang:La
   </div>;
 }
 
+function EverydayExamples({ examples,lang }:{ examples:ConceptDetail['dailyExamples'];lang:Lang }) {
+  return <section className="everyday-examples" aria-label={lang==='zh'?'生活例子':'Everyday examples'}>
+    <header><p className="eyebrow">{lang==='zh'?'由日常生活開始':'EVERYDAY LIFE'}</p><h3>{lang==='zh'?'先用熟悉嘅事，理解新概念':'Understand the concept through familiar situations'}</h3><p>{lang==='zh'?'先想像情境，再睇「對應概念」：生活中嘅每個角色，喺系統入面代表乜？':'Picture each situation, then read “How it connects” to map everyday actions to the system.'}</p></header>
+    <div className="everyday-example-grid">{examples.map((example,index)=><article key={example.title.en}>
+      <span className="everyday-example-number">{String(index+1).padStart(2,'0')}</span><h4>{pick(example.title,lang)}</h4><p>{pick(example.story,lang)}</p>
+      <div className="everyday-connection"><b>{lang==='zh'?'對應概念':'How it connects'}</b><p>{pick(example.connection,lang)}</p></div>
+    </article>)}</div>
+  </section>;
+}
+
 function ConceptWorkshop({ topic,lang }:{ topic:Topic;lang:Lang }) {
   const details=detailsForTopic(topic.id);
   const [expanded,setExpanded]=useState<number|null>(0);
   const reduced=useReducedMotion();
   return <section className="rich-concept-workshop" aria-labelledby={`${topic.id}-concept-workshop`}>
     <motion.header initial={reduced?false:{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true,amount:.4}} transition={{duration:.55}}>
-      <div><p className="eyebrow"><Sparkles size={13}/> CONCEPT WORKSHOP</p><h2 id={`${topic.id}-concept-workshop`}>{lang==='zh'?'每個核心概念，都要落到心智模型同 Code':'Every core concept becomes a mental model and working code'}</h2><p>{lang==='zh'?'每個 workshop 有深入解釋、專屬比喻、真實情境、三步實作同 syntax-highlighted code。逐張展開，唔需要一次消化晒。':'Each workshop combines a deep explanation, its own metaphor, a real scenario, three implementation steps, and syntax-highlighted code. Expand them one at a time.'}</p></div><strong>{details.length}<small>DEEP LABS</small></strong>
+      <div><p className="eyebrow"><Sparkles size={13}/> CONCEPT WORKSHOP</p><h2 id={`${topic.id}-concept-workshop`}>{lang==='zh'?'每個核心概念，都要落到心智模型同 Code':'Every core concept becomes a mental model and working code'}</h2><p>{lang==='zh'?'每個概念先用兩個生活例子講清，再連到專屬比喻、真實技術情境、三步實作同 code。逐張展開，唔需要一次消化晒。':'Each concept starts with two everyday scenarios and explicit connections, followed by a metaphor, a technical example, implementation steps, and code. Expand them one at a time.'}</p></div><strong>{details.length}<small>DEEP LABS</small></strong>
     </motion.header>
     <div className="rich-concept-list">{details.map((detail,index)=>{
       const open=expanded===index;
@@ -299,7 +309,7 @@ function ConceptWorkshop({ topic,lang }:{ topic:Topic;lang:Lang }) {
           <span className="rich-concept-number">{String(index+1).padStart(2,'0')}</span><span><small>{detail.language} · CONCEPT LAB</small><b>{pick(detail.title,lang)}</b><em>{pick(detail.explanation,lang)}</em></span><motion.i animate={{rotate:open?180:0}}><ChevronDown size={20}/></motion.i>
         </button>
         <AnimatePresence initial={false}>{open&&<motion.div className="rich-concept-expanded" initial={reduced?{opacity:1}:{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={reduced?{opacity:0}:{height:0,opacity:0}} transition={{duration:.42,ease:[.2,.8,.2,1]}}>
-          <div className="rich-concept-inner"><div className="rich-concept-bridges"><motion.section whileHover={reduced?undefined:{y:-4}}><Lightbulb size={21}/><small>{lang==='zh'?'專屬比喻':'METAPHOR'}</small><h3>{pick(detail.metaphorTitle,lang)}</h3><p>{pick(detail.metaphor,lang)}</p></motion.section><motion.section whileHover={reduced?undefined:{y:-4}}><TestTube2 size={21}/><small>{lang==='zh'?'真實情境':'REAL EXAMPLE'}</small><p>{pick(detail.example,lang)}</p></motion.section></div><ol className="rich-concept-steps">{detail.steps.map((step,stepIndex)=><motion.li key={stepIndex} initial={reduced?false:{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:.12+stepIndex*.08}}><span>{stepIndex+1}</span><p>{pick(step,lang)}</p></motion.li>)}</ol><RichCodeExample detail={detail} lang={lang} index={index}/></div>
+          <div className="rich-concept-inner"><EverydayExamples examples={detail.dailyExamples} lang={lang}/><div className="rich-concept-bridges"><motion.section whileHover={reduced?undefined:{y:-4}}><Lightbulb size={21}/><small>{lang==='zh'?'專屬比喻':'METAPHOR'}</small><h3>{pick(detail.metaphorTitle,lang)}</h3><p>{pick(detail.metaphor,lang)}</p></motion.section><motion.section whileHover={reduced?undefined:{y:-4}}><TestTube2 size={21}/><small>{lang==='zh'?'真實情境':'REAL EXAMPLE'}</small><p>{pick(detail.example,lang)}</p></motion.section></div><ol className="rich-concept-steps">{detail.steps.map((step,stepIndex)=><motion.li key={stepIndex} initial={reduced?false:{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:.12+stepIndex*.08}}><span>{stepIndex+1}</span><p>{pick(step,lang)}</p></motion.li>)}</ol><RichCodeExample detail={detail} lang={lang} index={index}/></div>
         </motion.div>}</AnimatePresence>
       </motion.article>;
     })}</div>

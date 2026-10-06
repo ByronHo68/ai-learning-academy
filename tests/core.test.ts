@@ -55,6 +55,26 @@ test('all thirteen topics include 80 complete concept workshops',()=>{
   assert.match(JSON.stringify(conceptDetails.t12),/Docker[\s\S]*Kubernetes/i);
 });
 
+test('every concept has two distinct bilingual everyday scenarios with an explicit connection',()=>{
+  const details=Object.values(conceptDetails).flat();
+  const stories={zh:new Set<string>(),en:new Set<string>()};
+  for(const detail of details){
+    assert.equal(detail.dailyExamples.length,2,detail.title.en);
+    assert.equal(new Set(detail.dailyExamples.map((item)=>item.title.en)).size,2);
+    for(const example of detail.dailyExamples){
+      for(const lang of ['zh','en'] as const){
+        assert.ok(example.title[lang].trim().length>0);
+        assert.ok(example.story[lang].trim().length>20,detail.title.en);
+        assert.ok(example.connection[lang].trim().length>20,detail.title.en);
+        assert.notEqual(example.story[lang],example.connection[lang]);
+        stories[lang].add(example.story[lang]);
+      }
+    }
+  }
+  assert.equal(stories.zh.size,160);
+  assert.equal(stories.en.size,160);
+});
+
 test('code and Markdown corpus enrichments are attributed without publishing local archives',()=>{
   const ids=new Set(sources.map((source)=>source.id));
   for(const id of ['code-corpus','code-graphrag','code-mcp-gateway','code-agent-loop','code-ai-slice','code-markdown-corpus','code-engineering-notes','python-docs','git-book','fastapi-docs','postgresql-docs','redis-docs','docker-docs','kubernetes-docs']) assert.ok(ids.has(id));

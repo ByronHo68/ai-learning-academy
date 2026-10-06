@@ -29,6 +29,7 @@ npm run dev
 
 - Course content is stored in `lib/curriculum.ts` and compiled into the app.
 - Expanded metaphors, examples, steps, and code are stored in `lib/concepts.ts`.
+- Every one of the 80 concept workshops now starts with two bilingual everyday scenarios (160 total) and an explicit explanation of how the situation connects to the technical idea. These live in `lib/everyday-examples.js` and cover shopping, cooking, travel, studying, phones, and home life.
 - Thirteen production labs live in `lib/production-track.js`; fifteen Markdown-derived engineering labs live in `lib/markdown-track.js`.
 - The API lesson uses a provider-neutral OpenRouter example instead of the source PDFs' Volcengine/Doubao-specific setup.
 - Motion respects the learner's `prefers-reduced-motion` system setting.

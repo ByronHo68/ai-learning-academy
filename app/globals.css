@@ -307,6 +307,19 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .rich-concept-summary > i { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; color: var(--teal); background: var(--mint); font-style: normal; }
 .rich-concept-expanded { overflow: hidden; }
 .rich-concept-inner { padding: 0 18px 20px 75px; }
+.everyday-examples { margin-bottom: 18px; }
+.everyday-examples > header { padding: 8px 0 14px; }
+.everyday-examples > header .eyebrow { margin: 0 0 7px; color: var(--teal); }
+.everyday-examples h3 { margin: 0; color: var(--navy); font-size: 19px; line-height: 1.4; }
+.everyday-examples > header > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.everyday-example-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 12px; }
+.everyday-example-grid > article { min-width: 0; padding: 18px; display: flex; flex-direction: column; align-items: flex-start; border: 1px solid #bcded3; border-radius: 14px; background: #f7fcf9; overflow-wrap: anywhere; }
+.everyday-example-number { padding: 5px 8px; border-radius: 6px; color: #075f50; background: #dbf1e6; font: 800 10px ui-monospace,monospace; }
+.everyday-example-grid h4 { margin: 12px 0 0; color: var(--navy); font-size: 16px; line-height: 1.5; }
+.everyday-example-grid > article > p { margin: 9px 0 16px; color: #415c59; font-size: 13px; line-height: 1.85; }
+.everyday-connection { width: 100%; margin-top: auto; padding: 13px; border-radius: 10px; color: #285b52; background: #e5f3ec; }
+.everyday-connection b { display: block; color: #075f50; font-size: 11px; }
+.everyday-connection p { margin: 6px 0 0; font-size: 12px; line-height: 1.8; }
 .rich-concept-bridges { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
 .rich-concept-bridges section { min-height: 175px; padding: 21px; border-radius: 14px; background: #fff7e8; }
 .rich-concept-bridges section:last-child { background: #eef6ff; }

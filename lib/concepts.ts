@@ -1,6 +1,13 @@
 import type { Copy } from './curriculum';
 import { productionConceptDetails } from './production-track.js';
 import { markdownConceptDetails } from './markdown-track.js';
+import { dailyExamplesForConcept } from './everyday-examples.js';
+
+export type DailyExample = {
+  title: Copy;
+  story: Copy;
+  connection: Copy;
+};
 
 export type ConceptDetail = {
   title: Copy;
@@ -12,15 +19,18 @@ export type ConceptDetail = {
   codeTitle: Copy;
   code: string;
   steps: Copy[];
+  dailyExamples: DailyExample[];
 };
+
+type ConceptSeed = Omit<ConceptDetail, 'dailyExamples'>;
 
 const c = (zh: string, en: string): Copy => ({ zh, en });
 
-const concept = (title: Copy, explanation: Copy, metaphorTitle: Copy, metaphor: Copy, example: Copy, language: string, codeTitle: Copy, code: string, steps: Copy[]): ConceptDetail => ({
+const concept = (title: Copy, explanation: Copy, metaphorTitle: Copy, metaphor: Copy, example: Copy, language: string, codeTitle: Copy, code: string, steps: Copy[]): ConceptSeed => ({
   title, explanation, metaphorTitle, metaphor, example, language, codeTitle, code, steps,
 });
 
-const baseConceptDetails: Record<string, ConceptDetail[]> = {
+const baseConceptDetails: Record<string, ConceptSeed[]> = {
   t1: [
     concept(c('信任邊界', 'Trust boundaries'), c('每次資料由一個控制範圍進入另一個範圍，都要重新驗證身份、形狀、大小與權限。Frontend 提交嘅 role、price 或 userId 都只係聲稱，唔係事實。', 'Whenever data crosses into a new control boundary, re-check identity, shape, size, and authorization. A role, price, or userId submitted by the frontend is only a claim—not a fact.'), c('機場轉機', 'Airport transfer'), c('每過一個關口都要再驗證登機證同護照；你唔會因為上一個機場檢查過，就容許任何人直接入駕駛艙。', 'Every checkpoint verifies your boarding pass again; a previous airport check does not grant access to the cockpit.'), c('退款表單只提交 orderId 同 reason；backend 由 session 取得 customerId，再查訂單擁有者。', 'A refund form submits only orderId and reason; the backend derives customerId from the session and checks ownership.'), 'JavaScript', c('Server-side boundary check', 'Server-side boundary check'), [
       "function authorizeRefund(session, body, orders) {",
@@ -385,7 +395,7 @@ const baseConceptDetails: Record<string, ConceptDetail[]> = {
   ],
 };
 
-const supplementalConceptDetails: Record<string, ConceptDetail[]> = {
+const supplementalConceptDetails: Record<string, ConceptSeed[]> = {
   t1: [
     concept(c('Python 環境與可重現安裝', 'Python environments and reproducible installs'), c('Virtual environment 隔離每個 project 嘅 package；lock file 或固定版本再令另一部機重建同一套依賴。隔離唔會自動保護 secret，亦唔代表 package 可信。', 'A virtual environment isolates each project’s packages; a lockfile or pinned versions lets another machine rebuild the same dependency set. Isolation does not protect secrets or make packages trustworthy.'), c('每個實驗一個工具箱', 'One toolbox per experiment'), c('兩個實驗可以需要同名但唔同版本嘅量杯；分開工具箱就唔會互相換走零件，但仍要檢查工具來源。', 'Two experiments may need different versions of the same measuring tool. Separate toolboxes prevent collisions, but the tool source still needs review.'), c('客服 API 用獨立環境、固定 package 版本、提交 lock file；`.env` 只留本機並提供冇 secret 嘅 `.env.example`。', 'A support API uses an isolated environment, pinned packages, and a committed lockfile; `.env` stays local while a secret-free `.env.example` documents required keys.'), 'Python', c('Create and verify an isolated environment', 'Create and verify an isolated environment'), [
       "python -m venv .venv",
@@ -526,7 +536,8 @@ const supplementalConceptDetails: Record<string, ConceptDetail[]> = {
 export const conceptDetails: Record<string, ConceptDetail[]> = Object.fromEntries(
   Object.keys(baseConceptDetails).map((topicId) => [
     topicId,
-    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...((productionConceptDetails as Record<string, ConceptDetail[]>)[topicId] || []), ...((markdownConceptDetails as Record<string, ConceptDetail[]>)[topicId] || [])],
+    [...baseConceptDetails[topicId], ...(supplementalConceptDetails[topicId] || []), ...((productionConceptDetails as Record<string, ConceptSeed[]>)[topicId] || []), ...((markdownConceptDetails as Record<string, ConceptSeed[]>)[topicId] || [])]
+      .map((detail) => ({ ...detail, dailyExamples: dailyExamplesForConcept(detail.title.en) })),
   ]),
 );
 

@@ -693,7 +693,7 @@ label:has(input:checked) .radio-ui { border: 6px solid var(--teal); }
 @media (max-width: 1080px) {
   .app-header { grid-template-columns: 1fr auto; }
   .app-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; min-height: 59px; padding: 0 12px max(0px,env(safe-area-inset-bottom)); justify-content: space-around; gap: 4px; border-top: 1px solid var(--line); background: rgba(255,254,250,.97); box-shadow: 0 -10px 28px rgba(16,47,57,.08); }
-  .app-nav a { min-width: 70px; font-size: 10px; }
+  .app-nav a { min-width: 0; flex: 1; text-align: center; font-size: 10px; }
   body { padding-bottom: 59px; }
   .dashboard-hero { grid-template-columns: 1fr; }
   .progress-orbit { max-width: 760px; }

@@ -38,6 +38,13 @@ npm run dev
 - No secrets or environment variables are required to read the course.
 - `NEXT_PUBLIC_SITE_URL` is optional and only controls canonical/social-preview URLs after deployment. Copy `.env.example` to `.env.local` if you want to set it locally.
 
+## AI developer hiring practice
+
+Open `/hiring-readiness` from the navigation, dashboard, or concept map. Ten bilingual competency guides include twenty everyday examples, code, practical drills, portfolio evidence, and original interview prompts. They cover problem framing, software, ML fundamentals, data, RAG, agents, evaluation, security, operations, and communication, with optional vision/training/research paths. Reading or quiz completion is not hiring certification.
+
+- [Bilingual AI Developer Hiring Guide](docs/AI_DEVELOPER_HIRING_GUIDE.md) — evidence-based portfolio plan and interview discussion rubric.
+- Content: `lib/hiring-track.js`; job references checked on 2026-10-09. These are a small sample of experienced roles, not universal junior requirements or a hiring guarantee.
+
 ## PDF guide and review record
 
 - [Bilingual AI learning roadmap and quiz guide](docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf) — the consolidated 49-page guide.

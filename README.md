@@ -26,6 +26,13 @@ You can also start it without npm:
 node server.mjs
 ```
 
+## AI developer hiring practice
+
+Open `#/hiring-readiness` from the navigation, dashboard, or concept map. Ten bilingual competency guides include twenty everyday examples, code, practical drills, portfolio evidence, and original interview prompts. They cover problem framing, software, ML fundamentals, data, RAG, agents, evaluation, security, operations, and communication, with optional vision/training/research paths. Reading or quiz completion is not hiring certification.
+
+- [Bilingual AI Developer Hiring Guide](docs/AI_DEVELOPER_HIRING_GUIDE.md) — evidence-based portfolio plan and interview discussion rubric.
+- Content: `site/hiring-track.js`; references checked on 2026-10-09. This is a small sample of experienced roles, not universal junior requirements or a hiring guarantee. No new dependencies or paid API calls are added.
+
 ## Project structure
 
 - `site/index.html` — application shell and metadata

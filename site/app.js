@@ -1,5 +1,6 @@
 import { pick, sources, topicById, topicBySlug, topics } from './curriculum.js';
 import { detailsForTopic } from './concepts.js';
+import { renderHiringContent, renderHiringBanner } from './hiring-view.js';
 
 const STORAGE_KEY = 'ai-academy-progress-v1';
 const app = document.querySelector('#app');
@@ -93,7 +94,7 @@ function header() {
   const ui = copy[state.lang];
   return `<header class="app-header">
     <a class="brand" href="#/" aria-label="AI Academy home"><span class="brand-mark" aria-hidden="true">AI</span><span><strong>${state.lang === 'zh' ? 'AI 學習院' : 'AI Academy'}</strong><small>Visual learning academy</small></span></a>
-    <nav class="app-nav" aria-label="Primary navigation"><a href="#/">${ui.path}</a><a href="#/review">${ui.review}</a><a href="#/assessment">${ui.assessment}</a><a href="#/map">${ui.map}</a><a href="#/glossary">${ui.glossary}</a></nav>
+    <nav class="app-nav" aria-label="Primary navigation"><a href="#/">${ui.path}</a><a href="#/review">${ui.review}</a><a href="#/assessment">${ui.assessment}</a><a href="#/map">${ui.map}</a><a href="#/glossary">${ui.glossary}</a><a href="#/hiring-readiness">${state.lang === 'zh' ? '求職實戰' : 'Hiring skills'}</a></nav>
     <div class="header-actions"><button class="language-button" data-action="language" type="button"><b class="${state.lang === 'zh' ? 'active-lang' : ''}">繁中</b><span>/</span><b class="${state.lang === 'en' ? 'active-lang' : ''}">EN</b></button><a class="settings-link" href="#/settings" aria-label="${ui.settings}">⚙</a></div>
   </header>`;
 }
@@ -116,6 +117,7 @@ function dashboard() {
     <div class="progress-orbit"><div class="orbit-heading"><div><small>${ui.progress}</small><strong>${percent}%</strong></div><span>${mastered}/13</span></div><div class="orbit-track"><i style="width:${Math.max(percent,2)}%"></i></div><div class="mini-path">${topics.slice(0,6).map((topic) => `<div class="mini-node ${state.topicProgress[topic.id].status}"><b>${String(topic.order).padStart(2,'0')}</b><span>${text(topic.title)}</span><em>${statusLabel(state.topicProgress[topic.id].status)}</em></div>`).join('')}</div><a class="continue-card" href="#/lesson/${current.slug}"><span><small>${ui.continue}</small><b>${text(current.title)}</b></span><i>→</i></a></div></section>
     <section class="safety-gate"><div class="gate-number">P0</div><div class="gate-copy"><p class="eyebrow">${state.lang === 'zh' ? '開始之前' : 'BEFORE YOU START'}</p><h2>${state.lang === 'zh' ? '安全重設 · Safety reset' : 'Safety reset'}</h2><p>${state.lang === 'zh' ? '開始 AI project 前要確認嘅工程底線。' : 'Engineering preconditions before starting an AI project.'}</p></div><div class="safety-list">${safety.map((label,index) => `<label><input type="checkbox" data-safety="${index}" ${state.safetyChecks[index] ? 'checked' : ''}><span>✓</span>${escapeHtml(label)}</label>`).join('')}</div></section>
     <section class="learning-loop-section"><div><p class="eyebrow">ONE REPEATABLE RHYTHM</p><h2>${state.lang === 'zh' ? '掃、畫、跑、改、講' : 'Scan, Map, Run, Change, Explain'}</h2></div><div class="loop-track">${[['掃','Scan','10m'],['畫','Map','15m'],['跑','Run','45m'],['改','Change','20m'],['講','Explain','5m']].map(([zh,en,time],index) => `<div class="loop-step"><span>${String(index+1).padStart(2,'0')}</span><b>${state.lang === 'zh' ? zh : en}</b><small>${state.lang === 'zh' ? en : time}</small><em>${time}</em></div>`).join('')}</div></section>
+    ${renderHiringBanner(state.lang)}
     <section class="dashboard-intelligence"><div class="dashboard-status-grid"><article><span>01</span><p>${state.lang === 'zh' ? '到期溫習' : 'Reviews due'}</p><strong>${due}</strong><small>${state.reviewQueue.filter((item) => !item.done).length} ${state.lang === 'zh' ? '項排期' : 'scheduled'}</small><a href="#/review">${state.lang === 'zh' ? '開啟隊列' : 'Open queue'} →</a></article><article><span>02</span><p>${state.lang === 'zh' ? '完整課程' : 'Complete curriculum'}</p><strong>13</strong><small>104 quiz questions · 5 example modes</small><a href="#/glossary">${state.lang === 'zh' ? '搜尋詞彙' : 'Search vocabulary'} →</a></article><article><span>03</span><p>${state.lang === 'zh' ? '跨主題能力' : 'Cross-topic readiness'}</p><strong>${state.cumulative.bestScore}%</strong><small>${state.cumulative.capstoneComplete ? 'Capstone ✓' : 'Capstone ○'}</small><a href="#/assessment">${state.lang === 'zh' ? '開始總評' : 'Start assessment'} →</a></article></div></section>
     <section class="course-section"><div class="section-heading"><div><p class="eyebrow">${state.lang === 'zh' ? '課程總覽' : 'COURSE OVERVIEW'}</p><h2>${state.lang === 'zh' ? '由安全 request，行到可靠 AI 系統' : 'From a safe request to a reliable AI system'}</h2></div><div class="progress-summary"><div><span>${ui.progress}</span><b>${percent}%</b></div><div class="progress-track"><i style="width:${Math.max(percent,2)}%"></i></div><small>${mastered} / 13 ${ui.mastered}</small></div></div><div class="full-module-grid">${topics.map(courseCard).join('')}</div></section>
   </main>`);
@@ -193,7 +195,7 @@ function reviewPage() {
 }
 
 function mapPage() {
-  return shell(`<main class="utility-page"><div class="utility-hero"><p class="eyebrow">KNOWLEDGE MAP</p><h1>${state.lang === 'zh' ? '13 個概念點樣連埋一齊' : 'How the 13 concepts connect'}</h1><p>${state.lang === 'zh' ? '由基礎主線，分到資料、產品、部署同治理。' : 'Foundations branch into knowledge, agents, products, deployment, and governance.'}</p></div><div class="concept-map">${topics.map((topic) => `<a href="#/lesson/${topic.slug}" class="concept-node level-${Math.min(topic.prerequisites.length,3)} ${state.topicProgress[topic.id].status}"><span>${String(topic.order).padStart(2,'0')}</span><div><b>${text(topic.title)}</b><small>${topic.prerequisites.length ? `${state.lang === 'zh' ? '先備' : 'Prereq'}: ${topic.prerequisites.map((id) => id.toUpperCase()).join(', ')}` : (state.lang === 'zh' ? '起點' : 'Starting point')}</small></div><i>${state.topicProgress[topic.id].status === 'mastered' ? '✓' : '→'}</i></a>`).join('')}</div></main>`);
+  return shell(`<main class="utility-page"><div class="utility-hero"><p class="eyebrow">KNOWLEDGE MAP</p><h1>${state.lang === 'zh' ? '13 個概念點樣連埋一齊' : 'How the 13 concepts connect'}</h1><p>${state.lang === 'zh' ? '由基礎主線，分到資料、產品、部署同治理。' : 'Foundations branch into knowledge, agents, products, deployment, and governance.'}</p></div>${renderHiringBanner(state.lang)}<div class="concept-map">${topics.map((topic) => `<a href="#/lesson/${topic.slug}" class="concept-node level-${Math.min(topic.prerequisites.length,3)} ${state.topicProgress[topic.id].status}"><span>${String(topic.order).padStart(2,'0')}</span><div><b>${text(topic.title)}</b><small>${topic.prerequisites.length ? `${state.lang === 'zh' ? '先備' : 'Prereq'}: ${topic.prerequisites.map((id) => id.toUpperCase()).join(', ')}` : (state.lang === 'zh' ? '起點' : 'Starting point')}</small></div><i>${state.topicProgress[topic.id].status === 'mastered' ? '✓' : '→'}</i></a>`).join('')}</div></main>`);
 }
 
 function glossaryPage() {
@@ -275,6 +277,15 @@ function render() {
     if (overview) overview.textContent = state.lang === 'zh' ? '設計檢查' : 'Design checkpoint';
   }
   else if (current.path === '/map') app.innerHTML = mapPage();
+  else if (current.path === '/hiring-readiness') {
+    const selectedSkill = current.params.get('skill') || '';
+    app.innerHTML = shell(renderHiringContent(state.lang, selectedSkill));
+    if (selectedSkill) {
+      const target = app.querySelector('.hiring-skill[open]');
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    }
+  }
   else if (current.path === '/glossary') app.innerHTML = glossaryPage();
   else if (current.path === '/settings') app.innerHTML = settingsPage();
   else app.innerHTML = dashboard();

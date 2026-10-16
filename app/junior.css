@@ -1,0 +1,33 @@
+.junior-page { max-width: 1100px; }
+.junior-page p, .junior-sequence li { line-height: 1.9; }
+.junior-page h3, .junior-page h4 { line-height: 1.5; }
+.junior-sequence, .junior-setup { margin: 28px 0; padding: 24px; border: 1px solid #d9e4e4; border-radius: 16px; background: #fff; }
+.junior-sequence ol { padding-left: 24px; }
+.junior-sequence li + li { margin-top: 12px; }
+.junior-setup pre { padding: 20px; background: #102331; color: #ecf5f9; border-radius: 10px; overflow-x: auto; font-size: 13px; line-height: 1.8; }
+.junior-code { min-width: 0; max-width: 100%; }
+.junior-code pre { max-height: 560px; overflow: auto; font-size: 13px; }
+.junior-code header { gap: 16px; flex-wrap: wrap; }
+.junior-code header > div { display: flex; gap: 8px; }
+.junior-code header a { color: #ecf5f9; border: 1px solid #698091; border-radius: 6px; padding: 7px 10px; font-size: 12px; text-decoration: none; }
+.junior-code footer { flex-wrap: wrap; }
+.junior-code footer p { margin: 0; }
+.junior-code footer span { font-size: 12px; }
+.junior-lesson { scroll-margin-top: 100px; min-width: 0; }
+.junior-lesson .hiring-skill-body > section > p { margin: 10px 0 16px; }
+.junior-doc-links { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; }
+.junior-page .hiring-index a > span { flex: 0 0 22px; white-space: nowrap; }
+.junior-projects { margin-top: 44px; }
+.junior-projects .hiring-capstone { scroll-margin-top: 100px; }
+.junior-projects h4 { margin: 22px 0 8px; }
+.junior-page .hiring-source-list { overflow-wrap: anywhere; }
+.junior-page details > summary:focus-visible, .junior-page pre:focus-visible { outline: 3px solid #146553; outline-offset: 4px; }
+@media (max-width: 640px) {
+  .junior-sequence, .junior-setup { padding: 16px; }
+  .junior-page .hiring-skill-body { padding: 16px; }
+  .junior-page .hiring-skill summary { gap: 10px; }
+  .junior-page .hiring-skill summary h2 { font-size: 17px; }
+  .junior-page .hiring-capstone { padding: 18px; }
+  .junior-code header b { font-size: 12px; }
+  .junior-page .hiring-topic-links a { max-width: 100%; white-space: normal; }
+}

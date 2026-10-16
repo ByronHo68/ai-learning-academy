@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Highlight, themes, type Language } from 'prism-react-renderer';
 import { hiringCapstone, hiringSkills, hiringSources, hiringVerifiedAt, specialistTracks } from '../lib/hiring-track.js';
 import { Lang, pick, topicById } from '../lib/curriculum';
+import { JuniorBanner } from './junior-content';
 
 type HiringSkill = (typeof hiringSkills)[number];
 
@@ -50,6 +51,7 @@ export default function HiringContent({ lang }:{ lang:Lang }) {
     return()=>window.removeEventListener('hashchange',followHash);
   },[]);
   return <main className="utility-page hiring-page">
+    <JuniorBanner lang={lang}/>
     <div className="utility-hero"><p className="eyebrow">AI DEVELOPER · RECRUITER LENS</p><h1>{lang==='zh'?'由「識工具」，變成「有證據嘅 AI Developer」':'From knowing tools to proving AI engineering ability'}</h1><p>{lang==='zh'?'如果我招聘 applied AI developer，我會睇你點定義問題、寫程式、量度品質、守住安全同處理失敗。以下係練習指南，唔係自動招聘評分。':'If I were hiring an applied AI developer, I would look for problem framing, working code, measured quality, safe boundaries, and failure handling. This is a practice guide, not an automated hiring score.'}</p></div>
     <aside className="hiring-notice"><strong>{lang==='zh'?'Junior 先學核心；專門職位再加深':'Core first for juniors; specialize for the role'}</strong><p>{lang==='zh'?'以下優先次序係教學判斷，參考少量有經驗職位嘅描述，唔係所有公司嘅門檻。唔需要識晒 framework、Kubernetes 或訓練大模型先開始申請。讀完、測驗過關或開過每張卡，都唔代表已驗證 production 能力，亦唔保證獲聘。':'These priorities are editorial teaching judgment informed by a small sample of experienced-role descriptions, not universal requirements. You do not need every framework, Kubernetes, or large-model training before applying. Reading, passing quizzes, or opening cards does not verify production ability or guarantee employment.'}</p></aside>
     <nav className="hiring-index" aria-label={lang==='zh'?'能力指南目錄':'Competency guide contents'}>{hiringSkills.map((skill,index)=><a href={`#hire-${skill.id}`} onClick={()=>openSkill(`hire-${skill.id}`)} key={skill.id}><span>{String(index+1).padStart(2,'0')}</span>{pick(skill.title,lang)}</a>)}</nav>

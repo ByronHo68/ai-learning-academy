@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './hiring.css';
+import './junior.css';
+import './concept-studio.css';
 
 const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-academy.byronho680.chatgpt.site';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin),
   title: 'AI 學習院 | Visual AI Academy',
-  description: '用 80 個概念工作坊、專屬比喻、可執行 code、互動視覺與精準回饋，真正理解 AI。',
+  description: '用 80 個概念工作坊、專屬比喻、程式示例、互動視覺與精準回饋，真正理解 AI。',
   alternates: { canonical: '/' },
   openGraph: {
     title: 'AI 學習院 | Visual AI Academy',

@@ -2,6 +2,9 @@
 
 Reviewed / 核實日期: 2026-10-09
 
+Hong Kong junior supplement / 香港初級補充 (2026-10-15): start at `/junior-path` for six runnable Python lessons and three progressive projects. See [the current Hong Kong review](HK_CURRICULUM_REVIEW_2026-10-15.md) for 13 local role descriptions, access limits and the audit. The three global experienced-role references below remain historical context, not the Hong Kong sample.
+香港初級學員先到 `/junior-path`：六課 Python 實作、三個漸進項目；下方三份全球有經驗職位只保留作背景。
+
 Read the detailed bilingual lessons at `/hiring-readiness` (rich edition) or `#/hiring-readiness` (plain Node 18 edition). Each competency includes an explanation, metaphor, two everyday scenarios, code, a drill, and evidence to discuss.
 詳細雙語課堂位於 `/hiring-readiness`（豐富版）或 `#/hiring-readiness`（純 JavaScript、Node 18 版）。每項能力都有解釋、比喻、兩個生活例子、程式碼、練習同可討論嘅證據。
 

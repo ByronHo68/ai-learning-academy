@@ -83,3 +83,17 @@ npm run build             # Standard Node/Next.js production build
 npm run start:production  # Serve an existing build without rebuilding
 npm run sites:build       # Build the existing ChatGPT Sites deployment target
 ```
+
+## Hong Kong junior curriculum review (2026-10-15)
+
+Start at `/junior-path`: six complete bilingual Python lessons with offline programs, independent exercises, checks and interview guidance, plus three progressive project briefs. The 13 original topics remain a reference library. Quiz completion is labeled as a knowledge check, not practical proficiency.
+
+- Review, hiring matrix, audit and remaining work: [Hong Kong curriculum review](docs/HK_CURRICULUM_REVIEW_2026-10-15.md).
+- New content: `lib/junior-track.ts`, `lib/junior-examples.ts`, `lib/junior-projects.ts`; dated evidence: `lib/hk-market.ts`.
+- Python examples can be copied or downloaded from each lesson. They run offline using Python 3.11+ and its standard library. No live model calls were made.
+- The older 80 workshops contain conceptual fragments; some require setup, dependencies or external variables. They are not all standalone executable labs.
+- Review includes public and indexed descriptions from 13 Hong Kong roles, including explicitly labeled experienced/closed comparators. OfferToday was inaccessible; eFinancialCareers access was limited. This is a qualitative sample, not a labor-market survey.
+
+### Animated concept studio
+
+The junior path starts with six interactive visual explanations of data transformation, API access, model validation, retrieval, evaluation and agent approval. Play or step through each sequence, switch failure cases, compare top-k/threshold outcomes, and open the corresponding lesson. English and Traditional Chinese, narrow mobile layouts, reduced motion and keyboard controls are supported. See [animation notes and checks](docs/CONCEPT_ANIMATIONS.md).

@@ -1,0 +1,853 @@
+{
+  "title": "LabContracts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "Health",
+    "Run",
+    "RunIndex",
+    "EvalReport",
+    "EvalIndex"
+  ],
+  "properties": {
+    "Health": {
+      "$ref": "#/$defs/Health"
+    },
+    "Run": {
+      "$ref": "#/$defs/Run"
+    },
+    "RunIndex": {
+      "$ref": "#/$defs/RunIndex"
+    },
+    "EvalReport": {
+      "$ref": "#/$defs/EvalReport"
+    },
+    "EvalIndex": {
+      "$ref": "#/$defs/EvalIndex"
+    }
+  },
+  "$defs": {
+    "Health": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "ok",
+          "default": "ok",
+          "title": "Status",
+          "type": "string"
+        },
+        "bank_connected": {
+          "title": "Bank Connected",
+          "type": "boolean"
+        },
+        "tools": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tools",
+          "type": "array"
+        },
+        "live_configured": {
+          "title": "Live Configured",
+          "type": "boolean"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Model"
+        },
+        "langfuse_configured": {
+          "title": "Langfuse Configured",
+          "type": "boolean"
+        },
+        "synthetic": {
+          "const": true,
+          "default": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "status",
+        "bank_connected",
+        "tools",
+        "live_configured",
+        "model",
+        "langfuse_configured",
+        "synthetic"
+      ],
+      "title": "Health",
+      "type": "object"
+    },
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "title": "Step",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "title": "Elapsed Ms",
+          "type": "number"
+        },
+        "kind": {
+          "enum": [
+            "agent",
+            "tool",
+            "checkpoint",
+            "approval",
+            "error"
+          ],
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step",
+        "detail",
+        "elapsed_ms",
+        "kind"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "Metrics": {
+      "additionalProperties": false,
+      "properties": {
+        "active_ms": {
+          "default": 0,
+          "title": "Active Ms",
+          "type": "number"
+        },
+        "input_tokens": {
+          "default": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "default": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "model_calls": {
+          "default": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost Usd"
+        },
+        "cost_basis": {
+          "default": "no_model",
+          "enum": [
+            "no_model",
+            "configured_rates",
+            "unavailable"
+          ],
+          "title": "Cost Basis",
+          "type": "string"
+        },
+        "trace_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Url"
+        },
+        "tracing": {
+          "default": "disabled",
+          "enum": [
+            "disabled",
+            "enabled",
+            "error"
+          ],
+          "title": "Tracing",
+          "type": "string"
+        }
+      },
+      "required": [
+        "active_ms",
+        "input_tokens",
+        "output_tokens",
+        "model_calls",
+        "cost_usd",
+        "cost_basis",
+        "trace_url",
+        "tracing"
+      ],
+      "title": "Metrics",
+      "type": "object"
+    },
+    "PendingAction": {
+      "additionalProperties": false,
+      "properties": {
+        "tool": {
+          "const": "open_review_case",
+          "default": "open_review_case",
+          "title": "Tool",
+          "type": "string"
+        },
+        "account_id": {
+          "title": "Account Id",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool",
+        "account_id",
+        "reason"
+      ],
+      "title": "PendingAction",
+      "type": "object"
+    },
+    "Result": {
+      "additionalProperties": false,
+      "properties": {
+        "intent": {
+          "enum": [
+            "balance",
+            "transactions",
+            "review",
+            "refuse",
+            "clarify"
+          ],
+          "title": "Intent",
+          "type": "string"
+        },
+        "answer": {
+          "title": "Answer",
+          "type": "string"
+        },
+        "account_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Account Id"
+        },
+        "balance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Balance"
+        },
+        "transaction_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Transaction Ids",
+          "type": "array"
+        },
+        "case_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Id"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "action": {
+          "default": "none",
+          "enum": [
+            "none",
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intent",
+        "answer",
+        "account_id",
+        "balance",
+        "transaction_ids",
+        "case_id",
+        "sources",
+        "action"
+      ],
+      "title": "Result",
+      "type": "object"
+    },
+    "Run": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "single",
+            "supervisor"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "engine": {
+          "enum": [
+            "offline",
+            "live"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "model_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Name"
+        },
+        "language": {
+          "enum": [
+            "en",
+            "zh"
+          ],
+          "title": "Language",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "queued",
+            "running",
+            "awaiting_approval",
+            "completed",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "string"
+        },
+        "memory_turns": {
+          "default": 0,
+          "title": "Memory Turns",
+          "type": "integer"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/Event"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "metrics": {
+          "$ref": "#/$defs/Metrics"
+        },
+        "pending": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PendingAction"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Result"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "question",
+        "mode",
+        "engine",
+        "model_name",
+        "language",
+        "status",
+        "created_at",
+        "memory_turns",
+        "events",
+        "metrics",
+        "pending",
+        "result",
+        "error"
+      ],
+      "title": "Run",
+      "type": "object"
+    },
+    "RunIndex": {
+      "additionalProperties": false,
+      "properties": {
+        "runs": {
+          "items": {
+            "$ref": "#/$defs/Run"
+          },
+          "title": "Runs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "runs"
+      ],
+      "title": "RunIndex",
+      "type": "object"
+    },
+    "Check": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "passed"
+      ],
+      "title": "Check",
+      "type": "object"
+    },
+    "EvalRow": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "title": "Case Id",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "single",
+            "supervisor"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "passed": {
+          "title": "Passed",
+          "type": "boolean"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/Check"
+          },
+          "title": "Checks",
+          "type": "array"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Run Id"
+        },
+        "active_ms": {
+          "title": "Active Ms",
+          "type": "number"
+        },
+        "cost_usd": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Cost Usd"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "case_id",
+        "mode",
+        "category",
+        "question",
+        "passed",
+        "checks",
+        "run_id",
+        "active_ms",
+        "cost_usd",
+        "error"
+      ],
+      "title": "EvalRow",
+      "type": "object"
+    },
+    "EvalReport": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        },
+        "engine": {
+          "enum": [
+            "offline",
+            "live"
+          ],
+          "title": "Engine",
+          "type": "string"
+        },
+        "model_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Name"
+        },
+        "workflow_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Sha256"
+        },
+        "modes": {
+          "items": {
+            "enum": [
+              "single",
+              "supervisor"
+            ],
+            "type": "string"
+          },
+          "title": "Modes",
+          "type": "array"
+        },
+        "dataset_sha256": {
+          "title": "Dataset Sha256",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "running",
+            "completed",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "string"
+        },
+        "total": {
+          "title": "Total",
+          "type": "integer"
+        },
+        "rows": {
+          "items": {
+            "$ref": "#/$defs/EvalRow"
+          },
+          "title": "Rows",
+          "type": "array"
+        },
+        "gate_passed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gate Passed"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "engine",
+        "model_name",
+        "workflow_sha256",
+        "modes",
+        "dataset_sha256",
+        "status",
+        "created_at",
+        "total",
+        "rows",
+        "gate_passed",
+        "error"
+      ],
+      "title": "EvalReport",
+      "type": "object"
+    },
+    "EvalCase": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "category": {
+          "enum": [
+            "read",
+            "bilingual",
+            "approval",
+            "injection",
+            "boundary",
+            "memory"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        },
+        "language": {
+          "enum": [
+            "en",
+            "zh"
+          ],
+          "title": "Language",
+          "type": "string"
+        },
+        "expected_intent": {
+          "enum": [
+            "balance",
+            "transactions",
+            "review",
+            "refuse",
+            "clarify"
+          ],
+          "title": "Expected Intent",
+          "type": "string"
+        },
+        "expected_action": {
+          "default": "none",
+          "enum": [
+            "none",
+            "approved",
+            "rejected"
+          ],
+          "title": "Expected Action",
+          "type": "string"
+        },
+        "decision": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision"
+        },
+        "setup_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Setup Question"
+        },
+        "expected_balance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Balance"
+        },
+        "expected_transactions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Expected Transactions",
+          "type": "array"
+        },
+        "forbidden_text": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forbidden Text",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "category",
+        "question",
+        "language",
+        "expected_intent",
+        "expected_action",
+        "decision",
+        "setup_question",
+        "expected_balance",
+        "expected_transactions",
+        "forbidden_text"
+      ],
+      "title": "EvalCase",
+      "type": "object"
+    },
+    "EvalIndex": {
+      "additionalProperties": false,
+      "properties": {
+        "cases": {
+          "items": {
+            "$ref": "#/$defs/EvalCase"
+          },
+          "title": "Cases",
+          "type": "array"
+        },
+        "reports": {
+          "items": {
+            "$ref": "#/$defs/EvalReport"
+          },
+          "title": "Reports",
+          "type": "array"
+        }
+      },
+      "required": [
+        "cases",
+        "reports"
+      ],
+      "title": "EvalIndex",
+      "type": "object"
+    }
+  }
+}

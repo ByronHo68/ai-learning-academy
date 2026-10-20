@@ -1,12 +1,75 @@
-name: Node CI
+name: Academy quality gates
 
 on:
   push:
     branches: [main, 'codex/**']
   pull_request:
+  workflow_dispatch:
 
 jobs:
+  agent-quality:
+    runs-on: ubuntu-latest
+    env:
+      LAB_AUTH_TOKEN: ci-agent-token-only-for-synthetic-local-test
+      BANK_API_TOKEN: ci-bank-token-only-for-synthetic-local-test
+      BANK_APPROVAL_SECRET: ci-approval-secret-only-for-synthetic-local-test
+      MODEL_API_KEY: ${{ secrets.MODEL_API_KEY }}
+      MODEL_NAME: ${{ vars.MODEL_NAME }}
+      MODEL_BASE_URL: ${{ vars.MODEL_BASE_URL || 'https://openrouter.ai/api/v1' }}
+      REQUIRE_LIVE_EVAL: ${{ vars.LAB_REQUIRE_LIVE_EVAL || 'false' }}
+      EVAL_REPORT_PATH: ../../artifacts/offline-evaluation.json
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: services/agent/requirements.lock
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci
+      - run: python3 scripts/lab-setup.py
+      - run: node scripts/lab-contracts.mjs --check
+      - name: Real Java + MCP + graph regression gate
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          (cd services/bank && java -jar target/bank-1.0.0.jar) > artifacts/bank.log 2>&1 &
+          BANK_PID=$!
+          trap 'kill "$BANK_PID" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent -H "Authorization: Bearer $BANK_API_TOKEN" http://127.0.0.1:8081/health > /dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "$ready" = true
+          cd services/agent
+          .venv/bin/python -m pytest -q tests
+          if [ -n "$MODEL_API_KEY" ]; then
+            .venv/bin/python -m academy.evals --engine live --output ../../artifacts/live-evaluation.json
+          elif [ "$REQUIRE_LIVE_EVAL" = true ]; then
+            echo "Live quality gate required but MODEL_API_KEY is missing."
+            exit 1
+          else
+            echo "Live model quality not tested. Offline integration gate only." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-evaluation-evidence
+          path: artifacts/
   verify:
+    needs: agent-quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -25,6 +25,17 @@ For development with live reload:
 npm run dev
 ```
 
+## Working agent lab
+
+The new `/agent-lab`, `/agent-lab/evals`, and `/agent-lab/compare` pages connect to a real FastAPI/LangGraph backend and a Java Spring Boot MCP service. They include saved approvals and memory, three bank tools, structured results, Langfuse instrumentation, and a 50-case evaluation gate for both single-agent and supervisor designs.
+
+```bash
+npm run lab:setup  # Python 3.13 + Java 21; installs local dependencies
+npm run lab:start  # Starts the website, Python API, and Java service
+```
+
+Start in the clearly labeled offline workflow mode. Add your model and Langfuse credentials to `.env.lab` to enable live calls and exported traces. These integrations do not require keys to read the lessons. See [Agent Lab setup, architecture, evaluation and hosting](docs/AGENT_LAB.md).
+
 ## Content and saved progress
 
 - Course content is stored in `lib/curriculum.ts` and compiled into the app.

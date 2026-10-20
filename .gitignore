@@ -39,3 +39,13 @@ next-env.d.ts
 /work/
 /screenshots/
 *.tsbuildinfo
+
+# Agent lab runtimes and persisted synthetic data
+/.tools/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+/services/agent/data/
+/services/bank/data/
+/services/bank/target/
+/artifacts/

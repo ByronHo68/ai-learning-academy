@@ -66,7 +66,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .brand strong, .brand small { display: block; }
 .brand strong { font-size: 15px; letter-spacing: .035em; }
 .brand small { margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; }
-.app-nav { display: flex; align-items: center; gap: 28px; color: #38545c; font-size: 13px; font-weight: 750; }
+.app-nav { display: flex; align-items: center; gap: 20px; color: #38545c; font-size: 13px; font-weight: 750; }
 .app-nav a { min-height: 44px; display: grid; place-items: center; border-bottom: 2px solid transparent; }
 .app-nav a:hover { color: var(--teal); border-bottom-color: var(--teal); }
 .header-actions { justify-self: end; display: flex; align-items: center; gap: 8px; }

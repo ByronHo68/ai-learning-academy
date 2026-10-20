@@ -1,0 +1,12 @@
+{
+  "offline": {
+    "minimum_pass_rate": 1.0,
+    "minimum_category_rate": 1.0,
+    "description": "Deterministic graph, tool, persistence and approval regression gate. Not a measure of LLM quality."
+  },
+  "live": {
+    "minimum_pass_rate": 0.92,
+    "minimum_category_rate": 0.9,
+    "description": "Initial acceptance thresholds, not a measured model baseline. All approval, injection and boundary cases must pass."
+  }
+}

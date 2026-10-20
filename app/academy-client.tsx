@@ -9,6 +9,7 @@ import { Lang, Topic, pick, sources, topicById, topics } from '../lib/curriculum
 import { ConceptDetail, detailsForTopic } from '../lib/concepts';
 import HiringContent, { HiringBanner } from './hiring-content';
 import JuniorContent, { JuniorBanner } from './junior-content';
+import AgentLabContent from './agent-lab-content';
 import {
   AcademyState, Attempt, TopicProgress, TopicStatus, createReviewItems,
   deriveStatus, emptyProgress, initialState, mergeProgress, normalizeAcademyState, scorePercent,
@@ -82,7 +83,7 @@ function Header({ lang, setLang }: { lang:Lang; setLang:(lang:Lang)=>void }) {
         <span><strong>{lang === 'zh' ? 'AI 學習院' : 'AI Academy'}</strong><small>Visual learning academy</small></span>
       </Link>
       <nav className="app-nav" aria-label={lang === 'zh' ? '主要導覽' : 'Primary navigation'}>
-        <Link href="/junior-path">{lang==='zh'?'初級實作':'Junior practice'}</Link><Link href="/">{text.path}</Link><Link href="/review">{text.review}</Link><Link href="/assessment">{text.assessment}</Link><Link href="/concept-map">{text.map}</Link><Link href="/glossary">{text.glossary}</Link><Link href="/hiring-readiness">{lang==='zh'?'求職實戰':'Hiring skills'}</Link>
+        <Link href="/junior-path">{lang==='zh'?'初級實作':'Junior practice'}</Link><Link href="/">{text.path}</Link><Link href="/review">{text.review}</Link><Link href="/assessment">{text.assessment}</Link><Link href="/concept-map">{text.map}</Link><Link href="/glossary">{text.glossary}</Link><Link href="/hiring-readiness">{lang==='zh'?'求職實戰':'Hiring skills'}</Link><Link href="/agent-lab">{lang==='zh'?'Agent 實驗室':'Agent lab'}</Link>
       </nav>
       <div className="header-actions">
         <button className="language-button" onClick={() => setLang(lang === 'zh' ? 'en' : 'zh')} type="button" aria-label={lang === 'zh' ? 'Switch to English' : '切換到繁體中文'}>
@@ -425,7 +426,7 @@ function Settings({ state,setState }: { state:AcademyState; setState:React.Dispa
   return <Shell state={state} setState={setState}><main className="utility-page settings-page"><div className="utility-hero"><p className="eyebrow">LOCAL-FIRST SETTINGS</p><h1>{lang==='zh'?'你控制自己嘅學習資料':'You control your learning data'}</h1><p>{lang==='zh'?'進度只存喺呢個 browser。你可以匯出備份、匯入同版本資料，或者確認後重設。':'Progress stays in this browser. Export a backup, import matching versioned data, or reset with confirmation.'}</p></div><section className="settings-grid"><article><span>01</span><h2>{lang==='zh'?'語言':'Language'}</h2><p>{lang==='zh'?'繁體中文內容完整；English UI 同核心標題可切換，technical terms 保留英文。':'Traditional Chinese is complete; English UI and core titles are available, with technical terms preserved.'}</p><button onClick={()=>setState((current)=>({...current,lang:current.lang==='zh'?'en':'zh'}))}>{lang==='zh'?'Switch to English':'切換到繁體中文'}</button></article><article><span>02</span><h2>{lang==='zh'?'備份與轉移':'Backup & transfer'}</h2><p>{lang==='zh'?'JSON 包括 attempts、review queue、mastery 同設定；冇 API key 或帳戶資料。':'JSON includes attempts, review queue, mastery, and preferences—no API keys or account data.'}</p><div><button onClick={exportData}>{lang==='zh'?'匯出進度':'Export progress'}</button><button onClick={()=>fileRef.current?.click()}>{lang==='zh'?'匯入進度':'Import progress'}</button><input ref={fileRef} type="file" accept="application/json" onChange={importData} hidden/></div></article><article className="danger-setting"><span>03</span><h2>{lang==='zh'?'重設進度':'Reset progress'}</h2><p>{lang==='zh'?'刪除呢個 browser 入面所有完成狀態、測驗歷史同溫習隊列。':'Deletes completion states, quiz history, and review queue from this browser.'}</p><button onClick={reset}>{lang==='zh'?'重設所有進度':'Reset all progress'}</button></article></section>{message&&<p className="settings-message" role="status">{message}</p>}<section className="storage-note"><b>{lang==='zh'?'儲存 schema':'Storage schema'} v1</b><p>{lang==='zh'?'有效進度更新時會盡量保留；無效或損壞檔案會安全拒絕。':'Valid progress is preserved across updates where possible; malformed imports fail safely.'}</p></section></main></Shell>;
 }
 
-export default function AcademyClient({ view='dashboard', topicId }: { view?:'dashboard'|'lesson'|'review'|'assessment'|'map'|'glossary'|'settings'|'hiring'|'junior'; topicId?:string }) {
+export default function AcademyClient({ view='dashboard', topicId }: { view?:'dashboard'|'lesson'|'review'|'assessment'|'map'|'glossary'|'settings'|'hiring'|'junior'|'agent-lab'|'agent-evals'|'agent-compare'; topicId?:string }) {
   const {state,setState,ready}=useAcademyState();
   if(!ready)return <main className="loading-screen" aria-live="polite"><span className="brand-mark">AI</span><p>AI 學習院準備緊你嘅本機進度…</p></main>;
   if(view==='lesson'&&topicId){const topic=topicById(topicId);return topic?<Lesson topic={topic} state={state} setState={setState}/>:null;}
@@ -433,6 +434,7 @@ export default function AcademyClient({ view='dashboard', topicId }: { view?:'da
   if(view==='assessment')return <AssessmentPage state={state} setState={setState}/>;
   if(view==='map')return <ConceptMap state={state} setState={setState}/>;
   if(view==='junior')return <Shell state={state} setState={setState}><JuniorContent lang={state.lang}/></Shell>;
+  if(view==='agent-lab'||view==='agent-evals'||view==='agent-compare')return <Shell state={state} setState={setState}><AgentLabContent lang={state.lang} view={view==='agent-evals'?'evals':view==='agent-compare'?'compare':'run'}/></Shell>;
   if(view==='hiring')return <Shell state={state} setState={setState}><HiringContent lang={state.lang}/></Shell>;
   if(view==='glossary')return <Glossary state={state} setState={setState}/>;
   if(view==='settings')return <Settings state={state} setState={setState}/>;

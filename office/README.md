@@ -1,6 +1,6 @@
 # Run the academy at the office
 
-This folder contains the prebuilt animated learning website and a Node.js server with no npm dependencies. Use Node.js 18.18 or newer on Windows, macOS, or Linux.
+This folder contains the prebuilt animated learning website and a Node.js server with no npm dependencies. Use Node.js 18.18 or newer on Windows, macOS, or Linux. The server is tested locally on Node 18.18.1.
 
 ## Start the website
 
@@ -21,7 +21,7 @@ cd ai-learning-academy/office
 npm start
 ```
 
-Run these commands inside `office`. The repository root contains the editable Next.js edition, which needs Node 22 and npm packages.
+`npm start` also works from the extracted project's main folder. It starts this same prebuilt office website. To run without npm from the main folder, use `node office/server.mjs`. Developing the editable Next.js edition needs Node 22 and npm packages; start that edition with `npm run start:source`.
 
 No install is needed in `office`. If your workflow requires it, `npm ci --offline` or `npm install --offline` works without a populated npm cache. Do not run the install in the repository root.
 
@@ -36,6 +36,16 @@ For another port:
 ```bash
 npm start -- --port 4000
 ```
+
+## Fix a missing Next.js error
+
+If you see `Cannot find module 'next/dist/bin/next'`, your copy is using the old source-app startup command. From the extracted project's main folder, run:
+
+```bash
+node office/server.mjs
+```
+
+You do not need to install Next.js. Download the latest `codex/node18-office-bundle` branch to make `npm start` work from the main folder too.
 
 ## Check the downloaded package
 

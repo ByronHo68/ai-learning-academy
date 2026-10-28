@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node scripts/start.mjs",
+    "start": "node office/server.mjs",
+    "start:source": "node scripts/start.mjs",
     "start:production": "next start",
     "office:build": "node scripts/build-office.mjs",
     "office:test": "node --test office/tests/server.test.mjs",

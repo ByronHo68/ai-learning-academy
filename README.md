@@ -2,25 +2,25 @@
 
 ## Office computers with Node 18 or restricted npm access
 
-This branch includes a prebuilt copy of the current animated website in [`office`](office/README.md). Download this branch, open a terminal in `office`, and run `npm start` or `node server.mjs`. No npm install or registry access is needed. The root project still needs Node 22; use the commands below only when developing the source app. The live agent lab needs its separate backend setup.
+This branch includes a prebuilt copy of the current animated website in [`office`](office/README.md). Download this branch, open a terminal in the extracted project folder, and run `npm start` or `node office/server.mjs`. Node 18.18.1 works. No npm install or registry access is needed. `npm start` also works inside `office`. Developing and rebuilding the source app still needs Node 22 and installed packages. The live agent lab needs its separate backend setup.
 
 The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 80 expanded concept workshops. Fifteen engineering workshops come from a complete 651-unique-document Markdown corpus review, covering Git, Python async, networking, FastAPI, PostgreSQL, Redis, queues, microservices, media delivery, Docker, Kubernetes, and safe deployment. The production labs also cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent tests, durable jobs, Deep Agents, and LangSmith. Every workshop has its own explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
 
 This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/plain-node18`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/plain-node18) branch.
 
-## Start it
+## Develop the source app
 
 Requirements: Node.js 22.13 or newer and npm 10 or newer.
 
 ```bash
 npm install
-npm start
+npm run start:source
 ```
 
-`npm start` creates a fresh production build and then serves the site at [http://localhost:3000](http://localhost:3000). Pass a different port when needed:
+`npm run start:source` creates a fresh production build and then serves the source app at [http://localhost:3000](http://localhost:3000). Pass a different port when needed:
 
 ```bash
-npm start -- --port 4000
+npm run start:source -- --port 4000
 ```
 
 For development with live reload:

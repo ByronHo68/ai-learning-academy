@@ -11,6 +11,8 @@
     "build": "next build",
     "start": "node scripts/start.mjs",
     "start:production": "next start",
+    "office:build": "node scripts/build-office.mjs",
+    "office:test": "node --test office/tests/server.test.mjs",
     "sites:dev": "vinext dev",
     "sites:build": "vinext build",
     "sites:start": "vinext start",

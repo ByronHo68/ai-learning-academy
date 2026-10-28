@@ -1,0 +1,27 @@
+import json
+
+def count_intents(raw):
+    rows = json.loads(raw)
+    if not isinstance(rows, list):
+        raise ValueError("expected a list")
+    counts = {}
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"row {index}: expected an object")
+        intent = row.get("intent")
+        if not isinstance(intent, str) or not intent.strip():
+            raise ValueError(f"row {index}: missing intent")
+        intent = intent.strip().lower()
+        counts[intent] = counts.get(intent, 0) + 1
+    return counts
+
+assert count_intents('[{"intent":"Refund"},{"intent":" refund "}]') == {"refund": 2}
+assert count_intents('[]') == {}
+for bad in ['{}', '[null]', '[{"intent":3}]', '[{"intent":" "}]', 'broken JSON']:
+    try:
+        count_intents(bad)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError(f"accepted invalid input: {bad}")
+print("python: 2 valid + 5 invalid cases passed")

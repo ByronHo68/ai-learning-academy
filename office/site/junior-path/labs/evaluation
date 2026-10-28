@@ -1,0 +1,39 @@
+# Synthetic validation data, not a trained model or a final test result.
+def metrics(labels, scores, threshold):
+    if not labels or len(labels) != len(scores):
+        raise ValueError("nonempty, paired observations required")
+    if any(y not in (0, 1) for y in labels):
+        raise ValueError("binary labels required")
+    tp = fp = fn = tn = 0
+    for truth, score in zip(labels, scores):
+        predicted = score >= threshold
+        if predicted and truth == 1: tp += 1
+        elif predicted: fp += 1
+        elif truth == 1: fn += 1
+        else: tn += 1
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return {"tp": tp, "fp": fp, "fn": fn, "tn": tn,
+            "precision": precision, "recall": recall, "f1": f1}
+
+labels, scores = [1, 1, 0, 0], [0.9, 0.4, 0.6, 0.1]
+strict = metrics(labels, scores, 0.5)
+assert strict == {"tp": 1, "fp": 1, "fn": 1, "tn": 1,
+                  "precision": 0.5, "recall": 0.5, "f1": 0.5}
+loose = metrics(labels, scores, 0.3)
+assert loose["recall"] == 1.0 and abs(loose["f1"] - 0.8) < 1e-9
+assert metrics([0, 0], [0.1, 0.2], 0.5)["f1"] == 0.0
+
+def check_groups(train, validation, test):
+    if train & validation or train & test or validation & test:
+        raise ValueError("customer leakage between splits")
+
+check_groups({"c1", "c2"}, {"c3"}, {"c4"})
+try:
+    check_groups({"c1", "c2"}, {"c2"}, {"c4"})
+except ValueError:
+    pass
+else:
+    raise AssertionError("missed leakage")
+print("evaluation: threshold, zero-division and customer-leakage checks passed")

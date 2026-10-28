@@ -1,0 +1,24 @@
+1:"$Sreact.fragment"
+2:I[6579,["290","static/chunks/290-c7c8f6aeb4161ab3.js","507","static/chunks/507-b19319f1c066082c.js","197","static/chunks/app/assessment/page-8cae0b33c606d3ad.js"],"default"]
+3:I[2562,[],"OutletBoundary"]
+4:"$Sreact.suspense"
+8:I[2562,[],"ViewportBoundary"]
+9:I[2562,[],"MetadataBoundary"]
+b:I[6347,[],""]
+c:I[1367,[],""]
+:HL["/_next/static/css/b86b764b626f0b8c.css","style"]
+:HL["/_next/static/css/d3d2d9b9e7a373b0.css","style"]
+:HL["/_next/static/css/2710442502f04253.css","style"]
+7:X
+e:X
+e:C
+0:{"buildId":"pIR7jBh4aPQSrI34RcMEm","data":[{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"view":"assessment"}],null,["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"isPartial":"$@6","staleTime":"$7","varyParams":null},{"rsc":["$","$1","h",{"children":[null,["$","$L8",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","div",null,{"hidden":true,"children":["$","$L9",null,{"children":["$","$4",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"AI 學習院 | Visual AI Academy"}],["$","meta","1",{"name":"description","content":"用 80 個概念工作坊、專屬比喻、程式示例、互動視覺與精準回饋，真正理解 AI。"}],["$","link","2",{"rel":"canonical","href":"https://ai-learning-academy.byronho680.chatgpt.site"}],["$","meta","3",{"property":"og:title","content":"AI 學習院 | Visual AI Academy"}],["$","meta","4",{"property":"og:description","content":"13 個互動主題、80 個概念工作坊，由安全 request 行到可靠 AI 系統。"}],["$","meta","5",{"property":"og:url","content":"https://ai-learning-academy.byronho680.chatgpt.site"}],["$","meta","6",{"property":"og:site_name","content":"AI 學習院"}],["$","meta","7",{"property":"og:locale","content":"zh_HK"}],["$","meta","8",{"property":"og:image","content":"https://ai-learning-academy.byronho680.chatgpt.site/og.png"}],["$","meta","9",{"property":"og:image:width","content":"1200"}],["$","meta","10",{"property":"og:image:height","content":"630"}],["$","meta","11",{"property":"og:image:alt","content":"AI 學習院 — Visual AI Academy"}],["$","meta","12",{"property":"og:type","content":"website"}],["$","meta","13",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","14",{"name":"twitter:title","content":"AI 學習院 | Visual AI Academy"}],["$","meta","15",{"name":"twitter:description","content":"13 個互動主題、80 個概念工作坊，由安全 request 行到可靠 AI 系統。"}],["$","meta","16",{"name":"twitter:image","content":"https://ai-learning-academy.byronho680.chatgpt.site/og.png"}]]}]}]}],null]}],"isPartial":"$@a","staleTime":"$7","varyParams":null},{"rsc":["$","$1","c",{"children":[null,["$","$Lb",null,{"parallelRouterKey":"children","template":["$","$Lc",null,{}]}]]}],"isPartial":"$@d","staleTime":"$7","varyParams":"$e"},{"rsc":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/b86b764b626f0b8c.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/css/d3d2d9b9e7a373b0.css","precedence":"next"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/css/2710442502f04253.css","precedence":"next"}]],["$","html",null,{"lang":"zh-Hant","children":["$","body",null,{"children":["$","$Lb",null,{"parallelRouterKey":"children","template":["$","$Lc",null,{}],"notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]]}]}]}]]}],"isPartial":"$@f","staleTime":"$7","varyParams":null}],"isUpgradeableISRFallback":false,"a":"$@10","rootVaryParams":null,"needsRuntimeRequest":"$@11"}
+5:null
+7:300
+11:true
+7:C
+10:0
+a:"$undefined"
+d:"$undefined"
+f:"$undefined"
+6:"$undefined"

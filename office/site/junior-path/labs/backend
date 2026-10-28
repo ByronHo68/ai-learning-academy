@@ -1,0 +1,38 @@
+import json
+import sqlite3
+
+db = sqlite3.connect(":memory:")
+db.execute("CREATE TABLE orders (id TEXT PRIMARY KEY, owner TEXT, status TEXT)")
+with db:
+    db.executemany("INSERT INTO orders VALUES (?, ?, ?)", [
+        ("HK-1", "alice", "dispatched"), ("HK-2", "bob", "pending")])
+
+# A transport-independent handler; not an HTTP server or login system.
+# trusted_user must come from verified server-side authentication.
+def handle(raw_body, trusted_user):
+    if not trusted_user:
+        return 401, {"error": "unauthenticated"}
+    try:
+        body = json.loads(raw_body)
+    except (ValueError, TypeError):
+        return 400, {"error": "invalid_json"}
+    if (not isinstance(body, dict) or set(body) != {"order_id"}
+            or not isinstance(body["order_id"], str)
+            or not 1 <= len(body["order_id"]) <= 40):
+        return 422, {"error": "invalid_order_id"}
+    row = db.execute(
+        "SELECT status FROM orders WHERE id = ? AND owner = ?",
+        (body["order_id"], trusted_user)).fetchone()
+    if row is None:
+        return 404, {"error": "not_found"}
+    return 200, {"order_id": body["order_id"], "status": row[0]}
+
+assert handle('{"order_id":"HK-1"}', "alice")[0] == 200
+assert handle('{"order_id":"HK-2"}', "alice")[0] == 404
+assert handle('{"order_id":"missing"}', "alice")[0] == 404
+assert handle('{"order_id":"HK-1"}', None)[0] == 401
+assert handle('broken', "alice")[0] == 400
+assert handle('{"order_id":"HK-2","user":"bob"}', "alice")[0] == 422
+assert handle(json.dumps({"order_id": "' OR 1=1 --"}), "alice")[0] == 404
+db.close()
+print("backend: 7 contract and authorization checks passed")

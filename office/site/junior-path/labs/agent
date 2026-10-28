@@ -1,0 +1,47 @@
+# In-memory state machine with a scripted model and synthetic orders.
+# No refunds, messages or external actions are performed.
+orders = {"HK-1": {"owner": "alice", "version": 1}}
+approvals = {}  # Trusted reviewer channel, never filled from model output.
+executed = {}   # Local demonstration; not durable across process restarts.
+
+def action_key(user, proposal):
+    if (not isinstance(proposal, dict) or set(proposal) != {"tool", "order_id", "version"}
+            or proposal["tool"] != "draft_case"
+            or not isinstance(proposal["order_id"], str)
+            or type(proposal["version"]) is not int):
+        raise ValueError("tool contract denied")
+    order = orders.get(proposal["order_id"])
+    if not order or order["owner"] != user or order["version"] != proposal["version"]:
+        raise PermissionError("ownership or version changed")
+    return (user, proposal["tool"], proposal["order_id"], proposal["version"])
+
+def run(scripted_proposals, user):
+    for step, proposal in enumerate(scripted_proposals):
+        if step >= 3:
+            return "budget_exhausted"
+        if proposal is None:  # scripted model asks for another reasoning step
+            continue
+        try:
+            key = action_key(user, proposal)
+        except (ValueError, PermissionError):
+            return "denied"
+        if approvals.get(key) != "approved":
+            return "awaiting_approval"
+        if key not in executed:
+            executed[key] = {"case_id": f"CASE-{len(executed) + 1}"}
+        return executed[key]["case_id"]
+    return "handoff"
+
+p = {"tool": "draft_case", "order_id": "HK-1", "version": 1}
+assert run([p], "alice") == "awaiting_approval"
+assert run([{**p, "approved": True}], "alice") == "denied"
+assert run([p], "bob") == "denied"
+assert run([{**p, "tool": "refund"}], "alice") == "denied"
+assert run([None] * 4, "alice") == "budget_exhausted"
+assert run([], "alice") == "handoff"
+approvals[action_key("alice", p)] = "approved"  # simulated trusted reviewer
+assert run([p], "alice") == run([p], "alice") == "CASE-1"
+assert len(executed) == 1
+orders["HK-1"]["version"] = 2
+assert run([p], "alice") == "denied"
+print("agent: approval, forgery, ownership, budget, replay and stale-state checks passed")

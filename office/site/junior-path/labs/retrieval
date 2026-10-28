@@ -1,0 +1,42 @@
+import re
+
+# Synthetic Hong Kong support documents. Tags are a lexical baseline, not embeddings.
+DOCS = [
+    {"id": "returns-v2", "tenant": "shop-a", "active": True,
+     "tags": {"refund", "return", "退款", "退貨"}, "text": "Returns require a receipt. / 退貨須出示收據。"},
+    {"id": "delivery-v1", "tenant": "shop-a", "active": True,
+     "tags": {"delivery", "shipping", "送貨", "運送"}, "text": "Delivery normally takes 2 days. / 送貨一般需兩日。"},
+    {"id": "returns-v1", "tenant": "shop-a", "active": False,
+     "tags": {"refund", "退款"}, "text": "Obsolete policy"},
+    {"id": "private-v1", "tenant": "shop-b", "active": True,
+     "tags": {"refund", "退款"}, "text": "Another tenant's policy"},
+]
+
+def search(query, trusted_tenant, k=2):
+    if not isinstance(query, str) or type(k) is not int or not 1 <= k <= 5:
+        raise ValueError("invalid query or k")
+    query = query.lower()
+    # Permission and freshness filters happen before ranking.
+    candidates = [d for d in DOCS if d["tenant"] == trusted_tenant and d["active"]]
+    words = set(re.findall(r"[a-z]+", query))
+    def score(doc):
+        return sum(tag in words if tag.isascii() else tag in query for tag in doc["tags"])
+    ranked = sorted(candidates, key=lambda d: (-score(d), d["id"]))
+    return [d["id"] for d in ranked if score(d) > 0][:k]
+
+cases = [
+    ("refund receipt", "shop-a", {"returns-v2"}),
+    ("點樣退款？", "shop-a", {"returns-v2"}),
+    ("shipping", "shop-a", {"delivery-v1"}),
+    ("refund and delivery", "shop-a", {"returns-v2", "delivery-v1"}),
+]
+recalls = []
+for query, tenant, relevant in cases:
+    found = set(search(query, tenant))
+    recalls.append(len(found & relevant) / len(relevant))
+    assert not found & {"returns-v1", "private-v1"}
+assert sum(recalls) / len(recalls) == 1.0
+assert search("refund", "unknown-tenant") == []
+assert search("What is the weather?", "shop-a") == []
+print("retrieval: Recall@2=1.00 on 4 toy cases; 2 empty-result checks passed")
+print("This does not measure answer accuracy or real multilingual retrieval quality.")

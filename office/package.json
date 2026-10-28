@@ -1,0 +1,12 @@
+{
+  "name": "ai-learning-academy-office",
+  "version": "1.0.0",
+  "description": "Prebuilt animated AI Learning Academy for office computers with Node 18 and no registry access.",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18.18.0" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/server.test.mjs"
+  }
+}

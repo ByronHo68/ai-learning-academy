@@ -1,0 +1,26 @@
+name: Node 18 office package
+
+on:
+  push:
+    branches: ['codex/node18-office-bundle']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  office:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ['18.18.2', '18.20.8', '22.22.2']
+    defaults:
+      run:
+        working-directory: office
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install with no registry or cached packages
+        run: npm ci --offline --cache "${{ runner.temp }}/office-empty-cache" --registry http://127.0.0.1:9
+      - run: npm test

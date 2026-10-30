@@ -51,6 +51,10 @@ Start in the clearly labeled offline workflow mode. Add your model and Langfuse 
 
 ## AI developer hiring practice
 
+### Finance portfolio project
+
+Open `/finance-project` from the dashboard or concept map. The bilingual **Hong Kong Financial Report Analyst** blueprint includes an eight-branch interactive mind map, 24 functions, input/output contracts, acceptance checks, a seven-step answer walkthrough with a missing-evidence scenario, a technology stack and four build stages. It connects report extraction, reviewed financial facts, cited answers, comparisons, dashboards, LangGraph and later n8n automation. The walkthrough uses fictional offline examples; this is a guide to building the application, not an operational finance service. See [the project blueprint and mind map](docs/FINANCIAL_REPORT_PROJECT.md).
+
 Open `/hiring-readiness` from the navigation, dashboard, or concept map. Ten bilingual competency guides include twenty everyday examples, code, practical drills, portfolio evidence, and original interview prompts. They cover problem framing, software, ML fundamentals, data, RAG, agents, evaluation, security, operations, and communication, with optional vision/training/research paths. Reading or quiz completion is not hiring certification.
 
 - [Bilingual AI Developer Hiring Guide](docs/AI_DEVELOPER_HIRING_GUIDE.md) — evidence-based portfolio plan and interview discussion rubric.

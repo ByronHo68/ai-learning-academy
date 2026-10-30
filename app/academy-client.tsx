@@ -10,6 +10,7 @@ import { ConceptDetail, detailsForTopic } from '../lib/concepts';
 import HiringContent, { HiringBanner } from './hiring-content';
 import JuniorContent, { JuniorBanner } from './junior-content';
 import AgentLabContent from './agent-lab-content';
+import FinanceProjectContent, { FinanceProjectBanner } from './finance-project-content';
 import {
   AcademyState, Attempt, TopicProgress, TopicStatus, createReviewItems,
   deriveStatus, emptyProgress, initialState, mergeProgress, normalizeAcademyState, scorePercent,
@@ -171,6 +172,7 @@ function Dashboard({ state, setState }: { state:AcademyState; setState:React.Dis
         <section className="learning-loop-section"><div><p className="eyebrow">{lang === 'zh' ? '每課同一節奏' : 'ONE REPEATABLE RHYTHM'}</p><h2>{lang === 'zh' ? '掃、畫、跑、改、講' : 'Scan, Map, Run, Change, Explain'}</h2></div><div className="loop-track">{[['掃','Scan','10m'],['畫','Map','15m'],['跑','Run','45m'],['改','Change','20m'],['講','Explain','5m']].map(([zh,en,time],index)=><div className="loop-step" key={zh}><span>{String(index+1).padStart(2,'0')}</span><b>{lang === 'zh' ? zh : en}</b><small>{lang === 'zh' ? en : time}</small><em>{time}</em></div>)}</div></section>
 
         <DashboardIntelligence state={state}/>
+        <FinanceProjectBanner lang={lang}/>
         <JuniorBanner lang={lang}/>
         <HiringBanner lang={lang}/>
 
@@ -410,7 +412,7 @@ function ReviewPage({ state,setState }: { state:AcademyState; setState:React.Dis
 
 function ConceptMap({ state,setState }: { state:AcademyState; setState:React.Dispatch<React.SetStateAction<AcademyState>> }) {
   const lang=state.lang;
-  return <Shell state={state} setState={setState}><main className="utility-page"><div className="utility-hero"><p className="eyebrow">KNOWLEDGE MAP</p><h1>{lang==='zh'?'13 個概念點樣連埋一齊':'How the 13 concepts connect'}</h1><p>{lang==='zh'?'實線代表先備依賴。你可以由基礎主線開始，再分到資料、產品、部署同治理。':'Dependencies flow from foundations into knowledge, agents, products, deployment, and governance.'}</p></div><HiringBanner lang={lang}/><div className="concept-map" role="img" aria-label={lang==='zh'?'十三個主題依賴圖':'Dependency map for thirteen topics'}>{topics.map((topic)=><Link href={`/learn/${topic.slug}`} className={`concept-node level-${Math.min(topic.prerequisites.length,3)} ${state.topicProgress[topic.id].status}`} key={topic.id}><span>{String(topic.order).padStart(2,'0')}</span><div><b>{pick(topic.title,lang)}</b><small>{topic.prerequisites.length?`${lang==='zh'?'先備':'Prereq'}: ${topic.prerequisites.map((id)=>id.toUpperCase()).join(', ')}`:(lang==='zh'?'起點':'Starting point')}</small></div><i>{state.topicProgress[topic.id].status==='mastered'?'✓':'→'}</i></Link>)}</div><div className="map-legend"><span><i className="legend-foundation"/>{lang==='zh'?'較少先備':'Fewer prerequisites'}</span><span><i className="legend-advanced"/>{lang==='zh'?'跨主題整合':'Cross-topic integration'}</span></div></main></Shell>;
+  return <Shell state={state} setState={setState}><main className="utility-page"><div className="utility-hero"><p className="eyebrow">KNOWLEDGE MAP</p><h1>{lang==='zh'?'13 個概念點樣連埋一齊':'How the 13 concepts connect'}</h1><p>{lang==='zh'?'實線代表先備依賴。你可以由基礎主線開始，再分到資料、產品、部署同治理。':'Dependencies flow from foundations into knowledge, agents, products, deployment, and governance.'}</p></div><FinanceProjectBanner lang={lang}/><HiringBanner lang={lang}/><div className="concept-map" role="img" aria-label={lang==='zh'?'十三個主題依賴圖':'Dependency map for thirteen topics'}>{topics.map((topic)=><Link href={`/learn/${topic.slug}`} className={`concept-node level-${Math.min(topic.prerequisites.length,3)} ${state.topicProgress[topic.id].status}`} key={topic.id}><span>{String(topic.order).padStart(2,'0')}</span><div><b>{pick(topic.title,lang)}</b><small>{topic.prerequisites.length?`${lang==='zh'?'先備':'Prereq'}: ${topic.prerequisites.map((id)=>id.toUpperCase()).join(', ')}`:(lang==='zh'?'起點':'Starting point')}</small></div><i>{state.topicProgress[topic.id].status==='mastered'?'✓':'→'}</i></Link>)}</div><div className="map-legend"><span><i className="legend-foundation"/>{lang==='zh'?'較少先備':'Fewer prerequisites'}</span><span><i className="legend-advanced"/>{lang==='zh'?'跨主題整合':'Cross-topic integration'}</span></div></main></Shell>;
 }
 
 function Glossary({ state,setState }: { state:AcademyState; setState:React.Dispatch<React.SetStateAction<AcademyState>> }) {
@@ -426,7 +428,7 @@ function Settings({ state,setState }: { state:AcademyState; setState:React.Dispa
   return <Shell state={state} setState={setState}><main className="utility-page settings-page"><div className="utility-hero"><p className="eyebrow">LOCAL-FIRST SETTINGS</p><h1>{lang==='zh'?'你控制自己嘅學習資料':'You control your learning data'}</h1><p>{lang==='zh'?'進度只存喺呢個 browser。你可以匯出備份、匯入同版本資料，或者確認後重設。':'Progress stays in this browser. Export a backup, import matching versioned data, or reset with confirmation.'}</p></div><section className="settings-grid"><article><span>01</span><h2>{lang==='zh'?'語言':'Language'}</h2><p>{lang==='zh'?'繁體中文內容完整；English UI 同核心標題可切換，technical terms 保留英文。':'Traditional Chinese is complete; English UI and core titles are available, with technical terms preserved.'}</p><button onClick={()=>setState((current)=>({...current,lang:current.lang==='zh'?'en':'zh'}))}>{lang==='zh'?'Switch to English':'切換到繁體中文'}</button></article><article><span>02</span><h2>{lang==='zh'?'備份與轉移':'Backup & transfer'}</h2><p>{lang==='zh'?'JSON 包括 attempts、review queue、mastery 同設定；冇 API key 或帳戶資料。':'JSON includes attempts, review queue, mastery, and preferences—no API keys or account data.'}</p><div><button onClick={exportData}>{lang==='zh'?'匯出進度':'Export progress'}</button><button onClick={()=>fileRef.current?.click()}>{lang==='zh'?'匯入進度':'Import progress'}</button><input ref={fileRef} type="file" accept="application/json" onChange={importData} hidden/></div></article><article className="danger-setting"><span>03</span><h2>{lang==='zh'?'重設進度':'Reset progress'}</h2><p>{lang==='zh'?'刪除呢個 browser 入面所有完成狀態、測驗歷史同溫習隊列。':'Deletes completion states, quiz history, and review queue from this browser.'}</p><button onClick={reset}>{lang==='zh'?'重設所有進度':'Reset all progress'}</button></article></section>{message&&<p className="settings-message" role="status">{message}</p>}<section className="storage-note"><b>{lang==='zh'?'儲存 schema':'Storage schema'} v1</b><p>{lang==='zh'?'有效進度更新時會盡量保留；無效或損壞檔案會安全拒絕。':'Valid progress is preserved across updates where possible; malformed imports fail safely.'}</p></section></main></Shell>;
 }
 
-export default function AcademyClient({ view='dashboard', topicId }: { view?:'dashboard'|'lesson'|'review'|'assessment'|'map'|'glossary'|'settings'|'hiring'|'junior'|'agent-lab'|'agent-evals'|'agent-compare'; topicId?:string }) {
+export default function AcademyClient({ view='dashboard', topicId }: { view?:'dashboard'|'lesson'|'review'|'assessment'|'map'|'glossary'|'settings'|'hiring'|'junior'|'agent-lab'|'agent-evals'|'agent-compare'|'finance-project'; topicId?:string }) {
   const {state,setState,ready}=useAcademyState();
   if(!ready)return <main className="loading-screen" aria-live="polite"><span className="brand-mark">AI</span><p>AI 學習院準備緊你嘅本機進度…</p></main>;
   if(view==='lesson'&&topicId){const topic=topicById(topicId);return topic?<Lesson topic={topic} state={state} setState={setState}/>:null;}
@@ -434,6 +436,7 @@ export default function AcademyClient({ view='dashboard', topicId }: { view?:'da
   if(view==='assessment')return <AssessmentPage state={state} setState={setState}/>;
   if(view==='map')return <ConceptMap state={state} setState={setState}/>;
   if(view==='junior')return <Shell state={state} setState={setState}><JuniorContent lang={state.lang}/></Shell>;
+  if(view==='finance-project')return <Shell state={state} setState={setState}><FinanceProjectContent lang={state.lang}/></Shell>;
   if(view==='agent-lab'||view==='agent-evals'||view==='agent-compare')return <Shell state={state} setState={setState}><AgentLabContent lang={state.lang} view={view==='agent-evals'?'evals':view==='agent-compare'?'compare':'run'}/></Shell>;
   if(view==='hiring')return <Shell state={state} setState={setState}><HiringContent lang={state.lang}/></Shell>;
   if(view==='glossary')return <Glossary state={state} setState={setState}/>;

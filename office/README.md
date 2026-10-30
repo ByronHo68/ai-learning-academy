@@ -59,6 +59,8 @@ The lessons, animations, quizzes, concept workshops, hiring guides, junior lesso
 
 The dashboard and concept map link to `/finance-project`: a bilingual Hong Kong Financial Report Analyst project guide. Its eight-branch mind map, function details, seven-step walkthrough, missing-evidence scenario, technology stack and build stages work offline. This is a blueprint for a future application; its example company, figures and page references are fictional, and it does not process real reports or call a model.
 
+Open **Function workflows** to explore all 24 functions. Every function includes four processing steps, the tools at each step, an expected result and failure handling. The technology table also describes data handoffs for each layer. Select an area and expand its function guides; English and Traditional Chinese both work offline.
+
 The agent lab pages are included, but running agents and evaluations requires the separate Python and Java services and the Next.js proxy in `codex/rich-animated-ts`. This office server returns an explanation when those pages request the lab API. It does not run those services.
 
 ## Rebuild after editing the source

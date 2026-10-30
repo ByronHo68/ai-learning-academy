@@ -32,7 +32,7 @@ test('office package serves every exported page and asset on Node without depend
     assert.equal(response.status, 200, path);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(join(site, path)), path);
   }
-  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
+  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
     const response = await fetch(base + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type'), /text\/html/);
@@ -41,6 +41,10 @@ test('office package serves every exported page and asset on Node without depend
   for (const match of (await home.text()).matchAll(/(?:src|href)="(\/_next\/[^"?]+)/g)) {
     assert.equal((await fetch(base + match[1])).status, 200, match[1]);
   }
+  const finance = await fetch(base + '/finance-project');
+  const financeHtml = await finance.text();
+  assert.match(financeHtml, /<title>香港財報分析項目/);
+  assert.match(financeHtml, /\/app\/finance-project\/page-[^" ]+\.js/);
   const download = await fetch(base + '/junior-path/labs/python');
   assert.match(download.headers.get('content-type'), /text\/x-python/);
   assert.equal(download.headers.get('content-disposition'), 'attachment; filename="python.py"');

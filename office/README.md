@@ -57,6 +57,8 @@ The test starts the real server and checks all exported files, page routes, Pyth
 
 The lessons, animations, quizzes, concept workshops, hiring guides, junior lessons, Python downloads, and browser progress run locally. Progress is saved in this browser. Use Settings to export or import it. External reference links still need internet access.
 
+The dashboard and concept map link to `/finance-project`: a bilingual Hong Kong Financial Report Analyst project guide. Its eight-branch mind map, function details, seven-step walkthrough, missing-evidence scenario, technology stack and build stages work offline. This is a blueprint for a future application; its example company, figures and page references are fictional, and it does not process real reports or call a model.
+
 The agent lab pages are included, but running agents and evaluations requires the separate Python and Java services and the Next.js proxy in `codex/rich-animated-ts`. This office server returns an explanation when those pages request the lab API. It does not run those services.
 
 ## Rebuild after editing the source

@@ -1,10 +1,10 @@
 import type { Copy } from './curriculum';
+import type { financeFunctionWorkflows } from './finance-function-workflows';
 
 type ProjectArea = {
-  id: string;
+  id: keyof typeof financeFunctionWorkflows;
   title: Copy;
   purpose: Copy;
-  functions: Copy[];
   input: Copy;
   output: Copy;
   technology: string;
@@ -17,11 +17,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'library', title: { en: 'Report library', zh: '財報資料庫' },
     purpose: { en: 'Know exactly which company, period and document each answer describes.', zh: '清楚知道每個答案屬於哪間公司、哪個期間及哪份文件。' },
-    functions: [
-      { en: 'Upload annual-report PDFs', zh: '上載年度財報 PDF' },
-      { en: 'Label company, period and source', zh: '標示公司、期間及來源' },
-      { en: 'Keep originals and revisions', zh: '保留原檔與修訂版本' },
-    ],
     input: { en: 'Public annual reports; company identity, fiscal period, source URL and upload date.', zh: '公開年報；公司身分、財政期間、來源網址及上載日期。' },
     output: { en: 'A versioned document record and the original PDF. A duplicate upload reuses the same document identity.', zh: '有版本的文件記錄及原始 PDF。重複上載沿用同一文件身分。' },
     technology: 'Next.js · FastAPI · PostgreSQL · S3-compatible file storage',
@@ -35,11 +30,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'extraction', title: { en: 'Read text and tables', zh: '讀取文字與表格' },
     purpose: { en: 'Turn PDF pages into traceable evidence, while keeping uncertain extraction visible.', zh: '把 PDF 頁面轉為可追溯的證據，並清楚顯示不確定的擷取結果。' },
-    functions: [
-      { en: 'Extract text and financial tables', zh: '擷取文字及財務表格' },
-      { en: 'Retain page and table references', zh: '保留頁碼及表格位置' },
-      { en: 'Review uncertain values', zh: '覆核不確定數值' },
-    ],
     input: { en: 'A text-based PDF from the library, including table headings, notes and printed page labels.', zh: '資料庫內可選取文字的 PDF，包括表頭、附註及印刷頁碼。' },
     output: { en: 'Text passages and candidate financial facts linked to the PDF page index and printed page label.', zh: '文字段落及候選財務數據，連結 PDF 頁面索引及印刷頁碼。' },
     technology: 'PyMuPDF · pdfplumber · Pydantic',
@@ -53,11 +43,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'facts', title: { en: 'Verified financial facts', zh: '已覆核財務數據' },
     purpose: { en: 'Store numbers as financial facts with context, rather than isolated values inside a prompt.', zh: '把數字連同財務背景儲存，而非只放進 prompt。' },
-    functions: [
-      { en: 'Start with five financial metrics', zh: '先處理五項財務指標' },
-      { en: 'Track currency, scale and period', zh: '記錄貨幣、單位及期間' },
-      { en: 'Record corrections and restatements', zh: '記錄更正及重列數字' },
-    ],
     input: { en: 'Candidate revenue, net profit, operating cash flow, total assets and total liabilities values.', zh: '候選營業收入、淨利潤、經營現金流、總資產及總負債數值。' },
     output: { en: 'A fact with company, metric definition, period, currency, scale, consolidated basis, source, version and review status.', zh: '每項數據包含公司、指標定義、期間、貨幣、單位、綜合報表口徑、來源、版本及覆核狀態。' },
     technology: 'PostgreSQL · Python Decimal · Pydantic',
@@ -71,11 +56,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'research', title: { en: 'Ask with evidence', zh: '有證據的問答' },
     purpose: { en: 'Answer a specific financial question using the selected reports and identifiable evidence.', zh: '根據選定財報及可識別證據回答具體財務問題。' },
-    functions: [
-      { en: 'Ask in English or Traditional Chinese', zh: '英文或繁體中文提問' },
-      { en: 'Retrieve relevant report passages', zh: '檢索相關財報段落' },
-      { en: 'Cite evidence or say what is missing', zh: '引用證據或說明缺失' },
-    ],
     input: { en: 'A question, selected companies and periods, reviewed facts and version-filtered passages.', zh: '問題、選定公司及期間、已覆核數據，以及按版本篩選的段落。' },
     output: { en: 'An answer with claim-level citations, calculated figures and a clear distinction between reported reasons and interpretation.', zh: '答案包含逐項主張引用及計算數字，並區分報告所述原因與推論。' },
     technology: 'FastAPI · LangGraph · LLM API · embeddings · PostgreSQL/pgvector',
@@ -89,11 +69,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'comparison', title: { en: 'Calculate and compare', zh: '計算與比較' },
     purpose: { en: 'Make comparisons reproducible and reject comparisons that mix incompatible financial facts.', zh: '令比較可重現，並拒絕混合不相容財務數據。' },
-    functions: [
-      { en: 'Calculate year-on-year change', zh: '計算按年變化' },
-      { en: 'Compare companies side by side', zh: '並排比較公司' },
-      { en: 'Check periods and definitions', zh: '檢查期間及定義' },
-    ],
     input: { en: 'Reviewed facts with matching metric definitions, annual periods, currency, scale and reporting basis.', zh: '已覆核數據，且指標定義、年度期間、貨幣、單位及報表口徑相容。' },
     output: { en: 'A comparison table or chart with the formula, inputs, source references and any blocked calculation.', zh: '比較表或圖，顯示公式、輸入、來源及被阻止的計算。' },
     technology: 'Python Decimal · pandas · Plotly.js',
@@ -107,11 +82,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'workspace', title: { en: 'Research workspace', zh: '研究工作區' },
     purpose: { en: 'Let an analyst move easily between an explanation, the numbers and the original evidence.', zh: '讓分析員輕鬆切換解釋、數字及原始證據。' },
-    functions: [
-      { en: 'Dashboard and trend charts', zh: '儀表板與趨勢圖' },
-      { en: 'Open the cited PDF page', zh: '開啟引用的 PDF 頁面' },
-      { en: 'Save an editable research brief', zh: '儲存可編輯研究摘要' },
-    ],
     input: { en: 'Reviewed facts, chart series, answers and their document/page references.', zh: '已覆核數據、圖表數列、答案及文件／頁面引用。' },
     output: { en: 'A workspace with selected company/period, evidence links and a draft brief containing facts, commentary and limitations.', zh: '工作區顯示選定公司／期間、證據連結，以及包含事實、評論及限制的摘要草稿。' },
     technology: 'Next.js · React · TypeScript · Plotly.js · browser PDF viewer',
@@ -125,11 +95,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'automation', title: { en: 'Workflow and automation', zh: '流程與自動化' },
     purpose: { en: 'Keep analysis state separate from the triggers that bring reports into the system.', zh: '把分析狀態與報告匯入觸發器分開。' },
-    functions: [
-      { en: 'LangGraph analysis checkpoints', zh: 'LangGraph 分析檢查點' },
-      { en: 'n8n ingestion triggers', zh: 'n8n 匯入觸發器' },
-      { en: 'Retry jobs without duplicates', zh: '重試工作而不重複匯入' },
-    ],
     input: { en: 'A manual upload in the first version; later, an approved report-source event.', zh: '首版由手動上載觸發；之後才加入指定財報來源事件。' },
     output: { en: 'A resumable analysis run with status and errors; later, an optional report-ready notification.', zh: '可恢復的分析執行記錄，包含狀態及錯誤；之後可選擇發送報告完成通知。' },
     technology: 'LangGraph · PostgreSQL checkpoints · n8n webhooks/schedules · background worker',
@@ -143,11 +108,6 @@ export const financeAreas: ProjectArea[] = [
   {
     id: 'quality', title: { en: 'Evaluation and delivery', zh: '評估與交付' },
     purpose: { en: 'Prove that the project handles real financial-document failure modes and can be rerun by a reviewer.', zh: '證明項目能處理財報失敗情況，並可由審閱者重新執行。' },
-    functions: [
-      { en: 'Manually checked evaluation cases', zh: '人工核對評估案例' },
-      { en: 'Trace failures and model cost', zh: '追蹤失敗及模型成本' },
-      { en: 'Reproducible deployment and demo', zh: '可重現部署與展示' },
-    ],
     input: { en: 'Versioned reports, labelled questions, expected facts/citations, configuration and raw run results.', zh: '有版本財報、標記問題、預期數據／引用、設定及原始執行結果。' },
     output: { en: 'Per-case extraction/retrieval/answer results, traces, tests, a runnable README and a short demo.', zh: '逐案例擷取／檢索／答案結果、追蹤、測試、可執行 README 及短片展示。' },
     technology: 'pytest · Langfuse · Docker · GitHub Actions · AWS',
@@ -177,11 +137,11 @@ export const financeBuildStages: { title: Copy; scope: Copy; done: Copy }[] = [
   { title: { en: '4 · Extend after the core works', zh: '4 · 核心完成後再擴展' }, scope: { en: 'n8n schedules, watchlists, OCR, brief downloads and shared-user access when needed.', zh: '按需要加入 n8n 排程、自選公司、OCR、摘要下載及多人存取。' }, done: { en: 'Retries do not duplicate reports or notifications. Shared access has authentication and per-user authorization.', zh: '重試不會重複報告或通知；多人存取有身分驗證及逐用戶授權。' } },
 ];
 
-export const financeStack: { layer: Copy; tools: string; role: Copy }[] = [
-  { layer: { en: 'Interface', zh: '介面' }, tools: 'Next.js · React · TypeScript · Plotly.js', role: { en: 'Library, dashboard, comparison charts, chat and evidence viewer.', zh: '資料庫、儀表板、比較圖、問答及證據檢視器。' } },
-  { layer: { en: 'API and extraction', zh: 'API 與擷取' }, tools: 'Python · FastAPI · Pydantic · PyMuPDF · pdfplumber', role: { en: 'Validate requests, read reports and produce structured candidate facts.', zh: '驗證請求、讀取財報及產生結構化候選數據。' } },
-  { layer: { en: 'Data and retrieval', zh: '資料與檢索' }, tools: 'PostgreSQL · pgvector · S3-compatible storage', role: { en: 'Facts and metadata in SQL; embeddings for passages; originals in file storage.', zh: 'SQL 儲存數據及中繼資料；embedding 搜尋段落；檔案儲存保留原檔。' } },
-  { layer: { en: 'Analysis', zh: '分析' }, tools: 'LangGraph · LLM API · embedding model · Python Decimal', role: { en: 'Scope, retrieve, validate, calculate, draft, verify and present. Model choice stays configurable.', zh: '確定範圍、檢索、驗證、計算、草擬、核對及展示；模型可設定。' } },
-  { layer: { en: 'Automation later', zh: '後續自動化' }, tools: 'n8n · background worker · PostgreSQL checkpoints', role: { en: 'Trigger approved-source ingestion and notifications; LangGraph owns analysis state.', zh: '觸發指定來源匯入及通知；分析狀態由 LangGraph 負責。' } },
-  { layer: { en: 'Quality and delivery', zh: '品質與交付' }, tools: 'pytest · Langfuse · Docker · GitHub Actions · AWS', role: { en: 'Evaluate, trace, package and deploy the future application.', zh: '評估、追蹤、封裝及部署未來應用程式。' } },
+export const financeStack: { layer: Copy; tools: string; role: Copy; workflow: Copy }[] = [
+  { layer: { en: 'Interface', zh: '介面' }, tools: 'Next.js · React · TypeScript · Plotly.js', role: { en: 'Library, dashboard, comparison charts, chat and evidence viewer.', zh: '資料庫、儀表板、比較圖、問答及證據檢視器。' }, workflow: { en: 'User action → React state → HTTP request → validated API result → chart, answer or PDF view.', zh: '使用者操作 → React 狀態 → HTTP 請求 → 已驗證 API 結果 → 圖表、答案或 PDF 畫面。' } },
+  { layer: { en: 'API and extraction', zh: 'API 與擷取' }, tools: 'Python · FastAPI · Pydantic · PyMuPDF · pdfplumber', role: { en: 'Validate requests, read reports and produce structured candidate facts.', zh: '驗證請求、讀取財報及產生結構化候選數據。' }, workflow: { en: 'Upload → FastAPI validation → stored PDF → worker extraction → Pydantic candidate facts → review queue.', zh: '上載 → FastAPI 驗證 → 已存 PDF → worker 擷取 → Pydantic 候選數據 → 覆核隊列。' } },
+  { layer: { en: 'Data and retrieval', zh: '資料與檢索' }, tools: 'PostgreSQL · pgvector · S3-compatible storage', role: { en: 'Facts and metadata in SQL; embeddings for passages; originals in file storage.', zh: 'SQL 儲存數據及中繼資料；embedding 搜尋段落；檔案儲存保留原檔。' }, workflow: { en: 'Original PDF → text and page references → embedded passages; scoped query → SQL/version filters + vector/text ranking → evidence bundle.', zh: '原始 PDF → 文字及頁面參照 → 段落 embedding；限定查詢 → SQL／版本篩選 + 向量／文字排序 → 證據組。' } },
+  { layer: { en: 'Analysis', zh: '分析' }, tools: 'LangGraph · LLM API · embedding model · Python Decimal', role: { en: 'Scope, retrieve, validate, calculate, draft, verify and present. Model choice stays configurable.', zh: '確定範圍、檢索、驗證、計算、草擬、核對及展示；模型可設定。' }, workflow: { en: 'Scoped graph state → retrieval → compatibility checks → Decimal calculation → LLM draft → citation verification → answer or partial answer.', zh: '限定圖狀態 → 檢索 → 相容檢查 → Decimal 計算 → LLM 草稿 → 引用核對 → 答案或部分答案。' } },
+  { layer: { en: 'Automation later', zh: '後續自動化' }, tools: 'n8n · background worker · PostgreSQL checkpoints', role: { en: 'Trigger approved-source ingestion and notifications; LangGraph owns analysis state.', zh: '觸發指定來源匯入及通知；分析狀態由 LangGraph 負責。' }, workflow: { en: 'n8n event/schedule → authenticated API + ingestion key → durable job → worker/checkpointed analysis → completion record → opted-in notification.', zh: 'n8n 事件／排程 → 已驗證 API + 匯入 key → 持久工作 → worker／有檢查點分析 → 完成記錄 → 自選通知。' } },
+  { layer: { en: 'Quality and delivery', zh: '品質與交付' }, tools: 'pytest · Langfuse · Docker · GitHub Actions · AWS', role: { en: 'Evaluate, trace, package and deploy the future application.', zh: '評估、追蹤、封裝及部署未來應用程式。' }, workflow: { en: 'Versioned code/cases → pytest + evaluation gate → Docker image → AWS health checks → Langfuse traces and usage → diagnosed failure → regression case.', zh: '有版本程式／案例 → pytest + 評估關卡 → Docker 映像 → AWS 健康檢查 → Langfuse 追蹤及用量 → 失敗診斷 → 回歸案例。' } },
 ];

@@ -56,6 +56,23 @@ mindmap
 
 ## Analysis flow
 
+### Workflows for all 24 functions
+
+Open `/finance-project#finance-functions`. Eight area buttons share the mind map selection. Each area exposes three expandable function guides. Every function has four ordered steps, the technology responsible at each step, an expected result and explicit failure handling. There are 96 processing steps across the complete catalog.
+
+For example, **Upload annual-report PDFs** flows through:
+
+1. Select a file and company; show upload status — **Next.js and React**.
+2. Validate the file, size and metadata; compute a content hash — **FastAPI, Pydantic and Python hashlib**.
+3. Store the original and versioned record with duplicate detection — **S3-compatible storage and PostgreSQL**.
+4. Queue extraction and return the document ID and status — **FastAPI and a background worker**.
+
+The expected result is a stored original with a stable ID and a queued extraction job. Invalid files are rejected, duplicate uploads reuse the existing document and partial failures retain recoverable state.
+
+The same level of detail covers labelling, revisions, extraction, page references, human review, metric mapping, period/currency handling, restatements, bilingual questions, retrieval, citations, calculations, comparisons, compatibility checks, dashboards, PDF viewing, editable briefs, graph checkpoints, n8n triggers, retries, evaluation, tracing and deployment. These are proposed implementation workflows, not claims that the finance backend already exists.
+
+### One question across the system
+
 Scope the question → retrieve the relevant report evidence → validate facts and compatibility → calculate using code → draft an answer → verify figures and citations → present with source links.
 
 LangGraph coordinates the analysis and its checkpoints. n8n handles surrounding ingestion triggers, scheduled checks and optional notifications. An LLM explains retrieved material; a deterministic calculation tool produces financial arithmetic. A matching keyword is not proof that a citation supports a claim.
@@ -74,6 +91,8 @@ The walkthrough has two scenarios: figures plus a management explanation, and fi
 | Later automation | n8n, background worker, PostgreSQL checkpoints |
 | Evaluation and delivery | pytest, Langfuse, Docker, GitHub Actions, AWS |
 
+The on-page stack table includes an explicit data flow for each layer: interface action/request/result; upload/validation/extraction/review; passage storage/embedding/filtered retrieval; graph state/calculation/draft/verification; event/durable job/completion/notification; and tests/build/deployment/traces/regression. Tools at individual function steps show exactly where those layers meet.
+
 Java, C# and UiPath are optional integration choices, rather than requirements for this project. GraphRAG, fine-tuning and multiple agents need a demonstrated use case before being added.
 
 ## Build stages
@@ -86,10 +105,11 @@ Java, C# and UiPath are optional integration choices, rather than requirements f
 ## Academy implementation
 
 - Content: `lib/finance-project.ts`.
+- Function catalog: `lib/finance-function-workflows.ts`; the typed catalog is the single source for the 24 function names and their four-step workflows.
 - Interface: `app/finance-project-content.tsx` and `app/finance-project.css`.
 - Route: `app/finance-project/page.tsx`, using the existing academy language and shell.
 - Discoverability: banners on the dashboard and concept-map page.
 - Accessibility: native branch buttons, visible selected state, keyboard controls, responsive stacking, live detail announcements and reduced-motion support. Connections are decorative SVG; the content remains selectable HTML.
 - Office edition: regenerate through `npm run office:build`; the guide has no live-service dependency.
 
-Run `npm run check`, `npm run build`, `npm run office:build` and `npm run office:test` on Node 22.13 or newer when developing. The generated office package runs on Node 18.18 or newer. Test branch selection, both languages, both walkthrough scenarios, keyboard use and narrow mobile layouts in the browser.
+Run `npm run check`, `npm run build`, `npm run office:build` and `npm run office:test` on Node 22.13 or newer when developing. The generated office package runs on Node 18.18 or newer. Test all eight workflow areas and 24 disclosures, both languages, both answer scenarios, keyboard use and narrow mobile layouts in the browser.

@@ -28,6 +28,7 @@ test('office package serves every exported page and asset on Node without depend
   assert.equal(exported.filter(path => /^learn\/[^/]+\.html$/.test(path)).length, 13);
   assert.equal(exported.filter(path => /^junior-path\/labs\/[^/]+$/.test(path)).length, 6);
   assert.equal(exported.filter(path => /^finance-illustrations\/v1\/[^/]+\.webp$/.test(path)).length, 9);
+  assert.equal(exported.filter(path => /^proposal-illustrations\/v1\/[^/]+\.webp$/.test(path)).length, 3);
   assert(exported.includes('finance-project/proposal.html'));
   assert(exported.includes('downloads/financial-report-development-proposal.md'));
   for (const path of exported) {

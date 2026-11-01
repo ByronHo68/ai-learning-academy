@@ -6,6 +6,8 @@ import FinanceProjectContent, { FinanceProjectBanner } from '../app/finance-proj
 import { topics } from '../lib/curriculum';
 import { financeAreas } from '../lib/finance-project';
 import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
+import { financeAreaIllustrations, financeOverviewIllustration } from '../lib/finance-illustrations';
+import { readFile } from 'node:fs/promises';
 
 test('finance blueprint renders accessible branch controls and course links in both languages', () => {
   for (const lang of ['en', 'zh'] as const) {
@@ -16,6 +18,9 @@ test('finance blueprint renders accessible branch controls and course links in b
     assert.match(html, /id="finance-area-detail"[^>]*aria-live="polite"/);
     assert.match(html, /id="finance-workflow"/);
     assert.match(html, /id="finance-functions"/);
+    assert.match(html, /id="finance-pictures"/);
+    assert.ok(html.includes(financeOverviewIllustration.src));
+    assert.ok(html.includes(financeAreaIllustrations.library.src));
     assert.equal((html.match(/class="finance-function-flow"/g) ?? []).length, 3);
     assert.equal((html.match(/class="finance-stack-flow"/g) ?? []).length, 6);
     for (const item of financeFunctionWorkflows.library) {
@@ -33,5 +38,21 @@ test('finance blueprint renders accessible branch controls and course links in b
   }
   for (const area of financeAreas) {
     assert.ok(topics.some(topic => topic.slug === area.lesson.slug), `Broken course link: ${area.lesson.slug}`);
+  }
+});
+
+test('generated teaching illustrations are real local WebP assets for every project area', async () => {
+  for (const area of financeAreas) assert.ok(area.id in financeAreaIllustrations);
+  const illustrations = [financeOverviewIllustration, ...Object.values(financeAreaIllustrations)];
+  assert.equal(new Set(illustrations.map(item => item.src)).size, 9);
+  for (const illustration of illustrations) {
+    assert.ok(illustration.src.startsWith('/finance-illustrations/v1/'));
+    const asset = await readFile(new URL(`../public${illustration.src}`, import.meta.url));
+    assert.equal(new TextDecoder().decode(asset.subarray(0, 4)), 'RIFF', illustration.src);
+    assert.equal(new TextDecoder().decode(asset.subarray(8, 12)), 'WEBP', illustration.src);
+    for (const lang of ['en', 'zh'] as const) {
+      assert.ok(illustration.alt[lang].length > 20);
+      assert.ok(illustration.steps.every(step => step[lang].trim().length > 0));
+    }
   }
 });

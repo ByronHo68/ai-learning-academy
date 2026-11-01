@@ -57,6 +57,8 @@ Open `/finance-project` from the dashboard or concept map. The bilingual **Hong 
 
 The **Function workflows** section at `/finance-project#finance-functions` covers all 24 functions. Select an area, then expand a function to see four processing steps, the tools used at each step, its expected result and failure handling. The technology stack also shows data handoffs for all six layers. Everything is available in English and Traditional Chinese without live services.
 
+The **Picture guide** at `/finance-project#finance-pictures` uses a ChatGPT-generated overview. Each function area also has its own four-scene concept illustration, with numbered English/Traditional Chinese captions and accessible descriptions. All nine images are checked-in local WebP files, so they work in the office package without image-generation services. The illustrations are metaphors; the written function workflows specify the actual design. Generation prompts are retained in `docs/FINANCE_ILLUSTRATION_PROMPTS.json`.
+
 Open `/hiring-readiness` from the navigation, dashboard, or concept map. Ten bilingual competency guides include twenty everyday examples, code, practical drills, portfolio evidence, and original interview prompts. They cover problem framing, software, ML fundamentals, data, RAG, agents, evaluation, security, operations, and communication, with optional vision/training/research paths. Reading or quiz completion is not hiring certification.
 
 - [Bilingual AI Developer Hiring Guide](docs/AI_DEVELOPER_HIRING_GUIDE.md) — evidence-based portfolio plan and interview discussion rubric.

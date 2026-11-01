@@ -10,6 +10,16 @@
 .finance-section-heading { max-width: 850px; }
 .finance-section-heading h2 { margin: 0; font-size: clamp(25px, 3vw, 35px); line-height: 1.25; letter-spacing: -.035em; color: var(--navy); }
 .finance-section-heading > p:last-child { font-size: 14px; line-height: 1.8; color: #506970; }
+.finance-illustration { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 26px; align-items: start; margin: 26px 0 30px; padding: 0; }
+.finance-illustration-image { min-width: 0; }
+.finance-illustration-image img { display: block; width: 100%; height: auto; border-radius: 14px; }
+.finance-illustration-image > a { display: inline-block; padding: 11px 0; color: var(--teal); font-size: 12px; font-weight: 700; }
+.finance-illustration figcaption { min-width: 0; padding-top: 6px; }
+.finance-illustration-caption { margin: 0 0 17px; color: var(--navy); font-size: clamp(17px,1.6vw,21px); line-height: 1.55; }
+.finance-illustration ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.finance-illustration li { display: flex; align-items: flex-start; gap: 10px; color: #49636b; font-size: 13px; line-height: 1.7; }
+.finance-illustration li > b { display: grid; place-items: center; flex: 0 0 auto; width: 25px; height: 25px; border-radius: 50%; background: var(--mint); color: var(--teal); font-size: 12px; }
+.finance-illustration-note { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
 .finance-map { position: relative; display: grid; grid-template-columns: minmax(0,1fr) 190px minmax(0,1fr); grid-template-rows: repeat(4, minmax(158px,auto)); gap: 18px 44px; margin: 30px 0 24px; isolation: isolate; }
 .finance-map-connections { position: absolute; width: 100%; height: 100%; pointer-events: none; z-index: -1; overflow: visible; }
 .finance-map-connections path { fill: none; stroke: #bfd4cd; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
@@ -107,6 +117,7 @@
   .finance-map-root strong { font-size: 18px; }
 }
 @media (max-width: 720px) {
+  .finance-illustration { grid-template-columns: minmax(0,1fr); gap: 12px; }
   .finance-function-flow { grid-template-columns: minmax(0,1fr); gap: 20px; }
   .finance-function-flow > li:not(:last-child)::after { content: '↓'; display: block; top: auto; bottom: -20px; right: auto; left: 9px; }
   .finance-function-flow > li { padding-bottom: 10px; }

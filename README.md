@@ -116,3 +116,5 @@ Start at `/junior-path`: six complete bilingual Python lessons with offline prog
 ### Animated concept studio
 
 The junior path starts with six interactive visual explanations of data transformation, API access, model validation, retrieval, evaluation and agent approval. Play or step through each sequence, switch failure cases, compare top-k/threshold outcomes, and open the corresponding lesson. English and Traditional Chinese, narrow mobile layouts, reduced motion and keyboard controls are supported. See [animation notes and checks](docs/CONCEPT_ANIMATIONS.md).
+
+The finance project guide also documents API workflows for all 24 functions: 23 proposed HTTP contracts and a CI/CD deployment flow, with request/response examples, asynchronous polling and failure cases. English keywords overlay all nine generated concept illustrations, including the full-size view. These are offline design examples, not live finance endpoints.

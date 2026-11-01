@@ -8,6 +8,8 @@ import { financeAreas } from '../lib/finance-project';
 import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
 import { financeAreaIllustrations, financeOverviewIllustration } from '../lib/finance-illustrations';
 import { readFile } from 'node:fs/promises';
+import { financeApiWorkflows, type FinanceApiWorkflow } from '../lib/finance-api-workflows';
+import { FinanceApiContent } from '../app/finance-api-content';
 
 test('finance blueprint renders accessible branch controls and course links in both languages', () => {
   for (const lang of ['en', 'zh'] as const) {
@@ -22,6 +24,7 @@ test('finance blueprint renders accessible branch controls and course links in b
     assert.ok(html.includes(financeOverviewIllustration.src));
     assert.ok(html.includes(financeAreaIllustrations.library.src));
     assert.equal((html.match(/class="finance-function-flow"/g) ?? []).length, 3);
+    assert.equal((html.match(/class="finance-api"/g) ?? []).length, 3);
     assert.equal((html.match(/class="finance-stack-flow"/g) ?? []).length, 6);
     for (const item of financeFunctionWorkflows.library) {
       assert.ok(html.includes(item.title[lang]));
@@ -54,5 +57,47 @@ test('generated teaching illustrations are real local WebP assets for every proj
       assert.ok(illustration.alt[lang].length > 20);
       assert.ok(illustration.steps.every(step => step[lang].trim().length > 0));
     }
+    assert.equal(new Set(illustration.steps.map(step => step.keyword)).size, illustration.steps.length);
+    assert.ok(illustration.steps.every(step => /^[A-Za-z ]+$/.test(step.keyword)));
   }
+});
+
+test('all 24 function guides have a rendered API or CI contract in both languages', () => {
+  let httpCount = 0;
+  let pipelineCount = 0;
+  for (const area of financeAreas) {
+    const workflows: FinanceApiWorkflow[] = financeApiWorkflows[area.id];
+    assert.equal(workflows.length, financeFunctionWorkflows[area.id].length);
+    for (const workflow of workflows) {
+      if (workflow.kind === 'http') httpCount++;
+      else pipelineCount++;
+      for (const lang of ['en', 'zh'] as const) {
+        const html = renderToStaticMarkup(createElement(FinanceApiContent, { workflow, lang }));
+        assert.ok(html.includes(workflow.services));
+        for (const stage of workflow.processing) assert.ok(html.includes(stage[lang]));
+        if (workflow.kind === 'pipeline') {
+          assert.ok(html.includes('workflow_dispatch'));
+          assert.ok(html.includes(workflow.failure[lang]));
+          assert.ok(!html.includes('Authorization:'));
+          continue;
+        }
+        assert.ok(html.includes(workflow.path));
+        assert.ok(html.includes(`HTTP ${workflow.result.status}`));
+        assert.ok(html.includes('Authorization: Bearer'));
+        assert.ok(html.includes(lang === 'en' ? 'no requests are sent' : '不會發出請求'));
+        if (workflow.method === 'GET') assert.ok(workflow.request.kind === 'query' || workflow.request.kind === 'none');
+        if (workflow.result.kind === 'accepted') {
+          assert.ok(html.includes(`GET ${workflow.result.poll}`));
+          assert.equal(workflow.result.example.statusUrl, workflow.result.poll);
+          assert.equal(workflow.result.completed.state, 'completed');
+          assert.equal(workflow.result.failed.state, 'failed');
+          assert.ok(html.includes(lang === 'en' ? 'still unfinished' : '尚未完成'));
+        }
+        if (workflow.result.kind === 'file') assert.ok(html.includes('application/pdf'));
+        for (const error of workflow.errors) assert.ok(html.includes(error.code));
+      }
+    }
+  }
+  assert.equal(httpCount, 23);
+  assert.equal(pipelineCount, 1);
 });

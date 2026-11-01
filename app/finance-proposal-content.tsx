@@ -6,6 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { type Lang, pick } from '../lib/curriculum';
 import { proposalStages, proposalDeploymentSteps, proposalServices, proposalDeliveryOptions } from '../lib/finance-proposal';
 import proposalDocument from '../lib/finance-proposal-document.json';
+import { proposalIllustrations } from '../lib/proposal-illustrations';
+import { ProposalIllustration } from './proposal-illustration';
 
 function proposalUrl(url: string) {
   if (url === 'FINANCIAL_REPORT_PROJECT.md') return '/finance-project';
@@ -45,6 +47,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
 
     <section className="finance-section" id="proposal-stages" aria-labelledby="proposal-stages-title">
       <div className="finance-section-heading"><p className="eyebrow">02 · BUILD AND CHECK</p><h2 id="proposal-stages-title">{lang === 'zh' ? '每個階段都有可展示成果' : 'Every stage ends with a working result'}</h2><p>{lang === 'zh' ? '展開階段，查看開發任務、技術及驗收。第 5 至 6 週先完成一份真實報告的完整流程，第 16 週左右完成核心研究示範，再準備部署及面試材料。' : 'Expand a stage for its tasks, technology and acceptance check. Aim for one real report journey by week 5–6, the core research demo around week 16, then deployment and interview materials.'}</p></div>
+      <ProposalIllustration illustration={proposalIllustrations.roadmap} lang={lang}/>
       <div className="proposal-stage-list">{proposalStages.map((stage, index) => <details className="proposal-stage" id={`proposal-stage-${stage.id}`} key={stage.id} open={index === 0}>
         <summary><span className="proposal-stage-number">{String(stage.number).padStart(2, '0')}</span><span><strong>{pick(stage.title, lang)}</strong><small>{pick(stage.weeks, lang)} · {stage.hours} {lang === 'zh' ? '開發小時' : 'planned hours'}</small></span><i aria-hidden="true">+</i></summary>
         <div className="proposal-stage-body"><p className="proposal-stage-outcome">{pick(stage.outcome, lang)}</p><h4>{lang === 'zh' ? '開發任務' : 'Developer tasks'}</h4><ul>{stage.tasks.map(task => <li key={task.en}>{pick(task, lang)}</li>)}</ul><p className="proposal-stage-tools"><b>{lang === 'zh' ? '技術' : 'Tools'}</b>{stage.tools}</p><div className="proposal-stage-acceptance"><h4>{lang === 'zh' ? '通過條件' : 'Acceptance check'}</h4><p>{pick(stage.acceptance, lang)}</p></div></div>
@@ -53,6 +56,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
 
     <section className="finance-section" id="proposal-ec2" aria-labelledby="proposal-ec2-title">
       <div className="finance-section-heading"><p className="eyebrow">03 · DOCKER COMPOSE ON EC2</p><h2 id="proposal-ec2-title">{lang === 'zh' ? '一個 EC2 主機，清楚的服務分工' : 'One EC2 host with clear service boundaries'}</h2><p>{lang === 'zh' ? '以 Docker Compose 完成首版，再按需要加入 Kubernetes。以下是建議架構，不是正在運作的 AWS 資源。單一主機可接受維護停機，沒有自動故障切換。' : 'Ship the first release with Docker Compose, then add Kubernetes as a separate learning extension. This is a proposed architecture, not running AWS infrastructure. A single host accepts maintenance downtime and has no automatic failover.'}</p></div>
+      <ProposalIllustration illustration={proposalIllustrations.ec2} lang={lang}/>
       <div className="proposal-architecture" role="group" aria-label={lang === 'zh' ? 'EC2 部署架構' : 'EC2 deployment architecture'}>
         <div className="proposal-traffic"><span>Browser</span><b aria-hidden="true">→</b><span>DNS + HTTPS</span><b aria-hidden="true">→</b><span>Caddy · 80 / 443</span></div>
         <div className="proposal-host"><p className="eyebrow">EC2 · DOCKER COMPOSE</p><div className="proposal-service-grid">{proposalServices.map(service => <article key={service.name}><h3>{service.name}</h3><p>{pick(service.role, lang)}</p><small>{pick(service.exposure, lang)}</small></article>)}</div></div>
@@ -64,6 +68,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
 
     <section className="finance-section" id="proposal-deployment" aria-labelledby="proposal-deployment-title">
       <div className="finance-section-heading"><p className="eyebrow">04 · RELEASE AND RECOVER</p><h2 id="proposal-deployment-title">{lang === 'zh' ? '由映像建立走到可恢復的部署' : 'Build, release and recover'}</h2><p>{lang === 'zh' ? '第一階段先試行 EC2 路徑，第七階段驗證正式示範。完整規格第 10 節包含配置要求、指令範例、備份、還原及 K3s 擴展。' : 'Trial the EC2 path in stage 1 and verify the release in stage 7. Section 10 of the full specification includes configuration requirements, example commands, backup, restore and the K3s extension.'}</p></div>
+      <ProposalIllustration illustration={proposalIllustrations.release} lang={lang}/>
       <ol className="proposal-deploy-list">{proposalDeploymentSteps.map((step, index) => <li key={step.title.en}><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{pick(step.title, lang)}</h3><p>{pick(step.action, lang)}</p><small>{step.tools}</small></div></li>)}</ol>
       <div className="proposal-recovery"><h3>{lang === 'zh' ? '部署完成的證據' : 'What proves the deployment works'}</h3><p>{lang === 'zh' ? '測試 HTTPS、權限、重播去重、EC2 重啟後資料仍在、缺少 EBS 時 Docker 不啟動、在另一目標還原備份，以及相容資料庫版本下的映像回滾。' : 'Check HTTPS, permissions, replay deduplication, persistence after reboot, Docker refusing to start without EBS, a backup restored on a separate target and an image rollback against a compatible schema.'}</p><p>{lang === 'zh' ? '示範恢復目標：資料庫備份最多損失 24 小時資料；操作人員開始恢復後四個工作小時內完成。這些是待測目標，不是可用性承諾。' : 'Proposed recovery targets: at most 24 hours of database changes lost, and restoration within four working hours once the operator starts recovery. These are targets to test, not availability guarantees.'}</p></div>
     </section>

@@ -6,7 +6,7 @@ This project blueprint combines financial-document research with an evidence-bas
 
 The app includes a **Picture guide** at `/finance-project#finance-pictures`: a five-scene ChatGPT-generated overview following a public report through extraction, labelled facts, evidence/calculation and human review. Each of the eight function areas has a separate four-scene illustration. Numbered captions and alt text are supplied by the app in English and Traditional Chinese. Images are explanatory metaphors, not real financial data or operational screenshots.
 
-All nine assets live in `public/finance-illustrations/v1/` as static WebP files; `lib/finance-illustrations.ts` maps them to the project areas. Images are served directly with no runtime generation, remote image host or image-optimization service. The office export copies them as ordinary assets. Full-size links let a user inspect the artwork. The generation prompt set is recorded in `docs/FINANCE_ILLUSTRATION_PROMPTS.json`.
+All nine assets live in `public/finance-illustrations/v1/` as static WebP files; `lib/finance-illustrations.ts` maps them to the project areas. Images are served directly with no runtime generation, remote image host or image-optimization service. The office export copies them as ordinary assets. Short English keywords are drawn over the artwork as crisp HTML labels in both language modes. The full-size native dialog retains these labels, supports Escape to close and repeats their meanings in a caption. The original generated bitmap files remain unchanged. The generation prompt set is recorded in `docs/FINANCE_ILLUSTRATION_PROMPTS.json`.
 
 ```mermaid
 mindmap
@@ -75,6 +75,18 @@ The expected result is a stored original with a stable ID and a queued extractio
 
 The same level of detail covers labelling, revisions, extraction, page references, human review, metric mapping, period/currency handling, restatements, bilingual questions, retrieval, citations, calculations, comparisons, compatibility checks, dashboards, PDF viewing, editable briefs, graph checkpoints, n8n triggers, retries, evaluation, tracing and deployment. These are proposed implementation workflows, not claims that the finance backend already exists.
 
+### API workflow for every function
+
+Each function now includes a proposed contract from `lib/finance-api-workflows.ts`, rendered by `app/finance-api-content.tsx`. All 24 are covered: 23 HTTP API designs and one operator CI/CD workflow for deployment. These are documentation examples; no finance backend or deployment workflow is created by this guide.
+
+Every HTTP guide shows the method and path, required role, authentication, request encoding, example input, response status and payload, three backend handoffs with their technologies, and common errors. GET parameters belong in the URL; PDF uploads use multipart form fields; the original-PDF response contains PDF bytes rather than JSON. Monetary values are decimal strings. Every example ID, URL, company and result is fictional.
+
+Long-running operations return **202 Accepted**, followed by an authenticated status GET. Expand the polling guide to inspect both completed and failed examples. A status GET returns HTTP 200 with the job state, even when the job itself failed. Poll with backoff, stop on terminal states or navigation, and show a review action for paused analysis. A 202 response is not a completed analysis. See [HTTP semantics, RFC 9110 §15.3.3](https://www.rfc-editor.org/rfc/rfc9110.html#name-202-accepted).
+
+Mutation examples use stable operation keys where retries can duplicate work. The design requires resource authorization, revision conflict checks, bounded retries and durable jobs. Human review is validated from a server-side record, not a client boolean. Valid incompatibility findings return a successful check result with explicit blockers. Deployment is represented as a proposed `workflow_dispatch` pipeline with tests, evaluation gates, health checks and rollback, rather than a public API.
+
+English image keywords bridge the concepts and code: **Upload → Metadata → Storage → Versioning**, **Query → Retrieval → Generation → Citations**, and **Trigger → Job Queue → Checkpoint → Notify**. Native HTML overlays preserve readable text at different sizes; they do not alter the generated artwork or its recorded hashes.
+
 ### One question across the system
 
 Scope the question → retrieve the relevant report evidence → validate facts and compatibility → calculate using code → draft an answer → verify figures and citations → present with source links.
@@ -110,7 +122,8 @@ Java, C# and UiPath are optional integration choices, rather than requirements f
 
 - Content: `lib/finance-project.ts`.
 - Function catalog: `lib/finance-function-workflows.ts`; the typed catalog is the single source for the 24 function names and their four-step workflows.
-- Interface: `app/finance-project-content.tsx` and `app/finance-project.css`.
+- API designs: `lib/finance-api-workflows.ts`, with HTTP/CI variants and exactly three contracts per area.
+- Interface: `app/finance-project-content.tsx`, `app/finance-api-content.tsx` and `app/finance-project.css`.
 - Route: `app/finance-project/page.tsx`, using the existing academy language and shell.
 - Discoverability: banners on the dashboard and concept-map page.
 - Accessibility: native branch buttons, visible selected state, keyboard controls, responsive stacking, live detail announcements and reduced-motion support. Connections are decorative SVG; the content remains selectable HTML.

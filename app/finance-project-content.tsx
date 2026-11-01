@@ -1,22 +1,38 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { type Lang, pick } from '../lib/curriculum';
 import { financeAreas, financeBuildStages, financeStack, financeWorkflow } from '../lib/finance-project';
 import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
 import { type FinanceIllustration, financeAreaIllustrations, financeOverviewIllustration } from '../lib/finance-illustrations';
+import { financeApiWorkflows } from '../lib/finance-api-workflows';
+import { FinanceApiContent } from './finance-api-content';
+
+function IllustrationArt({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
+  return <div className="finance-illustration-art" data-layout={illustration.steps.length === 5 ? 'overview' : 'panels'}>
+    {/* eslint-disable-next-line @next/next/no-img-element -- Local WebP files are shared with the office server without an image optimizer. */}
+    <img src={illustration.src} width={illustration.width} height={illustration.height} alt={pick(illustration.alt, lang)} loading="lazy" decoding="async" />
+    <div className="finance-illustration-keywords" aria-hidden="true">{illustration.steps.map(item => <span key={item.keyword}>{item.keyword}</span>)}</div>
+  </div>;
+}
 
 function IllustratedConcept({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
   return <figure className="finance-illustration">
     <div className="finance-illustration-image">
-      {/* eslint-disable-next-line @next/next/no-img-element -- Local WebP files are shared with the office server without an image optimizer. */}
-      <img src={illustration.src} width={illustration.width} height={illustration.height} alt={pick(illustration.alt, lang)} loading="lazy" decoding="async" />
-      <a href={illustration.src} target="_blank" rel="noreferrer">{lang === 'zh' ? '開啟完整插圖' : 'Open full-size illustration'} ↗</a>
+      <IllustrationArt illustration={illustration} lang={lang}/>
+      <button type="button" className="finance-illustration-expand" onClick={() => dialog.current?.showModal()}>{lang === 'zh' ? '開啟完整插圖' : 'Open full-size illustration'} ↗</button>
+      <dialog ref={dialog} className="finance-illustration-dialog" aria-labelledby={titleId}>
+        <div className="finance-illustration-dialog-header"><p id={titleId}>{pick(illustration.caption, lang)}</p><button type="button" onClick={() => dialog.current?.close()}>{lang === 'zh' ? '關閉' : 'Close'} ×</button></div>
+        <IllustrationArt illustration={illustration} lang={lang}/>
+        <p className="finance-illustration-dialog-legend">{illustration.steps.map((item, index) => <span key={item.keyword}>{index + 1} · <strong>{item.keyword}</strong> — {pick(item, lang)}</span>)}</p>
+      </dialog>
     </div>
     <figcaption><p className="eyebrow">{lang === 'zh' ? '用圖像理解' : 'THE VISUAL STORY'}</p><p className="finance-illustration-caption">{pick(illustration.caption, lang)}</p>
-      <ol>{illustration.steps.map((item, index) => <li key={item.en}><b>{index + 1}</b><span>{pick(item, lang)}</span></li>)}</ol>
+      <ol>{illustration.steps.map((item, index) => <li key={item.en}><b>{index + 1}</b><span><strong>{item.keyword}</strong> — {pick(item, lang)}</span></li>)}</ol>
       <p className="finance-illustration-note">{lang === 'zh' ? 'ChatGPT 生成的概念插圖；圖中形狀及走勢只作比喻，並非真實財務數據。實際流程與技術以下方文字為準。' : 'ChatGPT-generated concept illustration. Shapes and trends are metaphors, not real financial data. The text below specifies the actual workflow and tools.'}</p>
     </figcaption>
   </figure>;
@@ -94,7 +110,8 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     </section>
 
     <section className="finance-section" id="finance-functions" aria-labelledby="finance-functions-title">
-      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, STEP BY STEP</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有清楚流程' : 'A clear workflow for every function'}</h2><p>{lang === 'zh' ? '選擇一個功能範疇，再展開其中一項功能。每項都有四個處理步驟、每步技術、預期結果及失敗處理。這些是未來應用程式的實作設計，並非即時執行。' : 'Choose an area and expand a function. Each has four processing steps, the tools used at each step, an expected result and failure handling. These are implementation designs for the future application, not live executions.'}</p></div>
+      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, STEP BY STEP</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有清楚流程' : 'A clear workflow for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，查看步驟、技術及 API 請求／回應範例。23 項功能有建議 API；部署則有 CI 工作流程。所有合約均為未來實作設計，不會即時發出請求。插圖上的英文關鍵詞可對應下方技術。' : 'Choose an area and expand a function to see its steps, tools and request/response examples. There are proposed APIs for 23 functions and a CI workflow for deployment. All contracts describe a future implementation; no requests are sent. English keywords on each illustration connect the picture to the technology below.'}</p></div>
+      <div className="finance-api-reading-guide"><b>{lang === 'zh' ? '怎樣閱讀 API 流程' : 'HOW TO READ AN API WORKFLOW'}</b><p><span>Client</span> → <span>Request</span> → <span>Auth + Validation</span> → <span>Service / Worker</span> → <span>Database</span> → <span>Response</span></p><small>{lang === 'zh' ? 'GET 讀取 · POST 建立或執行動作 · PATCH 修改 · 200 成功 · 201 已建立 · 202 已接納但未完成。範例 ID、公司、網址及結果均為虛構。' : 'GET reads · POST creates or performs an action · PATCH edits · 200 success · 201 created · 202 accepted, still unfinished. Example IDs, companies, URLs and results are fictional.'}</small></div>
       <div className="finance-function-areas" role="group" aria-label={lang === 'zh' ? '選擇功能流程範疇' : 'Choose a function workflow area'}>{financeAreas.map(area => <button key={area.id} type="button" aria-pressed={selected.id === area.id} aria-controls="finance-function-list" onClick={() => setSelected(area)}>{pick(area.title, lang)}</button>)}</div>
       <div id="finance-function-list" className="finance-function-list" key={selected.id}>
         <h3>{pick(selected.title, lang)} <span>· {lang === 'zh' ? '3 項功能' : '3 functions'}</span></h3>
@@ -103,6 +120,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
           <summary><span>{String(index + 1).padStart(2, '0')}</span><h4>{pick(item.title, lang)}</h4><i aria-hidden="true">+</i></summary>
           <div className="finance-function-body"><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>
             <dl className="finance-function-outcomes"><div><dt>{lang === 'zh' ? '預期結果' : 'Expected result'}</dt><dd>{pick(item.result, lang)}</dd></div><div><dt>{lang === 'zh' ? '失敗時怎樣處理' : 'Failure handling'}</dt><dd>{pick(item.failure, lang)}</dd></div></dl>
+            <FinanceApiContent workflow={financeApiWorkflows[selected.id][index]} lang={lang}/>
           </div>
         </details>)}
       </div>

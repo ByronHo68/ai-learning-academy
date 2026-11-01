@@ -1,4 +1,4 @@
 :HL["/_next/static/css/b86b764b626f0b8c.css","style"]
 :HL["/_next/static/css/d3d2d9b9e7a373b0.css","style"]
-:HL["/_next/static/css/c7b043968bbdfc18.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"finance-project","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"iQiQ3_8EhJkNaqjXv-0en"}
+:HL["/_next/static/css/ae3f99ecf7b9cc0a.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"finance-project","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"xsJGZuFsCeZBHpwRmtGaN"}

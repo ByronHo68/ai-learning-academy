@@ -78,3 +78,5 @@ npm run office:test
 Commit the regenerated `office/site` files and `office/build-info.json` with your source changes. The build script uses an isolated temporary copy of the app and removes it afterwards. Only the temporary copy excludes the live lab API and enables static export. The source app keeps its normal backend behavior.
 
 No `node_modules`, local service data, or `.env` credentials are needed in the office download.
+
+The finance project guide also documents API workflows for all 24 functions: 23 proposed HTTP contracts and a CI/CD deployment flow, with request/response examples, asynchronous polling and failure cases. English keywords overlay all nine generated concept illustrations, including the full-size view. These are offline design examples, not live finance endpoints.

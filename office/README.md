@@ -61,6 +61,8 @@ The dashboard and concept map link to `/finance-project`: a bilingual Hong Kong 
 
 Open **Function workflows** to explore all 24 functions. Every function includes four processing steps, the tools at each step, an expected result and failure handling. The technology table also describes data handoffs for each layer. Select an area and expand its function guides; English and Traditional Chinese both work offline.
 
+The **Picture guide** and each selected function area include ChatGPT-generated concept illustrations with bilingual captions. All nine WebP images are bundled locally in `site/finance-illustrations/v1/`, including full-size image links; no account, API key or image-generation service is needed to view them.
+
 The agent lab pages are included, but running agents and evaluations requires the separate Python and Java services and the Next.js proxy in `codex/rich-animated-ts`. This office server returns an explanation when those pages request the lab API. It does not run those services.
 
 ## Rebuild after editing the source

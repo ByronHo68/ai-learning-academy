@@ -27,9 +27,11 @@ test('office package serves every exported page and asset on Node without depend
   assert(exported.includes('index.html'));
   assert.equal(exported.filter(path => /^learn\/[^/]+\.html$/.test(path)).length, 13);
   assert.equal(exported.filter(path => /^junior-path\/labs\/[^/]+$/.test(path)).length, 6);
+  assert.equal(exported.filter(path => /^finance-illustrations\/v1\/[^/]+\.webp$/.test(path)).length, 9);
   for (const path of exported) {
     const response = await fetch(`${base}/${path}`);
     assert.equal(response.status, 200, path);
+    if (path.endsWith('.webp')) assert.equal(response.headers.get('content-type'), 'image/webp', path);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(join(site, path)), path);
   }
   for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {

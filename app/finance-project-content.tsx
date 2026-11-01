@@ -6,6 +6,21 @@ import { motion, useReducedMotion } from 'motion/react';
 import { type Lang, pick } from '../lib/curriculum';
 import { financeAreas, financeBuildStages, financeStack, financeWorkflow } from '../lib/finance-project';
 import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
+import { type FinanceIllustration, financeAreaIllustrations, financeOverviewIllustration } from '../lib/finance-illustrations';
+
+function IllustratedConcept({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
+  return <figure className="finance-illustration">
+    <div className="finance-illustration-image">
+      {/* eslint-disable-next-line @next/next/no-img-element -- Local WebP files are shared with the office server without an image optimizer. */}
+      <img src={illustration.src} width={illustration.width} height={illustration.height} alt={pick(illustration.alt, lang)} loading="lazy" decoding="async" />
+      <a href={illustration.src} target="_blank" rel="noreferrer">{lang === 'zh' ? '開啟完整插圖' : 'Open full-size illustration'} ↗</a>
+    </div>
+    <figcaption><p className="eyebrow">{lang === 'zh' ? '用圖像理解' : 'THE VISUAL STORY'}</p><p className="finance-illustration-caption">{pick(illustration.caption, lang)}</p>
+      <ol>{illustration.steps.map((item, index) => <li key={item.en}><b>{index + 1}</b><span>{pick(item, lang)}</span></li>)}</ol>
+      <p className="finance-illustration-note">{lang === 'zh' ? 'ChatGPT 生成的概念插圖；圖中形狀及走勢只作比喻，並非真實財務數據。實際流程與技術以下方文字為準。' : 'ChatGPT-generated concept illustration. Shapes and trends are metaphors, not real financial data. The text below specifies the actual workflow and tools.'}</p>
+    </figcaption>
+  </figure>;
+}
 
 export function FinanceProjectBanner({ lang }: { lang: Lang }) {
   return <aside className="hiring-banner finance-banner">
@@ -34,12 +49,15 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     </header>
 
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '項目指南目錄' : 'Project guide contents'}>
+      <a href="#finance-pictures">{lang === 'zh' ? '圖像入門' : 'Picture guide'}</a>
       <a href="#finance-map">{lang === 'zh' ? '互動心智圖' : 'Mind map'}</a>
       <a href="#finance-functions">{lang === 'zh' ? '每項功能流程' : 'Function workflows'}</a>
       <a href="#finance-workflow">{lang === 'zh' ? '答案如何產生' : 'Answer walkthrough'}</a>
       <a href="#finance-stack">{lang === 'zh' ? '技術分工' : 'Technology stack'}</a>
       <a href="#finance-stages">{lang === 'zh' ? '建立次序' : 'Build stages'}</a>
     </nav>
+
+    <section className="finance-section" id="finance-pictures" aria-labelledby="finance-pictures-title"><div className="finance-section-heading"><p className="eyebrow">START HERE · SEE THE IDEA</p><h2 id="finance-pictures-title">{lang === 'zh' ? '先看一張圖，理解整個項目' : 'Understand the project in one picture'}</h2><p>{lang === 'zh' ? '從左至右跟隨五個場景。重點是原始來源一直保留下來，計算有根據，最後仍能由人核對。' : 'Follow the five scenes from left to right. The original source stays connected, calculations have inputs and a person can check the final answer.'}</p></div><IllustratedConcept illustration={financeOverviewIllustration} lang={lang}/></section>
 
     <section className="finance-section" id="finance-map" aria-labelledby="finance-map-title">
       <div className="finance-section-heading"><p className="eyebrow">01 · EXPLORE THE PROJECT</p><h2 id="finance-map-title">{lang === 'zh' ? '由整體走入每個功能' : 'See the whole project, then explore a function'}</h2>
@@ -80,6 +98,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
       <div className="finance-function-areas" role="group" aria-label={lang === 'zh' ? '選擇功能流程範疇' : 'Choose a function workflow area'}>{financeAreas.map(area => <button key={area.id} type="button" aria-pressed={selected.id === area.id} aria-controls="finance-function-list" onClick={() => setSelected(area)}>{pick(area.title, lang)}</button>)}</div>
       <div id="finance-function-list" className="finance-function-list" key={selected.id}>
         <h3>{pick(selected.title, lang)} <span>· {lang === 'zh' ? '3 項功能' : '3 functions'}</span></h3>
+        <IllustratedConcept illustration={financeAreaIllustrations[selected.id]} lang={lang}/>
         {selectedFunctions.map((item, index) => <details className="finance-function" key={item.title.en} open={index === 0}>
           <summary><span>{String(index + 1).padStart(2, '0')}</span><h4>{pick(item.title, lang)}</h4><i aria-hidden="true">+</i></summary>
           <div className="finance-function-body"><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>

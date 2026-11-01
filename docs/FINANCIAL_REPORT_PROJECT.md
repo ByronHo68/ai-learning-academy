@@ -4,6 +4,10 @@ This project blueprint combines financial-document research with an evidence-bas
 
 ## Mind map
 
+The app includes a **Picture guide** at `/finance-project#finance-pictures`: a five-scene ChatGPT-generated overview following a public report through extraction, labelled facts, evidence/calculation and human review. Each of the eight function areas has a separate four-scene illustration. Numbered captions and alt text are supplied by the app in English and Traditional Chinese. Images are explanatory metaphors, not real financial data or operational screenshots.
+
+All nine assets live in `public/finance-illustrations/v1/` as static WebP files; `lib/finance-illustrations.ts` maps them to the project areas. Images are served directly with no runtime generation, remote image host or image-optimization service. The office export copies them as ordinary assets. Full-size links let a user inspect the artwork. The generation prompt set is recorded in `docs/FINANCE_ILLUSTRATION_PROMPTS.json`.
+
 ```mermaid
 mindmap
   root((Hong Kong Financial Report Analyst))

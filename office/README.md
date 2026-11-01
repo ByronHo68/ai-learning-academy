@@ -80,3 +80,5 @@ Commit the regenerated `office/site` files and `office/build-info.json` with you
 No `node_modules`, local service data, or `.env` credentials are needed in the office download.
 
 The finance project guide also documents API workflows for all 24 functions: 23 proposed HTTP contracts and a CI/CD deployment flow, with request/response examples, asynchronous polling and failure cases. English keywords overlay all nine generated concept illustrations, including the full-size view. These are offline design examples, not live finance endpoints.
+
+Open `/finance-project/proposal` for the eight-stage development proposal, bilingual summaries, EC2 and Docker Compose architecture, deployment and recovery steps, and optional K3s work. The complete English specification and Markdown download are bundled locally. The page is a design guide and does not provision AWS services. The office server serves the Markdown download as `text/markdown`; the prebuilt browser assets include the Markdown reader and its runtime dependency notices.

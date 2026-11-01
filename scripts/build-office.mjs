@@ -35,12 +35,16 @@ try {
   await cp(join(root, 'docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf'),
     join(target, 'docs/guide/ai-learning-roadmap-bilingual-quiz-guide.pdf'));
   const notices = ['Third-party licenses for the prebuilt office website\n'];
-  for (const name of ['react', 'react-dom', 'next', 'lucide-react', 'motion', 'framer-motion',
-    'motion-dom', 'motion-utils', 'prism-react-renderer', '@swc/helpers', 'scheduler']) {
-    const directory = join(root, 'node_modules', name);
-    for (const entry of await readdir(directory, { withFileTypes: true })) {
+  const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'));
+  for (const [packagePath, info] of Object.entries(lock.packages)) {
+    if (!packagePath || info.dev) continue;
+    const directory = join(root, packagePath);
+    let entries;
+    try { entries = await readdir(directory, { withFileTypes: true }); }
+    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
+    for (const entry of entries) {
       if (entry.isFile() && /^(license|licence|copying)/i.test(entry.name)) {
-        notices.push(`\n===== ${name} / ${entry.name} =====\n${await readFile(join(directory, entry.name), 'utf8')}`);
+        notices.push(`\n===== ${packagePath} / ${entry.name} =====\n${await readFile(join(directory, entry.name), 'utf8')}`);
       }
     }
   }

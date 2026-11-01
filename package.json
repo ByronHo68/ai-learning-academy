@@ -21,7 +21,9 @@
     "lab:setup": "python3 scripts/lab-setup.py",
     "lab:start": "node scripts/lab-start.mjs",
     "lab:eval": "node scripts/lab-eval.mjs",
-    "lab:contracts": "node scripts/lab-contracts.mjs"
+    "lab:contracts": "node scripts/lab-contracts.mjs",
+    "proposal:sync": "node scripts/sync-finance-proposal.mjs",
+    "proposal:check": "node scripts/sync-finance-proposal.mjs --check"
   },
   "dependencies": {
     "ajv": "^8.20.0",
@@ -30,7 +32,9 @@
     "next": "^16.3.5",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.54.11",

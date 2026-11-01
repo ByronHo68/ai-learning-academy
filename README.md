@@ -2,7 +2,7 @@
 
 The dependency-powered React/TypeScript edition of the bilingual visual AI curriculum. It includes 13 lessons, 104 quiz questions, and 80 expanded concept workshops. Fifteen engineering workshops come from a complete 651-unique-document Markdown corpus review, covering Git, Python async, networking, FastAPI, PostgreSQL, Redis, queues, microservices, media delivery, Docker, Kubernetes, and safe deployment. The production labs also cover provenance-safe GraphRAG, MCP policy gateways, deterministic agent tests, durable jobs, Deep Agents, and LangSmith. Every workshop has its own explanation, metaphor, real-world example, three implementation steps, and syntax-highlighted code sample.
 
-This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/plain-node18`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/plain-node18) branch.
+This branch intentionally uses Next.js, Motion, Lucide, and Prism for richer interactions and animation. For the zero-install Node 18.18 edition, use the [`codex/node18-office-bundle`](https://github.com/ByronHo68/ai-learning-academy/tree/codex/node18-office-bundle) side branch.
 
 ## Start it
 
@@ -52,6 +52,8 @@ Start in the clearly labeled offline workflow mode. Add your model and Langfuse 
 ## AI developer hiring practice
 
 ### Finance portfolio project
+
+Open `/finance-project/proposal` for an eight-stage, 20-week plan at 15 hours per week, with developer tasks, acceptance checks, an EC2 service diagram, Docker Compose deployment steps, recovery checks and an optional K3s extension. Bilingual summaries accompany the complete English specification and a Markdown download. The source is [the development proposal](docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md). After editing it, run `npm run proposal:sync` to update the reader and download; `npm run proposal:check` verifies they match. This documents a future application and does not deploy AWS resources.
 
 Open `/finance-project` from the dashboard or concept map. The bilingual **Hong Kong Financial Report Analyst** blueprint includes an eight-branch interactive mind map, 24 functions, input/output contracts, acceptance checks, a seven-step answer walkthrough with a missing-evidence scenario, a technology stack and four build stages. It connects report extraction, reviewed financial facts, cited answers, comparisons, dashboards, LangGraph and later n8n automation. The walkthrough uses fictional offline examples; this is a guide to building the application, not an operational finance service. See [the project blueprint and mind map](docs/FINANCIAL_REPORT_PROJECT.md).
 

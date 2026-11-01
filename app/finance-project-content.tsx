@@ -71,7 +71,10 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
       <a href="#finance-workflow">{lang === 'zh' ? '答案如何產生' : 'Answer walkthrough'}</a>
       <a href="#finance-stack">{lang === 'zh' ? '技術分工' : 'Technology stack'}</a>
       <a href="#finance-stages">{lang === 'zh' ? '建立次序' : 'Build stages'}</a>
+      <Link href="/finance-project/proposal">{lang === 'zh' ? '開發提案及 EC2 部署' : 'Development proposal and EC2'}</Link>
     </nav>
+
+    <aside className="hiring-banner finance-banner finance-proposal-banner"><div><p className="eyebrow">BUILD THE PROJECT · DEPLOY ON EC2</p><h2>{lang === 'zh' ? '按八個階段，把構想變成求職作品' : 'Turn this blueprint into a portfolio project'}</h2><p>{lang === 'zh' ? '查看每週 15 小時的 20 週提案、開發任務、驗收條件，以及 Docker Compose、EC2、備份與回滾設計。附完整 Markdown 下載。' : 'Read the 20-week plan at 15 hours per week, developer tasks, acceptance checks and the Docker Compose deployment design for EC2, including backup and rollback. Download the full Markdown proposal.'}</p></div><Link href="/finance-project/proposal">{lang === 'zh' ? '開啟開發提案' : 'Open the development proposal'} →</Link></aside>
 
     <section className="finance-section" id="finance-pictures" aria-labelledby="finance-pictures-title"><div className="finance-section-heading"><p className="eyebrow">START HERE · SEE THE IDEA</p><h2 id="finance-pictures-title">{lang === 'zh' ? '先看一張圖，理解整個項目' : 'Understand the project in one picture'}</h2><p>{lang === 'zh' ? '從左至右跟隨五個場景。重點是原始來源一直保留下來，計算有根據，最後仍能由人核對。' : 'Follow the five scenes from left to right. The original source stays connected, calculations have inputs and a person can check the final answer.'}</p></div><IllustratedConcept illustration={financeOverviewIllustration} lang={lang}/></section>
 

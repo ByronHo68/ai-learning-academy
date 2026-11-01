@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Check, ChevronDown, Code2, Copy, Lightbulb, Sparkles, TestTube2 } from 'lucide-react';
@@ -17,6 +18,7 @@ import {
 } from '../lib/progress';
 
 const STORAGE_KEY = 'ai-academy-progress-v1';
+const FinanceProposalContent = dynamic(() => import('./finance-proposal-content'));
 
 const reveal = {
   hidden: { opacity: 0, y: 28 },
@@ -428,7 +430,7 @@ function Settings({ state,setState }: { state:AcademyState; setState:React.Dispa
   return <Shell state={state} setState={setState}><main className="utility-page settings-page"><div className="utility-hero"><p className="eyebrow">LOCAL-FIRST SETTINGS</p><h1>{lang==='zh'?'你控制自己嘅學習資料':'You control your learning data'}</h1><p>{lang==='zh'?'進度只存喺呢個 browser。你可以匯出備份、匯入同版本資料，或者確認後重設。':'Progress stays in this browser. Export a backup, import matching versioned data, or reset with confirmation.'}</p></div><section className="settings-grid"><article><span>01</span><h2>{lang==='zh'?'語言':'Language'}</h2><p>{lang==='zh'?'繁體中文內容完整；English UI 同核心標題可切換，technical terms 保留英文。':'Traditional Chinese is complete; English UI and core titles are available, with technical terms preserved.'}</p><button onClick={()=>setState((current)=>({...current,lang:current.lang==='zh'?'en':'zh'}))}>{lang==='zh'?'Switch to English':'切換到繁體中文'}</button></article><article><span>02</span><h2>{lang==='zh'?'備份與轉移':'Backup & transfer'}</h2><p>{lang==='zh'?'JSON 包括 attempts、review queue、mastery 同設定；冇 API key 或帳戶資料。':'JSON includes attempts, review queue, mastery, and preferences—no API keys or account data.'}</p><div><button onClick={exportData}>{lang==='zh'?'匯出進度':'Export progress'}</button><button onClick={()=>fileRef.current?.click()}>{lang==='zh'?'匯入進度':'Import progress'}</button><input ref={fileRef} type="file" accept="application/json" onChange={importData} hidden/></div></article><article className="danger-setting"><span>03</span><h2>{lang==='zh'?'重設進度':'Reset progress'}</h2><p>{lang==='zh'?'刪除呢個 browser 入面所有完成狀態、測驗歷史同溫習隊列。':'Deletes completion states, quiz history, and review queue from this browser.'}</p><button onClick={reset}>{lang==='zh'?'重設所有進度':'Reset all progress'}</button></article></section>{message&&<p className="settings-message" role="status">{message}</p>}<section className="storage-note"><b>{lang==='zh'?'儲存 schema':'Storage schema'} v1</b><p>{lang==='zh'?'有效進度更新時會盡量保留；無效或損壞檔案會安全拒絕。':'Valid progress is preserved across updates where possible; malformed imports fail safely.'}</p></section></main></Shell>;
 }
 
-export default function AcademyClient({ view='dashboard', topicId }: { view?:'dashboard'|'lesson'|'review'|'assessment'|'map'|'glossary'|'settings'|'hiring'|'junior'|'agent-lab'|'agent-evals'|'agent-compare'|'finance-project'; topicId?:string }) {
+export default function AcademyClient({ view='dashboard', topicId }: { view?:'dashboard'|'lesson'|'review'|'assessment'|'map'|'glossary'|'settings'|'hiring'|'junior'|'agent-lab'|'agent-evals'|'agent-compare'|'finance-project'|'finance-proposal'; topicId?:string }) {
   const {state,setState,ready}=useAcademyState();
   if(!ready)return <main className="loading-screen" aria-live="polite"><span className="brand-mark">AI</span><p>AI 學習院準備緊你嘅本機進度…</p></main>;
   if(view==='lesson'&&topicId){const topic=topicById(topicId);return topic?<Lesson topic={topic} state={state} setState={setState}/>:null;}
@@ -437,6 +439,7 @@ export default function AcademyClient({ view='dashboard', topicId }: { view?:'da
   if(view==='map')return <ConceptMap state={state} setState={setState}/>;
   if(view==='junior')return <Shell state={state} setState={setState}><JuniorContent lang={state.lang}/></Shell>;
   if(view==='finance-project')return <Shell state={state} setState={setState}><FinanceProjectContent lang={state.lang}/></Shell>;
+  if(view==='finance-proposal')return <Shell state={state} setState={setState}><FinanceProposalContent lang={state.lang}/></Shell>;
   if(view==='agent-lab'||view==='agent-evals'||view==='agent-compare')return <Shell state={state} setState={setState}><AgentLabContent lang={state.lang} view={view==='agent-evals'?'evals':view==='agent-compare'?'compare':'run'}/></Shell>;
   if(view==='hiring')return <Shell state={state} setState={setState}><HiringContent lang={state.lang}/></Shell>;
   if(view==='glossary')return <Glossary state={state} setState={setState}/>;

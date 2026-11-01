@@ -48,7 +48,7 @@ try {
       }
     }
   }
-  await writeFile(join(root, 'office/THIRD_PARTY_NOTICES.txt'), notices.join('\n').replace(/\r\n/g, '\n'));
+  await writeFile(join(root, 'office/THIRD_PARTY_NOTICES.txt'), notices.join('\n').replace(/\r\n/g, '\n').replace(/[\t ]+$/gm, ''));
   const source = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
   await writeFile(join(root, 'office/build-info.json'), JSON.stringify({
     sourceCommit: source.stdout.trim(), buildNode: process.version,

@@ -9,6 +9,8 @@ import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
 import { type FinanceIllustration, financeAreaIllustrations, financeOverviewIllustration } from '../lib/finance-illustrations';
 import { financeApiWorkflows } from '../lib/finance-api-workflows';
 import { FinanceApiContent } from './finance-api-content';
+import { financeFunctionMaps } from '../lib/finance-function-maps';
+import { FinanceFunctionMindmap, type BackendLayout } from './finance-function-map';
 
 function IllustrationArt({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
   return <div className="finance-illustration-art" data-layout={illustration.steps.length === 5 ? 'overview' : 'panels'}>
@@ -51,6 +53,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
   const [selected, setSelected] = useState(financeAreas[0]);
   const [step, setStep] = useState(0);
   const [scenario, setScenario] = useState<'supported' | 'missing'>('supported');
+  const [backend, setBackend] = useState<BackendLayout>('java-python');
   const reducedMotion = useReducedMotion();
   const currentStep = financeWorkflow[step];
   const selectedFunctions = financeFunctionWorkflows[selected.id];
@@ -67,7 +70,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '項目指南目錄' : 'Project guide contents'}>
       <a href="#finance-pictures">{lang === 'zh' ? '圖像入門' : 'Picture guide'}</a>
       <a href="#finance-map">{lang === 'zh' ? '互動心智圖' : 'Mind map'}</a>
-      <a href="#finance-functions">{lang === 'zh' ? '每項功能流程' : 'Function workflows'}</a>
+      <a href="#finance-functions">{lang === 'zh' ? '每項功能心智圖及流程' : 'Function maps and workflows'}</a>
       <a href="#finance-workflow">{lang === 'zh' ? '答案如何產生' : 'Answer walkthrough'}</a>
       <a href="#finance-stack">{lang === 'zh' ? '技術分工' : 'Technology stack'}</a>
       <a href="#finance-stages">{lang === 'zh' ? '建立次序' : 'Build stages'}</a>
@@ -113,7 +116,8 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     </section>
 
     <section className="finance-section" id="finance-functions" aria-labelledby="finance-functions-title">
-      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, STEP BY STEP</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有清楚流程' : 'A clear workflow for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，查看步驟、技術及 API 請求／回應範例。23 項功能有建議 API；部署則有 CI 工作流程。所有合約均為未來實作設計，不會即時發出請求。插圖上的英文關鍵詞可對應下方技術。' : 'Choose an area and expand a function to see its steps, tools and request/response examples. There are proposed APIs for 23 functions and a CI workflow for deployment. All contracts describe a future implementation; no requests are sent. English keywords on each illustration connect the picture to the technology below.'}</p></div>
+      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, END TO END</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有自己的心智圖' : 'An individual mind map for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，沿前端、DNS／HTTPS、後端、處理及驗證走到成功或失敗回傳。AI 功能亦顯示檢索、RAG、LangGraph 及模型呼叫。下方保留每步技術及 API 範例；全部皆為離線設計。' : 'Choose an area and expand a function. Follow its caller, DNS/HTTPS, backend, processing and validation to success or failure. AI functions also show retrieval, RAG, LangGraph and model calls. Step-by-step tools and API examples remain below; everything is an offline design.'}</p></div>
+      <fieldset className="function-map-backend"><legend>{lang === 'zh' ? '選擇心智圖的後端架構' : 'Choose the backend architecture shown in the maps'}</legend><label><input type="radio" name="finance-map-backend" checked={backend === 'java-python'} onChange={() => setBackend('java-python')}/>{lang === 'zh' ? 'Java API + Python 分析服務' : 'Java API + Python analysis service'}</label><label><input type="radio" name="finance-map-backend" checked={backend === 'python'} onChange={() => setBackend('python')}/>{lang === 'zh' ? '原提案：Python API' : 'Original proposal: Python API'}</label><p>{lang === 'zh' ? 'Java Spring Boot 為建議新增的 API 層，負責身分、合約及轉送；FastAPI／LangGraph 保留財報與 AI 處理。20 週提案仍以 Python 首版估算，加入 Java 須另作範圍及工時評估。兩種服務皆未在此指南實作。DNS 是解析步驟，可使用快取，並非轉送資料的服務。' : 'Java Spring Boot is a proposed additional API layer for identity, contracts and forwarding. FastAPI/LangGraph retain finance and AI processing. The 20-week estimate covers the original Python release; adding Java needs a separate scope and effort estimate. Neither finance service is implemented in this guide. DNS resolves a name, may use a cache and does not forward application data.'}</p></fieldset>
       <div className="finance-api-reading-guide"><b>{lang === 'zh' ? '怎樣閱讀 API 流程' : 'HOW TO READ AN API WORKFLOW'}</b><p><span>Client</span> → <span>Request</span> → <span>Auth + Validation</span> → <span>Service / Worker</span> → <span>Database</span> → <span>Response</span></p><small>{lang === 'zh' ? 'GET 讀取 · POST 建立或執行動作 · PATCH 修改 · 200 成功 · 201 已建立 · 202 已接納但未完成。範例 ID、公司、網址及結果均為虛構。' : 'GET reads · POST creates or performs an action · PATCH edits · 200 success · 201 created · 202 accepted, still unfinished. Example IDs, companies, URLs and results are fictional.'}</small></div>
       <div className="finance-function-areas" role="group" aria-label={lang === 'zh' ? '選擇功能流程範疇' : 'Choose a function workflow area'}>{financeAreas.map(area => <button key={area.id} type="button" aria-pressed={selected.id === area.id} aria-controls="finance-function-list" onClick={() => setSelected(area)}>{pick(area.title, lang)}</button>)}</div>
       <div id="finance-function-list" className="finance-function-list" key={selected.id}>
@@ -121,7 +125,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
         <IllustratedConcept illustration={financeAreaIllustrations[selected.id]} lang={lang}/>
         {selectedFunctions.map((item, index) => <details className="finance-function" key={item.title.en} open={index === 0}>
           <summary><span>{String(index + 1).padStart(2, '0')}</span><h4>{pick(item.title, lang)}</h4><i aria-hidden="true">+</i></summary>
-          <div className="finance-function-body"><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>
+          <div className="finance-function-body"><FinanceFunctionMindmap map={financeFunctionMaps[selected.id][index]} api={financeApiWorkflows[selected.id][index]} title={item.title} lang={lang} backend={backend}/><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>
             <dl className="finance-function-outcomes"><div><dt>{lang === 'zh' ? '預期結果' : 'Expected result'}</dt><dd>{pick(item.result, lang)}</dd></div><div><dt>{lang === 'zh' ? '失敗時怎樣處理' : 'Failure handling'}</dt><dd>{pick(item.failure, lang)}</dd></div></dl>
             <FinanceApiContent workflow={financeApiWorkflows[selected.id][index]} lang={lang}/>
           </div>

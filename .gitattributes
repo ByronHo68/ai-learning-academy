@@ -1,0 +1,3 @@
+office/site/** -text -diff linguist-generated=true
+docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md text eol=lf
+public/downloads/financial-report-development-proposal.md text eol=lf

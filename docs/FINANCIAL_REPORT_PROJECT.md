@@ -62,6 +62,14 @@ mindmap
 
 ### Workflows for all 24 functions
 
+Each function also has a separate interactive end-to-end map. Select a node to inspect its responsibility, then choose its success, limited-result, or failure branch. Browser functions show frontend, DNS resolution, HTTPS, the chosen API layout, function-specific processing, validation, and the return path. The Java + Python view proposes a Spring Boot facade in front of the Python finance service. The original Python-only architecture remains selectable, and its 20-week estimate excludes the Java extension.
+
+Research maps distinguish LangGraph orchestration, embedding, filtered pgvector retrieval, RAG context, LLM generation, and claim verification. Database operations and deterministic calculations show their own processing paths. n8n uses private service discovery; operator functions use private administration because the public gateway denies `/api/internal` paths. Deployment has an operator CI map.
+
+Asynchronous maps distinguish submission acceptance from eventual completion: HTTP 202 follows input validation and durable job creation, and the caller polls for a completed or failed job. A status GET can return HTTP 200 with state `failed`. Connection failures happen before an API response exists. Authentication and input rejection stop business processing early.
+
+The diagrams are explanatory designs. DNS is name resolution and can be cached; it does not proxy the request. LangGraph coordinates the relevant retrieval and model steps rather than requiring a chat-model call for every feature. See [domain resolution](https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_domain_name), [Spring WebClient](https://docs.spring.io/spring-framework/reference/web/webflux-webclient.html), and [LangGraph workflows](https://docs.langchain.com/oss/python/langgraph/workflows-agents).
+
 Open `/finance-project#finance-functions`. Eight area buttons share the mind map selection. Each area exposes three expandable function guides. Every function has four ordered steps, the technology responsible at each step, an expected result and explicit failure handling. There are 96 processing steps across the complete catalog.
 
 For example, **Upload annual-report PDFs** flows through:

@@ -63,6 +63,8 @@ The README and CV description must distinguish completed features, limitations, 
 
 Use one web application, one Python API, and a separate worker. Store financial facts and evidence in PostgreSQL. Keep original PDFs outside the database with immutable identifiers.
 
+The web guide also offers an individual end-to-end map for each of the 24 functions. Its Java + Python view adds a proposed Spring Boot API facade for identity, request contracts, and scoped forwarding to the Python finance service. The Python-only view matches the baseline architecture below. The 20-week estimate excludes that additional Java service, which needs its own scope, deployment resources, tests, and effort estimate. The maps show design paths rather than an implemented finance backend.
+
 ```mermaid
 flowchart TD
     User[Owner or read-only reviewer] --> Web[Next.js and React]

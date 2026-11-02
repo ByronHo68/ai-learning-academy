@@ -260,14 +260,14 @@ export const financeFunctionMaps = {
     {
       kind: 'request', entry: 'n8n',
       steps: [
-        { id: 'event', keyword: 'INGESTION EVENT', action: { en: 'Receive an authenticated scheduled or manual event with a stable event key.', zh: '接收已驗證排程或人工事件，附穩定事件鍵。' }, tools: 'n8n HTTP Request · service token' },
+        { id: 'event', keyword: 'INGESTION EVENT', action: { en: 'Receive an authenticated scheduled or manual event with a stable event key.', zh: '接收已驗證排程或人工事件，附穩定事件鍵。' }, tools: 'HTTP request · service token' },
         { id: 'source', keyword: 'APPROVED SOURCE', action: { en: 'Validate the configured source, URL, redirects and download destination restrictions.', zh: '驗證已設定來源、網址、重新導向及下載目的地限制。' }, tools: 'Allowlist · network boundary checks' },
         { id: 'job', keyword: 'DEDUPLICATE JOB', action: { en: 'Create or reuse one logical ingestion job and record the source event.', zh: '建立或重用一項邏輯匯入工作，記錄來源事件。' }, tools: 'PostgreSQL unique key · durable job ledger' },
         { id: 'worker', keyword: 'DOWNLOAD + EXTRACT', action: { en: 'Let the worker fetch the approved PDF, store it and use the existing extraction pipeline.', zh: '由背景工作讀取獲准 PDF、儲存並使用原有擷取流程。' }, tools: 'Celery · S3 · pdfplumber · passage index' },
-        { id: 'completion', keyword: 'COMPLETION RECORD', action: { en: 'n8n polls the recorded job and records completion before any optional notification.', zh: 'n8n 輪詢已記錄工作，在選用通知前先記錄完成。' }, tools: 'n8n status check · delivery record' },
+        { id: 'completion', keyword: 'COMPLETION RECORD', action: { en: 'The event caller polls the recorded job and records completion before any optional notification.', zh: '事件呼叫者輪詢已記錄工作，在選用通知前先記錄完成。' }, tools: 'Status polling · delivery record' },
       ],
       validation: { en: 'The service and source are authorized, replay reuses the same logical job, and processing really reached its reported state.', zh: '服務及來源獲准，重播重用同一邏輯工作，處理確實到達所報狀態。' },
-      outcomes: { kind: 'binary', success: { en: 'Return the inspectable document/job result to n8n and show it in the report library.', zh: '把可檢查文件及工作結果回傳 n8n，並在財報資料庫顯示。' }, failure: { en: 'Record rejected source, invalid service token or failed processing; back off only permitted transient retries.', zh: '記錄來源拒絕、服務權杖無效或處理失敗，只對容許的暫時失敗退避重試。' } },
+      outcomes: { kind: 'binary', success: { en: 'Return the inspectable document/job result to the event caller and show it in the report library.', zh: '把可檢查文件及工作結果回傳事件呼叫者，並在財報資料庫顯示。' }, failure: { en: 'Record rejected source, invalid service token or failed processing; back off only permitted transient retries.', zh: '記錄來源拒絕、服務權杖無效或處理失敗，只對容許的暫時失敗退避重試。' } },
       aiUse: { en: 'n8n triggers ingestion rather than answering questions. Indexing can use embeddings; a chat LLM is called only by a separately requested analysis.', zh: 'n8n 觸發匯入而非回答問題；索引可用嵌入，聊天 LLM 只在另行請求分析時呼叫。' },
     },
     {

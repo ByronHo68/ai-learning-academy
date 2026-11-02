@@ -1,27 +1,30 @@
 # Hong Kong Financial Report Analyst: development proposal
 
-Date: 1 November 2026  
+Date: 3 November 2026\
 Status: Draft for review before implementation  
 Developer capacity: One developer, 15 hours per week  
 First-release goal: A working job-search portfolio demo  
-Deployment decision: One AWS EC2 instance using Docker Compose; optional K3s extension later
+Development decision: Run services directly on the local computer during stages 0 to 6\
+Deployment decision: Introduce Docker in stage 7, test containers locally, then deploy to one AWS EC2 instance; optional K3s extension later
 
 ## 1. Duration and assumptions
 
-Budget **300 developer hours over 20 weeks**, approximately five months, for the portfolio release. This includes 240 hours of planned work and 60 hours of contingency for extraction problems, integration defects, and evaluation fixes.
+The original provisional baseline is **300 developer hours over 20 weeks**, approximately five months. It contains 240 planned hours and 60 contingency hours for extraction problems, integration defects, and evaluation fixes.
 
-Use **18 to 22 weeks** as the planning range if the scope stays fixed. These are engineering estimates, not measured delivery times or a guaranteed deadline. Re-estimate after the first real report passes extraction checks in stage 2.
+For the chosen local-development-first approach, add **12 to 24 hours for Docker packaging and integration in stage 7**. The working total is now **312 to 324 hours, approximately 21 to 22 weeks at 15 hours per week**, before optional extensions or first-time EC2 learning. This allowance covers the extra risk of discovering container differences after the local features are complete. It does not replace the deployment tasks already budgeted in the baseline.
+
+The original baseline planning range was **18 to 22 weeks**. Treat the revised 21-to-22-week working target as provisional too. These are engineering estimates, not measured delivery times or a guaranteed deadline. Re-estimate after the first real report passes extraction checks in stage 2.
 
 | Milestone | Result | Estimated timing at 15 hours per week |
 | --- | --- | --- |
 | First working slice | Upload one report, review its cash-flow values, calculate a change, and open the source page | By week 5 or 6 |
 | Core research demo | Compare reviewed facts and ask questions with citations in English or Traditional Chinese | By approximately week 16 |
-| Portfolio release | Add a basic brief, one n8n workflow, evaluation evidence, deployment, and interview materials | Target week 20; planning range 18 to 22 weeks |
-| Full 24-function extension | Complete the deeper revision, checkpoint approval, recovery, and operator interfaces in section 6 | Another 90 to 150 hours including contingency; approximately 26 to 30 weeks total from the start |
+| Portfolio release | Add a basic brief, one n8n workflow, evaluation evidence, deployment, and interview materials | Original target week 20; revised local-first working target approximately weeks 21 to 22 |
+| Full 24-function extension | Complete the deeper revision, checkpoint approval, recovery, and operator interfaces in section 6 | Another 90 to 150 hours including contingency; approximately 27 to 32 weeks total with the local-first packaging allowance |
 
-The full extension excludes OCR and public multi-user operation. Its additional hours apply after the 300-hour portfolio budget. The combined 26-to-30-week estimate uses the 20-week working target. Combining the first release's 18-to-22-week range with the extension gives a wider range of 24 to 32 weeks.
+The full extension excludes OCR and public multi-user operation. Its additional hours apply after the portfolio budget. With the Docker packaging allowance, the combined budget is 402 to 474 hours, approximately 27 to 32 weeks, before optional EC2 learning or Java work.
 
-The EC2 and Docker Compose baseline uses the deployment allowance already in this estimate, provided deployment setup starts in stage 1. For a first EC2 deployment, allow another 12 to 24 hours, approximately one to two weeks. The optional Kubernetes extension in section 10 has a separate estimate.
+Build and test the application on the local computer during stages 0 to 6. Add Dockerfiles and Compose in stage 7, rehearse the same user journey in containers locally, then provision EC2. For a first EC2 deployment, add a separate 12 to 24 hours for AWS, IAM, HTTPS, storage, and recovery learning. That raises the local-first total to 324 to 348 hours, approximately 22 to 24 weeks. Do not count the Docker packaging allowance again inside the EC2 learning allowance. Kubernetes and the optional Java service have their own estimates.
 
 The estimate assumes the following:
 
@@ -63,7 +66,7 @@ The README and CV description must distinguish completed features, limitations, 
 
 Use one web application, one Python API, and a separate worker. Store financial facts and evidence in PostgreSQL. Keep original PDFs outside the database with immutable identifiers.
 
-The web guide also offers an individual end-to-end map for each of the 24 functions. Its Java + Python view adds a proposed Spring Boot API facade for identity, request contracts, and scoped forwarding to the Python finance service. The Python-only view matches the baseline architecture below. The 20-week estimate excludes that additional Java service, which needs its own scope, deployment resources, tests, and effort estimate. The maps show design paths rather than an implemented finance backend.
+The web guide also offers an individual end-to-end map for each of the 24 functions. Its Java + Python view adds a proposed Spring Boot API facade for identity, request contracts, and scoped forwarding to the Python finance service. The Python-only view matches the baseline architecture below. Both the original baseline and the revised local-first estimate exclude that additional Java service, which needs its own scope, deployment resources, tests, and effort estimate. The maps show design paths rather than an implemented finance backend.
 
 ```mermaid
 flowchart TD
@@ -96,17 +99,17 @@ flowchart TD
 | Extraction | pdfplumber first | Extract text and table candidates with page and coordinate references | Stage 2 |
 | Jobs | Celery, Redis, and PostgreSQL job records | Execute slow work, track attempts, and recover bounded retries | Stage 2 |
 | Analysis | LangGraph, Python Decimal | Coordinate retrieval, validation, calculation, drafting, verification, and saved state | Decimal in stage 2; LangGraph in stage 5 |
-| Automation | n8n | Send an approved event, check job status, and record the outcome | Stage 6 |
+| Automation | n8n | Send an approved event, check job status, and record the outcome | Stage 6 if a supported native release is available; otherwise stage 7 |
 | Verification and traces | pytest, Playwright, structured logs, Langfuse | Check arithmetic, user flows, model behavior, failures, and usage | Throughout; consolidated in stage 7 |
-| Delivery | Docker Compose, Caddy, GitHub Actions, Amazon ECR, EC2, EBS, S3, and Systems Manager | Build immutable images, serve HTTPS, preserve data, deploy, and roll back | Stages 1 and 7 |
+| Delivery | Docker Compose, Caddy, GitHub Actions, Amazon ECR, EC2, EBS, S3, and Systems Manager | Build immutable images, serve HTTPS, preserve data, deploy, and roll back | Stage 7; code checks start in stage 1 |
 
 The parser choice remains provisional until the report trial. pdfplumber documents text and table extraction for machine-generated PDFs in its [official repository](https://github.com/jsvine/pdfplumber). PyMuPDF is an alternative if the trial identifies a need. Review its package and licensing requirements before adopting it.
 
 Run heavy extraction and analysis outside the HTTP process. [FastAPI's background-task guidance](https://fastapi.tiangolo.com/tutorial/background-tasks/#caveat) discusses separate job tools for heavier computation. PostgreSQL records business job state; Redis alone does not define whether a document exists or a job completed.
 
-Use a persistent LangGraph checkpointer. An in-memory checkpointer loses state on restart. See [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence). The viewer uses [PDF.js](https://mozilla.github.io/pdf.js/), and the n8n container follows its [Docker installation guide](https://docs.n8n.io/hosting/installation/docker/).
+Use a persistent LangGraph checkpointer. An in-memory checkpointer loses state on restart. See [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence). The viewer uses [PDF.js](https://mozilla.github.io/pdf.js/). During development, use local services and the version-qualified n8n plan in section 5. At deployment, the n8n container follows its [Docker installation guide](https://docs.n8n.io/deploy/host-n8n/install-options/install-with-docker.md).
 
-Pin tested package versions and container tags during stage 1. Record them in lockfiles and deployment configuration. C#, Java, and UiPath remain optional integrations with their own scope and estimate.
+Pin tested development packages during stage 1. Pin container images when packaging begins in stage 7. Record them in lockfiles and deployment configuration. C#, Java, and UiPath remain optional integrations with their own scope and estimate.
 
 ## 4. Stages and effort budget
 
@@ -126,7 +129,7 @@ Each stage ends with a working demonstration and recorded acceptance results. Fe
 | Integration and correction reserve | 60 | Distributed within weeks 1 to 20 | Parser issues, evaluation fixes, deployment defects, usability corrections |
 | Total working budget | 300 | 20 weeks at 15 hours per week | Portfolio release |
 
-The week windows include the reserve. Do not add four more weeks of contingency to the 20-week target. The plan assumes sequential development, with test preparation and documentation alongside implementation.
+The table preserves the original 240 planned hours and 60-hour reserve. Its week windows already include that reserve. Add the separate 12-to-24-hour Docker packaging allowance to stage 7, which therefore has 42 to 54 planned hours including that allowance. Expect the local-first release around weeks 21 to 22. Test preparation and documentation continue alongside feature work.
 
 ### Stage 0. Confirm scope and sample reports
 
@@ -147,16 +150,17 @@ Acceptance: Each report has extractable text. The developer can locate an exampl
 
 Developer tasks:
 
-- Create the finance application's structure, Docker Compose configuration, environment examples, migrations, and health checks.
-- Prepare the EC2 deployment configuration, ECR image repositories, gateway routing, persistent-volume layout, and Systems Manager access described in section 10. Trial a placeholder image on EC2 early, then stop unused resources according to the spending plan.
+- Create the finance application structure, local environment examples, migrations, and health checks.
+- Run Next.js and FastAPI as native local processes. Install PostgreSQL with pgvector locally; add Redis and Celery in stage 2. Record the tested runtime versions and start commands.
+- Use loopback addresses and a Next.js development rewrite for permitted API routes. Keep Docker, public DNS, Caddy, and EC2 setup for stage 7.
 - Model companies, documents, versions, evidence, candidates, facts, reviews, jobs, runs, and briefs.
 - Add owner authentication and read-only preview permissions. Keep credentials on the server.
 - Define request and response schemas, error codes, expected revisions, and job states. Generate OpenAPI documentation.
 - Build navigation and the bilingual interface structure. Add initial CI checks and the file-storage adapter.
 
-Deliverables: A reproducible application skeleton, migrations, and an API contract.
+Deliverables: A reproducible local application, an environment template, migrations, and an API contract.
 
-Acceptance: A clean checkout starts through documented commands. The API connects to PostgreSQL, the browser loads the app, and protected endpoints reject unauthenticated requests. No credential appears in browser code or tracked files.
+Acceptance: A clean checkout starts through documented commands. The API connects to local PostgreSQL, the browser loads the app at the documented loopback address, and protected endpoints reject unauthenticated requests. No credential appears in browser code or tracked files.
 
 ### Stage 2. Build one complete report journey
 
@@ -227,14 +231,14 @@ Acceptance: Wrong-company and wrong-year distractors do not enter the answer. Un
 Developer tasks:
 
 - Save a basic editable brief with its source run, facts, citations, and revision checks.
-- Export an n8n workflow that sends one event for a configured, approved report source.
+- Use a pinned npm-capable n8n release only if it remains supported for the chosen version. Run it on loopback and export one workflow for an approved report source. If no supported native release is available, test the ingestion contract with a local script now and complete the real n8n workflow during the stage 7 Docker rehearsal. See section 5.
 - Authenticate the service request and validate the download destination on the backend, including redirects.
 - Reuse a stable event key, create or reuse a job, poll its status, and record the outcome.
 - Demonstrate success, failure, and replay. Keep credentials outside the workflow export.
 
-Deliverables: A saved brief, credential-free n8n export, setup notes, and replay evidence.
+Deliverables: A saved brief, setup notes, and local replay evidence. Include the credential-free n8n export when a supported native release is available; otherwise record its stage 7 completion task.
 
-Acceptance: Edits preserve evidence links. A repeated event creates one document and one logical ingestion job. Changed content with the same key is rejected. Completion is recorded only after processing finishes. Email and Slack notifications are optional extensions.
+Acceptance: Edits preserve evidence links. A repeated event creates one document and one logical ingestion job. Changed content with the same key is rejected. Completion is recorded only after processing finishes. If stage 6 uses a local script, the actual n8n export and workflow demonstration remain required in stage 7 before release. Email and Slack notifications are optional extensions.
 
 ### Stage 7. Evaluate, deploy, and prepare the portfolio
 
@@ -243,6 +247,9 @@ Developer tasks:
 - Expand and freeze at least 30 evaluation cases across facts, retrieval, arithmetic, support, missing evidence, and recovery.
 - Keep a held-out subset outside prompt tuning. Record expected evidence, configuration, and actual case-level results.
 - Add trace IDs, model usage, timings, and failures. Record cost as unknown if the pricing record is unavailable.
+- Create Dockerfiles for the web application and shared Python API/worker project. Create `deploy/compose.yaml`, health checks, persistent volumes, and protected configuration.
+- Build and run the containers locally. Repeat upload, review, research, failure, replay, and restart checks. Complete the n8n workflow here if its native installation was unavailable.
+- Provision EC2, ECR, EBS, S3, IAM, and SSM only after the local container rehearsal passes.
 - Deploy the tested images to EC2 using Docker Compose and the runbook in section 10. Add HTTPS, protected owner access, and a read-only seeded preview. Apply request limits and model-usage limits.
 - Check database backup and restore, persistent files, health checks, and rollback to the previous image.
 - Prepare the README, architecture diagram, setup commands, API contract, evaluation report, limitations, screenshots, and a short demonstration video.
@@ -269,26 +276,138 @@ The academy contains 23 illustrative HTTP designs and a deployment workflow. Use
 
 Keep business job state separate from graph state. A job tracks attempts. A LangGraph checkpoint records analysis progress. Persistent checkpoints alone do not prevent duplicated external side effects.
 
-Start the finance application in a separate repository unless you choose to keep it beside the academy. A proposed structure is:
+Start the finance application in a separate repository. The following tree is a proposed implementation, not a list of files already supplied by this academy. Create only the folders needed for the current stage.
+
+### 5.1. File hierarchy and responsibilities
 
 ```text
 finance-report-analyst/
-  apps/web/                 # Next.js interface
-  services/api/             # FastAPI and access checks
-  services/worker/          # Celery tasks and LangGraph
-  packages/contracts/      # Generated API client
-  db/migrations/           # Alembic migrations
-  data/manifests/          # Source metadata and hashes
-  evals/                   # Checked cases and recorded results
-  workflows/n8n/           # Credential-free exports
-  tests/                   # Integration and browser tests
-  docs/                    # Architecture and runbook
-  deploy/                   # EC2 Compose overrides, gateway, release files, runbook
-  scripts/                  # Deploy, backup, restore, and smoke-check commands
-  .github/workflows/        # Checks and container image publication
-  compose.yaml
-  .env.example
+├── apps/web/
+│   ├── app/
+│   │   ├── reports/page.tsx       # Upload, document status, candidate review
+│   │   ├── research/page.tsx      # Question, loading state, answer, citations
+│   │   ├── compare/page.tsx       # Company selection, comparison, charts
+│   │   └── workspace/page.tsx     # Dashboard, PDF viewer, editable brief
+│   ├── components/               # Shared forms, tables, error and source panels
+│   ├── lib/api-client.ts         # Typed requests to the same-origin /api path
+│   ├── next.config.ts            # Local rewrite to the selected backend
+│   └── Dockerfile                # Add in stage 7
+├── services/finance/
+│   ├── pyproject.toml            # One Python package for API and worker
+│   ├── app/
+│   │   ├── main.py               # Create FastAPI, register routes, health checks
+│   │   ├── api/
+│   │   │   ├── documents.py      # Uploads, labels, versions, evidence, status
+│   │   │   ├── facts.py          # Candidate review, verified facts, corrections
+│   │   │   ├── research.py       # Research runs, answer status, evidence search
+│   │   │   ├── comparisons.py    # Compatible facts, formulas, comparison results
+│   │   │   ├── briefs.py         # Save and update cited research notes
+│   │   │   ├── ingestion.py      # Authenticated automation events and replay
+│   │   │   └── operations.py     # Private evaluation and trace administration
+│   │   ├── schemas.py           # Request, response, error and job-state contracts
+│   │   ├── domain/
+│   │   │   ├── calculations.py  # Decimal arithmetic and compatibility rules
+│   │   │   └── reviews.py       # Accept, correct, reject and preserve history
+│   │   ├── storage.py           # Local files now; S3 adapter at deployment
+│   │   ├── retrieval.py         # Embeddings, filtered vector and keyword search
+│   │   ├── agents/graph.py      # LangGraph steps and checkpoint configuration
+│   │   ├── jobs/tasks.py        # Celery application and background tasks
+│   │   └── db/models.py         # Database models and persistence boundaries
+│   ├── alembic.ini             # Migration command configuration
+│   ├── migrations/             # Alembic schema history
+│   └── Dockerfile              # Same image, separate API and worker commands
+├── services/java-api/           # Optional extra scope
+│   ├── pom.xml
+│   ├── Dockerfile              # Add in stage 7 if Java is selected
+│   └── src/main/java/hk/finance/
+│       ├── ApiApplication.java
+│       ├── config/SecurityConfig.java
+│       ├── controller/FinanceController.java
+│       └── client/FinanceClient.java
+├── packages/contracts/          # OpenAPI schema and generated frontend types
+├── workflows/n8n/               # Workflow exports without credentials
+├── data/
+│   ├── manifests/              # Source URLs, hashes and fixture descriptions
+│   └── local/                  # Development PDFs and outputs; ignored by Git
+├── evals/                      # Checked questions, expected evidence and results
+├── tests/                      # Cross-service and browser tests
+├── docs/                       # Setup, architecture, operations and decisions
+├── scripts/                    # Repeatable local checks and deployment helpers
+├── deploy/                     # Create during stage 7
+│   ├── compose.yaml
+│   ├── compose.ec2.yaml        # EC2 storage, secrets and release overrides
+│   └── Caddyfile
+├── .github/workflows/           # Code checks first; image publication in stage 7
+├── .env.example                # Names and safe placeholders only
+└── .gitignore                  # Exclude .env, local data, caches and secrets
 ```
+
+The API receives the request and schedules work. The worker runs the slow task. Both import the same Python domain, storage, retrieval, and database modules, so calculation and access rules do not get copied into two projects. Keep migrations with that Python package. The Java facade, if selected, handles the agreed API contract and forwards the scoped request; it does not duplicate financial calculations.
+
+For example, changing the year-on-year formula starts in `domain/calculations.py`, with a calculation test. Changing the comparison chart starts in `apps/web/app/compare/page.tsx`. Changing which pages the RAG flow may retrieve starts in `retrieval.py`; test wrong-company and wrong-year examples before checking generated wording.
+
+### 5.2. Start native local services in dependency order
+
+During stages 0 to 6, run services directly on the development computer. Native processes use the installed runtimes, so changes appear without building a container image. Use a Python virtual environment and pinned JavaScript packages. Install PostgreSQL with the pgvector extension using the platform's supported packages. Add Redis when background jobs arrive. On Windows, choose a Linux development environment such as WSL for Celery and Redis and record that setup; it remains local development without Docker.
+
+| Start order | Process and address | Responsibility | Visible check |
+| --- | --- | --- | --- |
+| 1 | PostgreSQL at `127.0.0.1:5432` | Facts, document metadata, vectors, jobs and graph state | Migrations finish; an authenticated database query succeeds |
+| 2, from stage 2 | Redis at `127.0.0.1:6379` | Broker that carries queued task messages | A local authenticated Redis check succeeds |
+| 3 | FastAPI at `127.0.0.1:8000` | Request validation, permissions, resource API and status | Readiness reports the required dependencies available |
+| 4, from stage 2 | Celery worker, no browser port | Extraction and later research jobs | A test job changes from queued to completed |
+| 5, if selected | Java API at `127.0.0.1:8080` | Optional identity and contract facade | The facade reaches FastAPI and preserves a structured error |
+| 6 | Next.js at `127.0.0.1:3000` | Browser UI and permitted development API rewrite | The report page loads and a request reaches the selected backend |
+| 7, when available | n8n at `127.0.0.1:5678` | Manual test trigger and status polling | One approved event completes; replay creates no duplicate |
+
+Bind these services to loopback. Local host names are resolved by the computer; there is no public DNS record or Caddy TLS gateway in this development path. In `next.config.ts`, forward only permitted `/api/v1` routes to Java on port 8080 or FastAPI on port 8000. Do not forward `/api/internal`. The backend still checks identity, roles, resource access, and request data. Authorized operator tools can call the loopback internal API directly. If Java is selected, it must propagate trusted scoped identity rather than accepting arbitrary identity headers from the browser.
+
+The following commands describe the future repository **after its files, dependency locks, configuration loading, and commands have been implemented**. They are not setup commands for the academy. Run each long-lived process in its own terminal. Configure the application to load the ignored local environment file consistently in both the API and worker.
+
+```sh
+# One-time Python environment, from services/finance:
+python3 -m venv .venv
+. .venv/bin/activate
+python -m pip install -e '.[dev]'
+python -m alembic upgrade head
+
+# API terminal, from services/finance with that virtual environment active:
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# Worker terminal, same directory and virtual environment:
+python -m celery -A app.jobs.tasks:celery_app worker --loglevel=INFO
+
+# Frontend terminal, from the repository root after packages are locked:
+npm --prefix apps/web ci
+npm --prefix apps/web run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+For the optional Java service, configure the Spring Boot Maven plugin in `pom.xml` and document its tested JDK. Run `mvn spring-boot:run` from `services/java-api` with `server.address=127.0.0.1`, `server.port=8080`, and the private FastAPI base URL in its local configuration. Confirm a request reaches FastAPI before selecting Java as the frontend rewrite target.
+
+Create `alembic.ini` and the migration environment with the Python project before running Alembic. The `.[dev]` extra must be defined in `pyproject.toml`. The worker command expects `celery_app` in `app/jobs/tasks.py`. These names are developer contracts to implement, not existing application commands. On Windows, use the equivalent virtual-environment activation command for the chosen shell.
+
+For n8n, inspect the chosen release before installing it. The [official npm installation guide](https://docs.n8n.io/deploy/host-n8n/install-options/install-with-npm.md) currently lists Node.js 20.19 through 24.x and says npm installations are deprecated from n8n 3.0. A still-supported npm-capable release can run locally with an explicitly pinned version and a compatible Node version selected in its own terminal. Do not assume `npx n8n` will install a suitable release. If no supported native release fits, test the ingestion request and polling contract with a local script in stage 6, then complete the actual n8n workflow in Docker during stage 7. Use a manual trigger; no public webhook tunnel is required for this demonstration.
+
+### 5.3. Follow one request through the files
+
+A fictional example question is "Compare operating cash flow in 2024 and 2025." The frontend sends the company ID and the two periods to `api/research.py`. That route checks the caller and creates a durable run. It returns HTTP 202 with the run ID before the analysis finishes. The worker starts `agents/graph.py`, which calls `retrieval.py` for passages restricted to the permitted company, years and document versions. The vector database returns candidate passages, not a verified answer. The graph loads reviewed numerical facts, calls `domain/calculations.py`, and passes the resulting evidence to the configured LLM. Verification checks the claims and citation targets before saving the result.
+
+The browser polls the run endpoint. A successful status request returns HTTP 200 even when the saved run state is `failed`. A completed run can contain a supported partial answer. The UI must display that limitation. A request rejected before the job is accepted instead returns the appropriate HTTP 4xx or 5xx error. Keep these states distinct in `schemas.py`, the frontend client and the visible UI.
+
+### 5.4. Package the working application in stage 7
+
+Docker packages the tested processes. Compose describes their connections, configuration and persistent storage. First build and run this arrangement on the development computer; then deploy the same tested images to EC2. The source-to-answer logic stays in the same modules.
+
+| Native development setting | Stage 7 container setting | What to verify |
+| --- | --- | --- |
+| Database at `127.0.0.1:5432` | Database host `postgres` on the private Compose network | Migrations, extension and reviewed facts work |
+| Redis at `127.0.0.1:6379` | Broker host `redis` on the private Compose network | Jobs execute and bounded replay remains correct |
+| API at `127.0.0.1:8000` | API service name `api`; optional Java facade service in front | Permitted routes work; internal administration remains private |
+| Files under ignored `data/local/` | Persistent test volume locally, then private S3 on EC2 | An old citation still opens the same immutable PDF |
+| Browser opens the local web server | Caddy serves the public domain with HTTPS on EC2 | Authentication, cookies, allowed routes and source viewing work |
+| Local `.env` with development values | Protected runtime configuration and secrets | No key enters an image or browser bundle |
+
+Inside a container, `localhost` refers to that container. Use the Compose service names for other containers. Export checked seed data and source manifests for the deployment; do not copy the developer's `.env` or raw database directory into an image. Verify data persistence by recreating containers, then repeat the checks after the EC2 move.
 
 Record source URLs and hashes in the repository. Store originals in application storage. Redistribute reports only where their source permits it. Keep fixtures reproducible without committing credentials or personal documents.
 
@@ -354,7 +473,7 @@ These are proposed targets, not achieved results. Report actual case counts and 
 | Inconsistent PDF tables | Longer extraction work | Trial layouts early, restrict the dataset, retain manual review |
 | Ambiguous accounting definitions | Misleading comparisons | Maintain the metric dictionary and block unknown bases |
 | Sparse explanation evidence | Plausible unsupported answers | Demonstrate partial answers and evaluate claim support |
-| Deployment integration | Local demo fails on EC2 | Trial EC2 in stage 1, containerize early, and reserve time for deployment fixes |
+| Deployment integration | Native local demo fails in containers or on EC2 | Keep settings external, pin versions, add 12 to 24 packaging hours, and pass a local Compose rehearsal before EC2 deployment |
 | Single EC2 host failure | All application containers become unavailable | Keep off-host backups and a tested replacement-host recovery procedure; accept demo downtime |
 | Replayed work after a crash | Duplicate records or side effects | Persist identity, use idempotent handlers, test replay; do not promise exactly-once external delivery |
 | Extra integrations | Longer schedule | Finish the selected dataset and core journey first |
@@ -378,7 +497,7 @@ The following defaults are sufficient for this proposal. Confirm each before its
 | Provider | One configurable model provider and embedding model | Stage 5 |
 | Preview | Owner sign-in and read-only seeded access on EC2 | Stage 1 for access design; stage 7 for release |
 | Deployment | Docker Compose on one EC2 instance; Kubernetes deferred | Confirmed by this proposal update |
-| AWS region and domain | Choose a region with the required services and an owned DNS name before provisioning | Stage 1 |
+| AWS region and domain | Choose a region with the required services and an owned DNS name before provisioning | Stage 7 |
 | Running-cost ceiling | Owner selects a monthly cap after reviewing prices | Before paid services |
 | Interview deadline | Relative weeks until a date is supplied | Before committing to calendar dates |
 
@@ -525,27 +644,27 @@ aws ecr get-login-password --region "$AWS_REGION" \
 
 # Resolve the configuration without printing runtime secrets.
 docker compose --env-file deploy/production.env \
-	-f compose.yaml -f deploy/compose.ec2.yaml config --quiet
+	-f deploy/compose.yaml -f deploy/compose.ec2.yaml config --quiet
 
 # Pull the exact images recorded for this release.
 docker compose --env-file deploy/production.env \
-	-f compose.yaml -f deploy/compose.ec2.yaml pull
+	-f deploy/compose.yaml -f deploy/compose.ec2.yaml pull
 
 # On first installation, start the database and broker before migrations.
 docker compose --env-file deploy/production.env \
-	-f compose.yaml -f deploy/compose.ec2.yaml up -d --wait --wait-timeout 120 postgres redis
+	-f deploy/compose.yaml -f deploy/compose.ec2.yaml up -d --wait --wait-timeout 120 postgres redis
 
 # After the database and broker pass their health checks, run migrations.
 docker compose --env-file deploy/production.env \
-	-f compose.yaml -f deploy/compose.ec2.yaml run --rm migrate
+	-f deploy/compose.yaml -f deploy/compose.ec2.yaml run --rm migrate
 
 # Start the long-running services and inspect their status.
 docker compose --env-file deploy/production.env \
-	-f compose.yaml -f deploy/compose.ec2.yaml up -d \
+	-f deploy/compose.yaml -f deploy/compose.ec2.yaml up -d \
 	postgres redis api worker web gateway n8n
 
 docker compose --env-file deploy/production.env \
-	-f compose.yaml -f deploy/compose.ec2.yaml ps
+	-f deploy/compose.yaml -f deploy/compose.ec2.yaml ps
 ```
 
 `deploy/production.env` contains non-secret release configuration such as image references, domain, region, and bucket names. Secret values arrive through the protected file mounts. ECR authentication follows the [official registry authentication procedure](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html).
@@ -585,7 +704,7 @@ After host failure, provision a replacement, attach or restore the data volume, 
 - A previous application image can be redeployed against a compatible schema, with the result recorded.
 - Logs have trace IDs and retention limits. Disk, instance health, backup failures, and spending alerts reach the configured operator destination.
 
-Stage 1 establishes the EC2 path. Stage 7 verifies and documents it. Reserve approximately 12 to 18 of stage 7's 30 planned hours for deployment and recovery checks, with the remaining time for final evaluation and portfolio packaging. Feature tests and infrastructure preparation must already exist from earlier stages. For a first-time EC2 operator, add the 12-to-24-hour allowance in section 1.
+Stage 1 establishes the native local application. Stage 7 introduces Docker and EC2. Keep the baseline 30 stage-7 hours for final evaluation, deployment, recovery checks, and portfolio packaging. Add 12 to 24 hours for Dockerfiles, Compose integration, local container verification, and any deferred n8n rehearsal. This gives stage 7 a provisional 42-to-54-hour workload before EC2 learning. Re-estimate after the first local container run; do not force unresolved deployment work into a fixed deadline. For a first-time EC2 operator, add the separate 12-to-24-hour learning allowance in section 1.
 
 ### 10.10. Optional Kubernetes extension on EC2
 

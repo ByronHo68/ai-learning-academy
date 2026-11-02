@@ -52,13 +52,17 @@ test('proposal renders every stage, EC2 design and complete specification in bot
       assert.ok(html.includes(stage.acceptance[lang]));
       for (const task of stage.tasks) assert.ok(html.includes(task[lang]));
     }
-    assert.ok(html.includes(lang === 'en' ? '20-week target' : '目標 20 週'));
+    assert.ok(html.includes(lang === 'en' ? 'Plan for 21–22 weeks with Docker at deployment' : 'Docker 延至部署階段，規劃 21 至 22 週'));
     assert.ok(html.includes(lang === 'en' ? 'does not provision cloud resources' : '不會啟動雲端資源'));
     assert.ok(html.includes('docker compose --env-file deploy/production.env'));
     assert.ok(html.includes('--wait --wait-timeout 120'));
     assert.ok(html.includes('RequiresMountsFor=/srv/finance-data'));
     assert.ok(html.includes('CronJobs'));
-    assert.ok(html.includes('24 to 32 weeks'));
+    assert.ok(html.includes('312 to 324 hours'));
+    assert.ok(html.includes('402 to 474 hours'));
+    assert.ok(html.includes('5.2. Start native local services in dependency order'));
+    assert.ok(html.includes('services/finance/'));
+    assert.ok(html.includes('deploy/compose.yaml'));
     assert.ok(html.includes('Caddy'));
     assert.match(html, /href="\/finance-project"/);
     assert.ok(!html.includes('href="FINANCIAL_REPORT_PROJECT.md"'));

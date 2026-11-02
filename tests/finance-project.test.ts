@@ -16,7 +16,8 @@ test('finance blueprint renders accessible branch controls and course links in b
     const html = renderToStaticMarkup(createElement(FinanceProjectContent, { lang }));
     assert.equal((html.match(/aria-controls="finance-area-detail"/g) ?? []).length, 8);
     assert.equal((html.match(/aria-controls="finance-function-list"/g) ?? []).length, 8);
-    assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 2);
+    assert.equal((html.match(/class="finance-map-branch is-selected"/g) ?? []).length, 1);
+    assert.equal((html.match(/aria-pressed="true" aria-controls="finance-function-list"/g) ?? []).length, 1);
     assert.match(html, /id="finance-area-detail"[^>]*aria-live="polite"/);
     assert.match(html, /id="finance-workflow"/);
     assert.match(html, /id="finance-functions"/);
@@ -25,6 +26,7 @@ test('finance blueprint renders accessible branch controls and course links in b
     assert.ok(html.includes(financeAreaIllustrations.library.src));
     assert.equal((html.match(/class="finance-function-flow"/g) ?? []).length, 3);
     assert.equal((html.match(/class="finance-api"/g) ?? []).length, 3);
+    assert.equal((html.match(/class="function-mindmap"/g) ?? []).length, 3);
     assert.equal((html.match(/class="finance-stack-flow"/g) ?? []).length, 6);
     for (const item of financeFunctionWorkflows.library) {
       assert.ok(html.includes(item.title[lang]));

@@ -27,6 +27,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
       <p>{lang === 'zh' ? '香港財報分析助手的開發提案。按一位開發者、每週 15 小時，建立可供面試展示的作品；逐階段交付、驗證，再以 Docker Compose 部署到 EC2。' : 'A development proposal for the Hong Kong Financial Report Analyst. One developer, 15 hours a week, building a job-search portfolio demo with checkable stages and Docker Compose on EC2.'}</p>
       <p className="proposal-draft">{lang === 'zh' ? '設計草稿及工時估算。此頁不會啟動雲端資源或部署服務；現有財報指南仍是離線教學。' : 'Design draft and effort estimate. This page does not provision cloud resources or deploy services; the current finance guide remains an offline learning tool.'}</p>
       <a className="proposal-download" href="/downloads/financial-report-development-proposal.md" download="FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md">{lang === 'zh' ? '下載完整 Markdown 提案（英文）' : 'Download the full Markdown proposal'} ↓</a>
+      <Link className="proposal-function-maps-link" href="/finance-project#finance-functions">{lang === 'zh' ? '查看全部 24 項功能的端到端心智圖' : 'Explore the end-to-end maps for all 24 functions'} →</Link>
     </header>
 
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '開發提案目錄' : 'Development proposal contents'}>

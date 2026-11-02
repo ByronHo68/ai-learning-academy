@@ -1,0 +1,73 @@
+'use client';
+
+import { useId, useState } from 'react';
+import { type Copy, type Lang, pick } from '../lib/curriculum';
+import type { FinanceApiWorkflow } from '../lib/finance-api-workflows';
+import type { FinanceFunctionMap, MapStep } from '../lib/finance-function-maps';
+
+export type BackendLayout = 'java-python' | 'python';
+type Branch = 'success' | 'partial' | 'failure';
+
+function entrySteps({ entry, backend }: { entry: 'browser' | 'n8n' | 'operator'; backend: BackendLayout }): MapStep[] {
+  const origin: MapStep = entry === 'browser'
+    ? { id: 'entry', keyword: 'FRONTEND', tools: 'Next.js · React', action: { en: 'Collect this function’s input and send its scoped request. Keep a visible loading and error state.', zh: '收集這項功能的輸入，傳送有範圍請求，顯示載入及錯誤狀態。' } }
+    : entry === 'n8n'
+      ? { id: 'entry', keyword: 'n8n TRIGGER', tools: 'n8n · service token', action: { en: 'An approved manual or scheduled workflow sends a service-authenticated event with a stable operation key.', zh: '獲准手動或排程流程傳送附服務驗證及固定操作鍵的事件。' } }
+      : { id: 'entry', keyword: 'OPERATOR', tools: 'AWS IAM · Systems Manager', action: { en: 'An authorized operator uses private administration. The public gateway denies /api/internal routes.', zh: '獲准操作人員使用私人管理路徑；公開閘道拒絕 /api/internal 路由。' } };
+  const transport: MapStep[] = entry === 'browser'
+    ? [
+      { id: 'dns', keyword: 'DNS LOOKUP', tools: 'DNS resolver · cache', action: { en: 'Resolve the domain to the server address when needed; cached DNS may be reused. DNS does not forward the application request.', zh: '需要時把網域解析為伺服器位址，可重用 DNS 快取；DNS 不轉送應用請求。' } },
+      { id: 'https', keyword: 'HTTPS / CADDY', tools: 'TLS · EC2 reverse proxy', action: { en: 'Open the HTTPS connection and route the permitted API path to the backend. The frontend and API use the same origin.', zh: '建立 HTTPS 連線，把獲准 API 路徑轉送後端；前端與 API 使用同一來源。' } },
+    ]
+    : entry === 'n8n'
+      ? [{ id: 'dns', keyword: 'SERVICE DNS', tools: 'Docker service discovery · private network', action: { en: 'Resolve the internal backend service name and call it over the configured private service connection, without passing through public Caddy routes.', zh: '解析內部後端服務名稱，經已設定私人服務連線呼叫，不經公開 Caddy 路由。' } }]
+      : [{ id: 'private', keyword: 'SSM / PRIVATE', tools: 'Systems Manager · restricted administration', action: { en: 'Reach the operator endpoint through the authorized private administration path, with identity and role checks at the service.', zh: '經獲准私人管理路徑存取操作端點，服務仍核對身分及角色。' } }];
+  const java: MapStep[] = backend === 'java-python' ? [{ id: 'java', keyword: 'JAVA API', tools: 'Spring Boot · Spring Security · WebClient', action: { en: 'The proposed Java API facade authenticates the caller, validates the request contract and forwards the scoped call to the Python finance service. Keep internal endpoints private.', zh: '建議的 Java API 層驗證呼叫者及請求合約，把有範圍呼叫交予 Python 財報服務；內部端點保持私人存取。' } }] : [];
+  return [origin, ...transport, ...java, { id: 'python', keyword: 'PYTHON API', tools: 'FastAPI · Pydantic', action: { en: 'Recheck trusted identity, resource authorization and domain inputs before business processing. Return a structured rejection if these checks fail.', zh: '業務處理前重新核對可信身分、資源權限及領域輸入；檢查失敗時回傳結構化拒絕原因。' } }];
+}
+
+export function FinanceFunctionMindmap({ map, api, title, lang, backend }: { map: FinanceFunctionMap; api: FinanceApiWorkflow; title: Copy; lang: Lang; backend: BackendLayout }) {
+  const [selected, setSelected] = useState('entry');
+  const [branch, setBranch] = useState<Branch>('success');
+  const detailId = useId();
+  const isPipeline = map.kind === 'pipeline';
+  const entry = map.kind === 'request' ? map.entry : 'operator';
+  const transport = map.kind === 'request' ? entrySteps({ entry: map.entry, backend }) : [];
+  const nodes = [...transport, ...map.steps];
+  const current = nodes.find(node => node.id === selected) ?? nodes[0];
+  const outcomes = map.outcomes;
+  const options: { id: Branch; label: Copy; text: Copy }[] = [
+    { id: 'success', label: { en: 'PASS · success', zh: '通過 · 成功' }, text: outcomes.success },
+  ];
+  if (outcomes.kind === 'partial') options.push({ id: 'partial', label: { en: 'LIMITED · partial result', zh: '資料受限 · 部分結果' }, text: outcomes.partial });
+  options.push({ id: 'failure', label: { en: 'FAIL · error result', zh: '失敗 · 錯誤結果' }, text: outcomes.failure });
+  const active = options.find(option => option.id === branch) ?? options[0];
+  const response = isPipeline ? (active.id === 'failure' ? 'CI state: failed / blocked' : 'CI state: completed')
+    : api.kind === 'http' && api.result.kind === 'accepted'
+      ? active.id === 'failure'
+        ? 'Submission: HTTP 4xx / 5xx · Accepted job: status GET HTTP 200 / state failed'
+        : active.id === 'partial'
+          ? 'HTTP 200 · inspect persisted job/run state and available result'
+          : 'HTTP 200 · job/run state: completed'
+      : active.id === 'failure' ? 'HTTP 4xx / 5xx · structured error' : `HTTP ${api.kind === 'http' ? api.result.status : 200}${active.id === 'partial' ? ' · limited result' : ''}`;
+  const returnPath = isPipeline ? 'GitHub Actions → operator → deployment status'
+    : entry === 'n8n' ? `${backend === 'java-python' ? 'Python → Java → ' : 'Python → '}n8n status → saved job → owner dashboard`
+      : entry === 'operator' ? `${backend === 'java-python' ? 'Python → Java → ' : 'Python → '}private administration → operator`
+        : `${backend === 'java-python' ? 'Python → Java → ' : 'Python → '}Caddy / HTTPS → React → user`;
+  const renderPath = ({ steps, label }: { steps: MapStep[]; label: string }) => <ol className="function-map-path" aria-label={label}>{steps.map((node, index) => <li key={node.id}><button type="button" aria-pressed={current.id === node.id} aria-controls={detailId} onClick={() => setSelected(node.id)}><span>{index + 1}</span><strong>{node.keyword}</strong><small>{node.tools}</small></button></li>)}</ol>;
+
+  return <section className="function-mindmap" aria-label={`${pick(title, lang)} · ${lang === 'zh' ? '端到端心智圖' : 'end-to-end mind map'}`}>
+    <div className="function-map-heading"><p className="eyebrow">REQUEST → PROCESS → VALIDATE → RETURN</p><h5>{lang === 'zh' ? '這項功能的端到端心智圖' : 'This function’s end-to-end mind map'}</h5><p>{lang === 'zh' ? '點選節點查看責任，選擇下方分支查看回傳結果。這是互動設計圖，不會發出請求。' : 'Select a node to inspect its responsibility, then explore a return branch below. This is an interactive design, not a live request.'}</p></div>
+    {transport.length > 0 && <div className="function-map-lane"><h6>{lang === 'zh' ? '1 · 呼叫者及連線' : '1 · Caller and connection'}</h6>{renderPath({ steps: transport, label: lang === 'zh' ? '呼叫者至後端的路徑' : 'Caller-to-backend path' })}
+      <details className="function-map-early-error"><summary>{lang === 'zh' ? '連線或輸入檢查失敗時' : 'If connection or input checks fail'}</summary><p>{lang === 'zh' ? 'DNS／TLS 失敗由客戶端顯示網絡錯誤，尚未到達後端，沒有 API JSON。身分、權限或輸入失敗則由服務回傳 4xx，停止後續業務處理。不要自動重送可能重複寫入的操作。' : 'A DNS/TLS failure is a client network error: the backend was not reached, so there is no API JSON. Authentication, authorization or input rejection returns 4xx and stops business processing. Do not blindly replay operations that can duplicate writes.'}</p></details>
+    </div>}
+    {isPipeline && <p className="function-map-pipeline-note">{lang === 'zh' ? '由獲准操作人員觸發 GitHub Actions。此流程管理部署，不經公開 DNS、Java 或財報 API。' : 'An authorized operator triggers GitHub Actions. This is deployment control, outside the public DNS, Java and finance API request path.'}</p>}
+    <div className="function-map-lane"><h6>{isPipeline ? (lang === 'zh' ? '1 · CI 執行路徑' : '1 · CI execution path') : (lang === 'zh' ? '2 · 功能處理路徑' : '2 · Function processing path')}</h6>{renderPath({ steps: map.steps, label: lang === 'zh' ? '這項功能的處理節點' : 'Function-specific processing nodes' })}</div>
+    <div className="function-map-node-detail" id={detailId} aria-live="polite"><b>{current.keyword}</b><p>{pick(current.action, lang)}</p><small>{current.tools}</small></div>
+    {api.kind === 'http' && api.result.kind === 'accepted' && <aside className="function-map-async"><b>HTTP 202 · {lang === 'zh' ? '已接納，未完成' : 'accepted, unfinished'}</b><p>{lang === 'zh' ? '非同步合約：輸入驗證及持久工作建立後先回傳 202；背景工作之後完成。上圖涵蓋提交及背景處理，客戶端輪詢取得最終結果。工作接受前的拒絕為 4xx／5xx；接受後的工作失敗由狀態 GET 以 HTTP 200 回傳 failed。' : 'Asynchronous contract: after input validation and durable job creation, return 202 while the worker continues. The map covers submission and background work. Poll for the final result. Submission rejection uses 4xx/5xx; an accepted job’s failure is returned by status GET as HTTP 200 with state failed.'}</p><code>GET {api.result.poll}</code></aside>}
+    <p className="function-map-ai"><b>{lang === 'zh' ? 'AI 在這裏做甚麼' : 'AI’s role here'}</b>{pick(map.aiUse, lang)}</p>
+    <div className="function-map-validation"><span aria-hidden="true">◇</span><div><h6>VALIDATE · {lang === 'zh' ? '結果驗證' : 'result check'}</h6><p>{pick(map.validation, lang)}</p></div></div>
+    <div className="function-map-branches" role="group" aria-label={lang === 'zh' ? '選擇結果分支' : 'Explore a result branch'}>{options.map(option => <button type="button" key={option.id} className={`function-map-branch ${option.id}`} aria-pressed={active.id === option.id} onClick={() => setBranch(option.id)}><b>{pick(option.label, lang)}</b><span>{pick(option.text, lang)}</span><small>↓ {lang === 'zh' ? '回傳呼叫者' : 'return to caller'}</small></button>)}</div>
+    <div className={`function-map-return ${active.id}`} aria-live="polite"><p className="eyebrow">{lang === 'zh' ? '所選分支的示例回傳' : 'ILLUSTRATIVE RETURN FOR THE SELECTED BRANCH'}</p><code>{response}</code><p>{pick(active.text, lang)}</p><p className="function-map-return-path">{returnPath}</p>{entry === 'n8n' && !isPipeline && <small>{lang === 'zh' ? 'n8n 先儲存工作結果；使用者之後從工作狀態畫面讀取，並非把服務回應直接推送至瀏覽器。' : 'n8n records the job result first. The user later reads saved status; this is not a direct push of the service response into the browser.'}</small>}</div>
+  </section>;
+}

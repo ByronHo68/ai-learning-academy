@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { FinanceFunctionMindmap, type BackendLayout } from '../app/finance-function-map';
+import { FinanceFunctionMindmap, type BackendLayout, type BuildEnvironment } from '../app/finance-function-map';
+import { financeFunctionExamples } from '../lib/finance-function-examples';
 import { financeAreas } from '../lib/finance-project';
 import { financeFunctionMaps, type FinanceFunctionMap } from '../lib/finance-function-maps';
 import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
@@ -35,17 +36,20 @@ test('every function has a distinct map that matches its API, caller and domain 
         if (map.outcomes.kind === 'partial') assert.ok(map.outcomes.partial[lang].trim().length > 0);
         const layouts: BackendLayout[] = ['java-python', 'python'];
         for (const backend of layouts) {
-          const html = renderToStaticMarkup(createElement(FinanceFunctionMindmap, { map, api, title: financeFunctionWorkflows[area.id][index].title, lang, backend }));
+          const environments: BuildEnvironment[] = ['local', 'deployed'];
+          for (const environment of environments) {
+          const html = renderToStaticMarkup(createElement(FinanceFunctionMindmap, { map, api, title: financeFunctionWorkflows[area.id][index].title, lang, backend, environment, example: financeFunctionExamples[area.id][index] }));
           assert.ok(html.includes('VALIDATE'));
           assert.ok(html.includes(map.outcomes.success[lang]));
           assert.ok(html.includes(map.outcomes.failure[lang]));
           for (const step of map.steps) assert.ok(html.includes(step.keyword));
           if (map.kind === 'request') {
             assert.equal(html.includes('JAVA API'), backend === 'java-python');
-            assert.equal(html.includes('DNS LOOKUP'), map.entry === 'browser');
-            assert.equal(html.includes('HTTPS / CADDY'), map.entry === 'browser');
-            assert.equal(html.includes('SERVICE DNS'), map.entry === 'n8n');
-            assert.equal(html.includes('SSM / PRIVATE'), map.entry === 'operator');
+            assert.equal(html.includes('DNS LOOKUP'), environment === 'deployed' && map.entry === 'browser');
+            assert.equal(html.includes('DEV API PROXY'), environment === 'local' && map.entry === 'browser');
+            assert.equal(html.includes('HTTPS / CADDY'), environment === 'deployed' && map.entry === 'browser');
+            assert.equal(html.includes('SERVICE DNS'), environment === 'deployed' && map.entry === 'n8n');
+            assert.equal(html.includes('SSM / PRIVATE'), environment === 'deployed' && map.entry === 'operator');
           } else {
             assert.ok(!html.includes('JAVA API'));
             assert.ok(!html.includes('DNS LOOKUP'));
@@ -57,6 +61,11 @@ test('every function has a distinct map that matches its API, caller and domain 
             assert.ok(html.includes('HTTP 200 · job/run state: completed'));
           }
           if (map.outcomes.kind === 'partial') assert.ok(html.includes(map.outcomes.partial[lang]));
+          const example = financeFunctionExamples[area.id][index];
+          assert.ok(html.includes(example.scenario[lang]));
+          assert.ok(html.includes(example.check[lang]));
+          for (const file of example.files) assert.ok(html.includes(file));
+          }
         }
       }
     }

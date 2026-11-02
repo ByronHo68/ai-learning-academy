@@ -102,6 +102,16 @@
 .function-map-backend p { flex-basis: 100%; margin: 0; color: #49636b; font-size: 12px; line-height: 1.9; }
 .function-mindmap { background: #f6faf7; border: 1px solid #c7dcd1; border-radius: 12px; padding: 22px; margin: 12px 0 30px; }
 .function-map-heading h5 { margin: 0; font-size: 20px; line-height: 1.5; color: var(--navy); }
+.function-map-example { padding: 18px; margin-bottom: 24px; background: #fffdf5; border: 1px solid #e0d8bb; border-radius: 10px; }
+.function-map-example h5 { margin: 0; color: var(--navy); font-size: 18px; line-height: 1.7; }
+.function-map-example dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 0; }
+.function-map-example dt { font-size: 12px; font-weight: 750; color: var(--teal); }
+.function-map-example dd { margin: 7px 0 0; font-size: 13px; line-height: 1.85; color: #49636b; }
+.function-map-environment { padding: 12px 15px; background: #eaf1f5; color: #365662; font-size: 12px; line-height: 1.9; border-radius: 8px; }
+.function-map-files { margin-top: 24px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; font-size: 13px; line-height: 1.9; color: #49636b; }
+.function-map-files summary { font-weight: 750; color: var(--teal); cursor: pointer; min-height: 30px; }
+.function-map-files code { font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 720px) { .function-map-example dl { grid-template-columns: 1fr; } }
 .function-map-heading > p:last-child { font-size: 12px; line-height: 1.9; color: #49636b; }
 .function-map-lane { margin-top: 22px; }
 .function-mindmap h6 { margin: 0 0 12px; color: var(--teal); font-size: 12px; line-height: 1.7; }

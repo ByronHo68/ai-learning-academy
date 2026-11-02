@@ -6,6 +6,7 @@ import './concept-studio.css';
 import './agent-lab.css';
 import './finance-project.css';
 import './finance-proposal.css';
+import './finance-build-guide.css';
 
 const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-academy.byronho680.chatgpt.site';
 

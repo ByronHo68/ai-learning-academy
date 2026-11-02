@@ -10,7 +10,9 @@ import { type FinanceIllustration, financeAreaIllustrations, financeOverviewIllu
 import { financeApiWorkflows } from '../lib/finance-api-workflows';
 import { FinanceApiContent } from './finance-api-content';
 import { financeFunctionMaps } from '../lib/finance-function-maps';
-import { FinanceFunctionMindmap, type BackendLayout } from './finance-function-map';
+import { financeFunctionExamples } from '../lib/finance-function-examples';
+import { FinanceBuildGuide } from './finance-build-guide';
+import { FinanceFunctionMindmap, type BackendLayout, type BuildEnvironment } from './finance-function-map';
 
 function IllustrationArt({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
   return <div className="finance-illustration-art" data-layout={illustration.steps.length === 5 ? 'overview' : 'panels'}>
@@ -54,6 +56,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
   const [step, setStep] = useState(0);
   const [scenario, setScenario] = useState<'supported' | 'missing'>('supported');
   const [backend, setBackend] = useState<BackendLayout>('java-python');
+  const [environment, setEnvironment] = useState<BuildEnvironment>('local');
   const reducedMotion = useReducedMotion();
   const currentStep = financeWorkflow[step];
   const selectedFunctions = financeFunctionWorkflows[selected.id];
@@ -70,6 +73,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '項目指南目錄' : 'Project guide contents'}>
       <a href="#finance-pictures">{lang === 'zh' ? '圖像入門' : 'Picture guide'}</a>
       <a href="#finance-map">{lang === 'zh' ? '互動心智圖' : 'Mind map'}</a>
+      <a href="#finance-build-guide">{lang === 'zh' ? '本機開發及檔案結構' : 'Local setup and folders'}</a>
       <a href="#finance-functions">{lang === 'zh' ? '每項功能心智圖及流程' : 'Function maps and workflows'}</a>
       <a href="#finance-workflow">{lang === 'zh' ? '答案如何產生' : 'Answer walkthrough'}</a>
       <a href="#finance-stack">{lang === 'zh' ? '技術分工' : 'Technology stack'}</a>
@@ -77,7 +81,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
       <Link href="/finance-project/proposal">{lang === 'zh' ? '開發提案及 EC2 部署' : 'Development proposal and EC2'}</Link>
     </nav>
 
-    <aside className="hiring-banner finance-banner finance-proposal-banner"><div><p className="eyebrow">BUILD THE PROJECT · DEPLOY ON EC2</p><h2>{lang === 'zh' ? '按八個階段，把構想變成求職作品' : 'Turn this blueprint into a portfolio project'}</h2><p>{lang === 'zh' ? '查看每週 15 小時的 20 週提案、開發任務、驗收條件，以及 Docker Compose、EC2、備份與回滾設計。附完整 Markdown 下載。' : 'Read the 20-week plan at 15 hours per week, developer tasks, acceptance checks and the Docker Compose deployment design for EC2, including backup and rollback. Download the full Markdown proposal.'}</p></div><Link href="/finance-project/proposal">{lang === 'zh' ? '開啟開發提案' : 'Open the development proposal'} →</Link></aside>
+    <aside className="hiring-banner finance-banner finance-proposal-banner"><div><p className="eyebrow">BUILD THE PROJECT · DEPLOY ON EC2</p><h2>{lang === 'zh' ? '按八個階段，把構想變成求職作品' : 'Turn this blueprint into a portfolio project'}</h2><p>{lang === 'zh' ? '查看每週 15 小時、先本機開發的 21 至 22 週提案、開發任務、驗收條件，以及 Docker Compose、EC2、備份與回滾設計。附完整 Markdown 下載。' : 'Read the 21–22-week local-first plan at 15 hours per week, developer tasks, acceptance checks and the Docker Compose deployment design for EC2, including backup and rollback. Download the full Markdown proposal.'}</p></div><Link href="/finance-project/proposal">{lang === 'zh' ? '開啟開發提案' : 'Open the development proposal'} →</Link></aside>
 
     <section className="finance-section" id="finance-pictures" aria-labelledby="finance-pictures-title"><div className="finance-section-heading"><p className="eyebrow">START HERE · SEE THE IDEA</p><h2 id="finance-pictures-title">{lang === 'zh' ? '先看一張圖，理解整個項目' : 'Understand the project in one picture'}</h2><p>{lang === 'zh' ? '從左至右跟隨五個場景。重點是原始來源一直保留下來，計算有根據，最後仍能由人核對。' : 'Follow the five scenes from left to right. The original source stays connected, calculations have inputs and a person can check the final answer.'}</p></div><IllustratedConcept illustration={financeOverviewIllustration} lang={lang}/></section>
 
@@ -115,8 +119,11 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
       </div>
     </section>
 
+    <FinanceBuildGuide lang={lang}/>
+
     <section className="finance-section" id="finance-functions" aria-labelledby="finance-functions-title">
-      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, END TO END</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有自己的心智圖' : 'An individual mind map for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，沿前端、DNS／HTTPS、後端、處理及驗證走到成功或失敗回傳。AI 功能亦顯示檢索、RAG、LangGraph 及模型呼叫。下方保留每步技術及 API 範例；全部皆為離線設計。' : 'Choose an area and expand a function. Follow its caller, DNS/HTTPS, backend, processing and validation to success or failure. AI functions also show retrieval, RAG, LangGraph and model calls. Step-by-step tools and API examples remain below; everything is an offline design.'}</p></div>
+      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, END TO END</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有自己的心智圖' : 'An individual mind map for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，先看例子，再沿本機呼叫者、後端、處理及驗證走到回傳結果；切換部署模式便會加入 DNS／HTTPS 及託管服務。AI 功能亦顯示檢索、RAG、LangGraph 及模型呼叫。下方保留每步技術及 API 範例；全部皆為離線設計。' : 'Choose an area and expand a function. Start with its example, then follow the local caller, backend, processing and validation to the result. Switch to deployment mode to add DNS/HTTPS and hosted services. AI functions also show retrieval, RAG, LangGraph and model calls. Step-by-step tools and API examples remain below; everything is an offline design.'}</p></div>
+      <fieldset className="function-map-backend function-map-environment-control"><legend>{lang === 'zh' ? '先選擇你正在做哪個階段' : 'First choose where you are building'}</legend><label><input type="radio" name="finance-map-environment" checked={environment === 'local'} onChange={() => setEnvironment('local')}/>{lang === 'zh' ? '本機開發 · 暫不用 Docker' : 'Local development · no Docker yet'}</label><label><input type="radio" name="finance-map-environment" checked={environment === 'deployed'} onChange={() => setEnvironment('deployed')}/>{lang === 'zh' ? '部署階段 · Docker + EC2' : 'Deployment stage · Docker + EC2'}</label><p>{lang === 'zh' ? '本機先使用 localhost、獨立程序與本機檔案；功能完成後才建立映像，在本機驗證容器，再部署到 EC2。下方節點會跟著切換。' : 'Start with localhost, separate processes and local files. Once the features work, build images, verify containers on your computer, then deploy to EC2. The map nodes change with this choice.'}</p></fieldset>
       <fieldset className="function-map-backend"><legend>{lang === 'zh' ? '選擇心智圖的後端架構' : 'Choose the backend architecture shown in the maps'}</legend><label><input type="radio" name="finance-map-backend" checked={backend === 'java-python'} onChange={() => setBackend('java-python')}/>{lang === 'zh' ? 'Java API + Python 分析服務' : 'Java API + Python analysis service'}</label><label><input type="radio" name="finance-map-backend" checked={backend === 'python'} onChange={() => setBackend('python')}/>{lang === 'zh' ? '原提案：Python API' : 'Original proposal: Python API'}</label><p>{lang === 'zh' ? 'Java Spring Boot 為建議新增的 API 層，負責身分、合約及轉送；FastAPI／LangGraph 保留財報與 AI 處理。20 週提案仍以 Python 首版估算，加入 Java 須另作範圍及工時評估。兩種服務皆未在此指南實作。DNS 是解析步驟，可使用快取，並非轉送資料的服務。' : 'Java Spring Boot is a proposed additional API layer for identity, contracts and forwarding. FastAPI/LangGraph retain finance and AI processing. The 20-week estimate covers the original Python release; adding Java needs a separate scope and effort estimate. Neither finance service is implemented in this guide. DNS resolves a name, may use a cache and does not forward application data.'}</p></fieldset>
       <div className="finance-api-reading-guide"><b>{lang === 'zh' ? '怎樣閱讀 API 流程' : 'HOW TO READ AN API WORKFLOW'}</b><p><span>Client</span> → <span>Request</span> → <span>Auth + Validation</span> → <span>Service / Worker</span> → <span>Database</span> → <span>Response</span></p><small>{lang === 'zh' ? 'GET 讀取 · POST 建立或執行動作 · PATCH 修改 · 200 成功 · 201 已建立 · 202 已接納但未完成。範例 ID、公司、網址及結果均為虛構。' : 'GET reads · POST creates or performs an action · PATCH edits · 200 success · 201 created · 202 accepted, still unfinished. Example IDs, companies, URLs and results are fictional.'}</small></div>
       <div className="finance-function-areas" role="group" aria-label={lang === 'zh' ? '選擇功能流程範疇' : 'Choose a function workflow area'}>{financeAreas.map(area => <button key={area.id} type="button" aria-pressed={selected.id === area.id} aria-controls="finance-function-list" onClick={() => setSelected(area)}>{pick(area.title, lang)}</button>)}</div>
@@ -125,7 +132,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
         <IllustratedConcept illustration={financeAreaIllustrations[selected.id]} lang={lang}/>
         {selectedFunctions.map((item, index) => <details className="finance-function" key={item.title.en} open={index === 0}>
           <summary><span>{String(index + 1).padStart(2, '0')}</span><h4>{pick(item.title, lang)}</h4><i aria-hidden="true">+</i></summary>
-          <div className="finance-function-body"><FinanceFunctionMindmap map={financeFunctionMaps[selected.id][index]} api={financeApiWorkflows[selected.id][index]} title={item.title} lang={lang} backend={backend}/><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>
+          <div className="finance-function-body"><FinanceFunctionMindmap map={financeFunctionMaps[selected.id][index]} api={financeApiWorkflows[selected.id][index]} title={item.title} lang={lang} backend={backend} environment={environment} example={financeFunctionExamples[selected.id][index]}/><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>
             <dl className="finance-function-outcomes"><div><dt>{lang === 'zh' ? '預期結果' : 'Expected result'}</dt><dd>{pick(item.result, lang)}</dd></div><div><dt>{lang === 'zh' ? '失敗時怎樣處理' : 'Failure handling'}</dt><dd>{pick(item.failure, lang)}</dd></div></dl>
             <FinanceApiContent workflow={financeApiWorkflows[selected.id][index]} lang={lang}/>
           </div>

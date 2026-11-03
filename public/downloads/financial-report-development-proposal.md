@@ -249,6 +249,64 @@ Implement Java login, report services and private Python integration locally fir
 
 At stage 7, add a `java-api` image/service. Route public `/api/*`, configured OIDC login/callback routes and `/mcp` to Spring through Caddy; expose required OAuth metadata endpoints deliberately while keeping private operator paths blocked. Python `api` and its worker stay on private service networking. MCP shares Spring's port and image. Run Flyway and Alembic against their respective schemas, carry authenticated internal calls and rerun authorization, MCP compatibility and container recovery checks. The historical Compose and migration snippets in section 10 need these changes before use for the selected architecture; they are not a ready-to-run Java/MCP deployment.
 
+### 3.5. LangGraph analysis state and branches
+
+This is a proposed Python `StateGraph` for the selected Spring architecture. The web mind map is an offline walkthrough, not an executing finance service. The standalone [LangGraph design](FINANCIAL_REPORT_LANGGRAPH_DESIGN.md) gives the state fields, file responsibilities and evaluation cases.
+
+Spring authenticates a research submission and checks report access before creating its durable job. Invalid initial access returns HTTP 401 or 403 without a graph run. An accepted request returns HTTP 202 and a run ID. The worker starts the graph below and rechecks the trusted report scope. Later failures become saved run outcomes, which the browser reads through Spring's status endpoint.
+
+```mermaid
+flowchart TD
+    Start([START]) --> Scope[validate_scope]
+    Scope -->|Scope valid| Plan[plan_task]
+    Scope -->|Revoked or invalid scope| Save[save_result]
+    Plan -->|Reviewed facts or calculation| Facts[load_facts_calculate]
+    Plan -->|Cited research| Retrieve[retrieve_hybrid]
+    Plan -->|Unclear task| Save
+    Retrieve --> Assess{assess_evidence}
+    Assess -->|Enough evidence| Facts
+    Assess -->|Missing and refinement unused| Refine[refine_query: max 1]
+    Refine --> Retrieve
+    Assess -->|Still missing| Save
+    Assess -->|Conflicting evidence| Review[human_review: interrupt]
+    Review -->|Authorized reviewer submits decision| Resume[reauthorize_resume]
+    Resume -->|Approved corrections and valid scope| Retrieve
+    Resume -->|Rejected or stale access| Save
+    Facts -->|Code-only task| Validate{validate}
+    Facts -->|Research with compatible inputs| Select[select_model]
+    Facts -->|Missing facts or incompatible inputs| Save
+    Select -->|Allowed and budget reserved| Draft[draft]
+    Select -->|No eligible model or budget| Save
+    Draft --> Validate
+    Validate -->|Pass| Save
+    Validate -->|Repairable generation defect| Escalate{escalate: max 1}
+    Escalate -->|Evidence and budget allow evaluated higher tier| Select
+    Escalate -->|Unavailable or already used| Save
+    Validate -->|Unsupported claim or nonrepairable error| Save
+    Save --> Finish([END])
+```
+
+The common research path scopes the request, classifies its task, retrieves evidence, loads reviewed facts, selects an eligible model, drafts and validates the answer. `load_facts_calculate` uses SQL and Decimal only when the task needs numerical facts or arithmetic. A code-only request goes directly from that node to validation and never enters `select_model` or `draft`. Missing facts, unknown units and incompatible periods produce a limitation instead of a model guess.
+
+`assess_evidence` separates missing sources from conflicting sources. One `refine_query` attempt can search again within the same authorized company, periods and report versions. Persist `retrieval_refinements` and the execution deadline. When the source remains absent, save supported partial facts or a missing-evidence result. Conflicting accounting evidence pauses at `human_review`; approval requires audited corrections or evidence, not an unchecked model-generated approval flag.
+
+A persistent checkpointer saves the thread state. `interrupt()` pauses review and `Command(resume=...)` supplies a validated decision on the same thread. The application binds the opaque `thread_id` to the authenticated owner and run. Spring reauthorizes resume, and Python verifies reviewer identity, report access, evidence versions and the recorded decision before `reauthorize_resume` permits retrieval again. A review pause is `awaiting_review`, not completion. The review node can restart on resume, so irreversible work must not precede the interrupt. [LangGraph interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts)
+
+`validate` checks output shape, claims, source pages, numerical values, units and periods. A repairable generation defect can use one evaluated higher tier only when evidence exists, eligibility permits it and the remaining budget covers it. `escalate` persists its counter before another call; a run that starts on the highest allowed tier cannot escalate further. Missing sources and code-only calculation failures never trigger this path. Transient transport retries have separate finite limits and consume the same run deadline and budget.
+
+Persist state in these groups:
+
+| State group | Proposed fields | Rule |
+| --- | --- | --- |
+| Run identity and scope | `run_id`, `thread_id`, authenticated owner reference, company, periods, report version IDs, language | Scope comes from trusted service context; IDs alone do not grant access |
+| Evidence and results | Task type, query variants, evidence IDs, reviewed fact IDs, Decimal result strings, draft claims, validation findings | Preserve source provenance; do not promote retrieved text to instructions |
+| Limits and decisions | Retrieval refinement count, escalation count, model tier and ID, usage, reserved budget, deadline, review decision | Counters persist across resumes and cannot increase permissions or spending limits |
+| Reproducibility and status | Graph version, prompt version, embedding/index version, current node, outcome code | Record `completed`, `partial`, `awaiting_review`, `failed` or `cancelled` explicitly |
+
+Keep secrets and raw model reasoning out of graph state and traces. LangGraph checkpoints record progress but do not guarantee exactly-once provider calls or writes. The application run ledger, idempotent result writes, saved cost reservations and reconciliation of uncertain provider outcomes handle those boundaries. [LangGraph persistence](https://docs.langchain.com/oss/python/langgraph/persistence), [Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api)
+
+The three read-only MCP tools reuse fact and retrieval services without entering the answer-generation graph. n8n triggers ingestion; Celery carries durable background jobs; LangGraph controls analysis steps. Develop the graph locally first and package the same Python code with persistent PostgreSQL checkpoints in Docker at stage 7. Graph changes, review controls and their evaluation add implementation scope beyond the historical Python-only schedule.
+
 ## 4. Stages and effort budget
 
 Each stage ends with a working demonstration and recorded acceptance results. Feature tests belong in their own stage. Stage 7 consolidates evaluation and release work.

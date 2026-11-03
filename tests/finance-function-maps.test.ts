@@ -88,3 +88,14 @@ test('research maps distinguish orchestration, retrieval and generation without 
     assert.ok(!map.steps.some(step => step.keyword === 'LLM API'));
   }
 });
+
+// Check the selected architecture’s externally visible ownership, rather than internal node order.
+test('Spring metadata edits end in Java while research retains the private Python handoff', () => {
+  const metadata = renderToStaticMarkup(createElement(FinanceFunctionMindmap, { map: financeFunctionMaps.library[1], api: financeApiWorkflows.library[1], title: financeFunctionWorkflows.library[1].title, lang: 'en', backend: 'java-python', environment: 'local', example: financeFunctionExamples.library[1], modelRole: financeFunctionModelRoles.library[1] }));
+  assert.ok(metadata.includes('JAVA API'));
+  assert.ok(!metadata.includes('PYTHON API'));
+  assert.ok(metadata.includes('metadata edits do not call Python'));
+  const research = renderToStaticMarkup(createElement(FinanceFunctionMindmap, { map: financeFunctionMaps.research[0], api: financeApiWorkflows.research[0], title: financeFunctionWorkflows.research[0].title, lang: 'en', backend: 'java-python', environment: 'local', example: financeFunctionExamples.research[0], modelRole: financeFunctionModelRoles.research[0] }));
+  assert.ok(research.includes('JAVA API'));
+  assert.ok(research.includes('PYTHON API'));
+});

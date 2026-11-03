@@ -5,13 +5,13 @@ export const financeRagNodes = {
     keyword: 'QUESTION',
     title: { en: 'Ask a question and choose the reports', zh: '提問並選擇財報' },
     detail: { en: 'Collect the question, selected company, reporting years and answer language. For a Chinese question over English PDFs, use a suitable multilingual embedding model and an English keyword rewrite; preserve company identifiers, years and accounting terms. Keep the original question alongside the rewrite.', zh: '收集問題、所選公司、報告年份及回答語言。以中文查詢英文 PDF 時，使用合適的多語嵌入模型及英文關鍵詞改寫，保留公司識別、年份及會計用語，同時保存原問題。' },
-    tools: 'Next.js · typed API request · query preparation',
+    tools: 'Next.js → Spring research service → private Python',
   },
   scope: {
     keyword: 'ACCESS + SCOPE',
     title: { en: 'Restrict both searches to the right evidence', zh: '限定兩條搜尋路徑的證據範圍' },
     detail: { en: 'The backend checks caller access and resolves the permitted company, periods and exact report versions. Apply those constraints inside both dense and keyword queries. Keep source page and chunk IDs on every candidate so later ranking never loses provenance.', zh: '後端核對呼叫者權限，確定獲准公司、期間及確切報告版本。在向量及關鍵詞查詢中套用相同限制。每個候選段落保留來源頁及 chunk ID，排序後仍可追溯。' },
-    tools: 'FastAPI · authorization · PostgreSQL filters',
+    tools: 'Spring report scope · service-authenticated FastAPI · SQL filters',
   },
   dense: {
     keyword: 'DENSE VECTOR',

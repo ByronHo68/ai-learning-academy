@@ -212,9 +212,15 @@ export const proposalServices = [
     storage: { en: 'No required local application state', zh: '沒有必須保留的本機應用狀態' },
   },
   {
+    name: 'java-api',
+    role: { en: 'Spring login, report services and read-only MCP module', zh: 'Spring 登入、財報服務及唯讀 MCP 模組' },
+    exposure: { en: 'REST, configured login and protected MCP routes through Caddy', zh: 'REST、設定的登入及受保護 MCP 路由經 Caddy 存取' },
+    storage: { en: 'Spring-owned reports schema; shared immutable-file storage', zh: 'Spring 管理的 reports schema 及共用不可變檔案儲存' },
+  },
+  {
     name: 'api',
-    role: { en: 'FastAPI resource API and access checks', zh: 'FastAPI 資源 API 及權限檢查' },
-    exposure: { en: 'Permitted routes through Caddy only', zh: '只有獲准路由可經 Caddy 存取' },
+    role: { en: 'Private Python extraction, retrieval and analysis API', zh: '私人 Python 擷取、檢索及分析 API' },
+    exposure: { en: 'Private service calls from Spring; no public route', zh: '只接受 Spring 私人服務呼叫，沒有公開路由' },
     storage: { en: 'PostgreSQL records; original PDFs in S3', zh: '記錄存於 PostgreSQL，PDF 原檔存於 S3' },
   },
   {

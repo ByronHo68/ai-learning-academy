@@ -140,3 +140,7 @@ Java, C# and UiPath are optional integration choices, rather than requirements f
 - Office edition: regenerate through `npm run office:build`; the guide has no live-service dependency.
 
 Run `npm run check`, `npm run build`, `npm run office:build` and `npm run office:test` on Node 22.13 or newer when developing. The generated office package runs on Node 18.18 or newer. Test all eight workflow areas and 24 disclosures, both languages, both answer scenarios, keyboard use and narrow mobile layouts in the browser.
+
+### Model selection and prompt routing
+
+The bilingual guide now includes an offline prompt-routing simulator at `/finance-project#finance-models`, with candidate Luna, Sol, Astra, DeepSeek, Gemini and Claude models. Each of the 24 function maps describes whether it uses code, embeddings, or a generative model. The production design separates task classification from account eligibility, evidence, capability and spending checks. Missing sources cannot be repaired by using a larger model. See the development proposal for provider adapters, routing files and evaluation scope.

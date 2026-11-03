@@ -95,7 +95,7 @@ export const proposalStages = [
     id: 'research', number: 5, hours: 48,
     weeks: { en: 'Weeks 13 to 16', zh: '第 13 至 16 週' },
     title: { en: 'Add cited research and LangGraph', zh: '加入附引用研究及 LangGraph' },
-    outcome: { en: 'Bilingual research answers with filtered retrieval, evidence checks, saved graph state and partial-answer handling.', zh: '完成雙語研究答案、範圍檢索、證據核對、持久圖狀態及部分答案處理。' },
+    outcome: { en: 'Bilingual cited research with saved graph state. Model routing is added design scope that needs a separate estimate beyond this original 48-hour stage.', zh: '完成雙語附引用研究及持久圖狀態；模型路由是新增設計範圍，須在原定 48 小時以外另行估算。' },
     tasks: [
       { en: 'Create passages with page and version provenance, then add filtered vector and keyword retrieval.', zh: '建立附頁面及版本來源的段落，再加入有範圍的向量及關鍵詞檢索。' },
       { en: 'Enforce company, period, version and access filters before returning evidence.', zh: '回傳證據前強制套用公司、期間、版本及存取篩選。' },
@@ -103,9 +103,12 @@ export const proposalStages = [
       { en: 'Calculate numbers in code and treat report text as untrusted evidence, including embedded instructions.', zh: '以程式計算數字，把報告文字及當中的指令視為不可信證據。' },
       { en: 'Support both languages, attach evidence to material claims and distinguish reported commentary from interpretation.', zh: '支援兩種語言，為重要主張附證據，分清報告評論及程式詮釋。' },
       { en: 'Persist graph state, handle timeouts and missing evidence, and save approved examples for the read-only preview. Restrict live questions to the owner.', zh: '持久儲存圖狀態、處理逾時及證據缺失，為唯讀預覽儲存已核准範例，只有擁有者可即時提問。' },
+      { en: 'Add a server-side model registry and validated prompt classifier. Use Luna for bounded language tasks, Sol for cited answers and Astra for complex evidence synthesis only when account eligibility and budget permit. SQL and Decimal tasks need no chat model.', zh: '加入後端模型清單及已驗證提示分類器；帳戶資格及預算允許時，Luna 處理有限語言工作、Sol 處理附引用答案、Astra 處理複雜證據分析。SQL 及 Decimal 工作毋須聊天模型。' },
+      { en: 'Treat prompt effort as a preference. Enforce owner access, evidence, capabilities and total run budget in code. Missing evidence returns a partial answer; allow at most one paid escalation within the selected provider.', zh: '提示中的推理強度只屬偏好；以程式限制擁有者權限、證據、能力及執行總預算。缺證據時回傳部分答案；所選供應商內最多一次付費升級。' },
+      { en: 'Build one eligible provider first. Evaluate DeepSeek Flash and Pro with a separate adapter before the owner enables them. Version the embedding index separately and rebuild it when the embedding model changes.', zh: '先完成一個符合使用資格的供應商；以獨立介面適配器評估 DeepSeek Flash 及 Pro，擁有者啟用後才使用。向量索引獨立版本化，更換 embedding 模型時重建。' },
     ],
-    acceptance: { en: 'Wrong-company and wrong-year distractors stay out of the answer. Unsupported explanations produce partial answers. Citations resolve correctly, manual review checks support, and saved state survives a restart.', zh: '答案不受錯公司及錯年份干擾；無支持原因只提供部分答案。引用可正確開啟，人工覆核支持度，重啟後狀態仍存在。' },
-    tools: 'LangGraph · PostgreSQL checkpointer · pgvector · embeddings · LLM API · Python Decimal',
+    acceptance: { en: 'Wrong-company and wrong-year evidence stays out; unsupported explanations produce partial answers. Citations and saved state work. If routing is included, prompts cannot override provider, access or spending rules, and recorded node decisions explain the selected model.', zh: '排除錯公司及錯年份證據；無支持原因只提供部分答案，引用及持久狀態正常。若包含路由，提示不能更改供應商、權限或開支規則，記錄每個節點的模型選擇原因。' },
+    tools: 'LangGraph · PostgreSQL checkpointer · pgvector · embeddings · Pydantic router · model registry · provider adapters · Python Decimal',
   },
   {
     id: 'automation', number: 6, hours: 24,
@@ -130,6 +133,7 @@ export const proposalStages = [
     tasks: [
       { en: 'Freeze at least 30 evaluation cases and keep a held-out subset outside prompt tuning.', zh: '固定至少三十個評估案例，保留不參與提示調整的測試子集。' },
       { en: 'Record expected evidence, model configuration and actual case-level results.', zh: '記錄預期證據、模型設定及逐案實際結果。' },
+      { en: 'For the added routing scope, evaluate enabled models against the same cases and evidence. Check missing sources, malformed routing output, provider outages and exhausted budgets. Record the added effort separately from the original stage allocation.', zh: '新增路由範圍須以相同案例及證據評估已啟用模型，檢查缺來源、路由格式錯誤、供應商中斷及預算用盡；額外工時與原階段預算分開記錄。' },
       { en: 'Add trace IDs, usage, timings and failures; show cost as unknown when pricing records are unavailable.', zh: '加入追蹤 ID、用量、時間及失敗記錄；缺少價格記錄時成本顯示未知。' },
       { en: 'Add Dockerfiles and Compose now. Run the containers locally and repeat upload, research, failure and restart checks before provisioning EC2.', zh: '在此階段加入 Dockerfile 及 Compose；先在本機容器重測上載、研究、失敗和重啟，再建立 EC2。' },
       { en: 'Complete the real n8n workflow during the local Docker rehearsal if stage 6 used a script because a supported native release was unavailable.', zh: '若第六階段因缺少受支援本機版本而用腳本測試，在本機 Docker 演練完成實際 n8n 流程。' },
@@ -251,7 +255,7 @@ export const proposalDeliveryOptions = [
   {
     title: { en: 'Portfolio release', zh: '求職作品版本' },
     effort: { en: '300 hours · target 20 weeks', zh: '300 小時 · 目標 20 週' },
-    scope: { en: 'Original provisional baseline: 240 planned hours plus 60 contingency hours. For local development first and Docker in stage 7, add the packaging allowance below. Re-estimate after the first container rehearsal.', zh: '原暫定基準為 240 小時計劃工作及 60 小時緩衝。先本機開發、第七階段才用 Docker，須另加下方封裝預算；首次容器演練後重新估算。' },
+    scope: { en: 'Original provisional baseline: 240 planned hours plus 60 contingency hours for one chat model and one embedding model. Add the Docker packaging allowance below. Model routing and a second-provider evaluation add stage 5 and stage 7 scope that must be estimated before revising the target.', zh: '原暫定基準為 240 小時計劃工作及 60 小時緩衝，假設一個聊天及一個 embedding 模型。另加下方 Docker 封裝預算；模型路由及第二供應商評估增加第五、七階段範圍，須先估算再修訂目標。' },
   },
   {
     title: { en: 'Local development first, Docker at deployment', zh: '先本機開發，部署時才加入 Docker' },

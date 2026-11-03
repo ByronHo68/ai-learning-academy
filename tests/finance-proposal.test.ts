@@ -24,7 +24,7 @@ test('proposal reader and Markdown download preserve the complete developer spec
   }
   assert.equal(proposalStages.length, 8);
   assert.equal(proposalStages.reduce((total, stage) => total + stage.hours, 0), 240);
-  assert.equal(proposalServices.length, 8);
+  assert.equal(proposalServices.length, 9);
   assert.equal(proposalDeploymentSteps.length, 9);
 });
 
@@ -52,7 +52,7 @@ test('proposal renders every stage, EC2 design and complete specification in bot
       assert.ok(html.includes(stage.acceptance[lang]));
       for (const task of stage.tasks) assert.ok(html.includes(task[lang]));
     }
-    assert.ok(html.includes(lang === 'en' ? 'Plan for 21–22 weeks with Docker at deployment' : 'Docker 延至部署階段，規劃 21 至 22 週'));
+    assert.ok(html.includes(lang === 'en' ? 'Historical Python baseline: 21–22 weeks' : '歷史 Python 基準：21 至 22 週'));
     assert.ok(html.includes(lang === 'en' ? 'does not provision cloud resources' : '不會啟動雲端資源'));
     assert.ok(html.includes('docker compose --env-file deploy/production.env'));
     assert.ok(html.includes('--wait --wait-timeout 120'));

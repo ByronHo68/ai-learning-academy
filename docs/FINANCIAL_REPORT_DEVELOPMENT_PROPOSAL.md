@@ -1,6 +1,6 @@
 # Hong Kong Financial Report Analyst: development proposal
 
-Date: 3 November 2026\
+Date: 4 November 2026\
 Status: Draft for review before implementation  
 Developer capacity: One developer, 15 hours per week  
 First-release goal: A working job-search portfolio demo  
@@ -24,7 +24,7 @@ The original baseline planning range was **18 to 22 weeks**. Treat the revised 2
 
 The full extension excludes OCR and public multi-user operation. Its additional hours apply after the portfolio budget. With the Docker packaging allowance, the combined budget is 402 to 474 hours, approximately 27 to 32 weeks, before optional EC2 learning or Java work.
 
-Build and test the application on the local computer during stages 0 to 6. Add Dockerfiles and Compose in stage 7, rehearse the same user journey in containers locally, then provision EC2. For a first EC2 deployment, add a separate 12 to 24 hours for AWS, IAM, HTTPS, storage, and recovery learning. That raises the local-first total to 324 to 348 hours, approximately 22 to 24 weeks. Do not count the Docker packaging allowance again inside the EC2 learning allowance. Kubernetes and the optional Java service have their own estimates.
+Build and test the application on the local computer during stages 0 to 6. Add Dockerfiles and Compose in stage 7, rehearse the same user journey in containers locally, then provision EC2. For a first EC2 deployment, add a separate 12 to 24 hours for AWS, IAM, HTTPS, storage, and recovery learning. That raises the local-first total to 324 to 348 hours, approximately 22 to 24 weeks. Do not count the Docker packaging allowance again inside the EC2 learning allowance. Kubernetes remains optional. The selected Java/MCP design requires a separate estimate beyond this historical Python baseline.
 
 The estimate assumes the following:
 
@@ -64,9 +64,11 @@ The README and CV description must distinguish completed features, limitations, 
 
 ## 3. Architecture and technology stack
 
-Use one web application, one Python API, and a separate worker. Store financial facts and evidence in PostgreSQL. Keep original PDFs outside the database with immutable identifiers.
+Selected architecture (updated 4 November 2026): **Next.js → Spring Boot → private Python**. Spring owns OIDC login integration, API permissions, report metadata, versions, ACLs and original-file lifecycle. Python owns extraction, retrieval, financial calculations and analysis. The MCP adapter is a module inside the same Spring Boot application, not another required process. The architecture mind map and both request paths appear at `/finance-project#finance-architecture`.
 
-The web guide also offers an individual end-to-end map for each of the 24 functions. Its Java + Python view adds a proposed Spring Boot API facade for identity, request contracts, and scoped forwarding to the Python finance service. The Python-only view matches the baseline architecture below. Both the original baseline and the revised local-first estimate exclude that additional Java service, which needs its own scope, deployment resources, tests, and effort estimate. The maps show design paths rather than an implemented finance backend.
+The schedules below retain the historical Python-only estimate. Java ownership, MCP authorization/interoperability and multi-model routing add scope that must be estimated before a new delivery date is committed. The existing detailed Python API examples and deployment snippets are reference contracts for that historical baseline; use section 3.4 for the selected ownership and required deployment changes. No finance backend is implemented by this learning site.
+
+Historical Python baseline diagram:
 
 ```mermaid
 flowchart TD
@@ -203,6 +205,49 @@ Apply identical access, company, period and document-version constraints inside 
 PostgreSQL's built-in text ranking is not BM25. Learned sparse embeddings are a separate representation and are not required to combine dense and lexical retrieval. HNSW is an approximate search index, rather than another retrieval branch; keep exact search as its baseline. Filters can reduce the candidates returned from an approximate index, so compare relevant-source recall as well as query time. See [pgvector hybrid search](https://github.com/pgvector/pgvector#hybrid-search), [pgvector filtering](https://github.com/pgvector/pgvector#filtering), [PostgreSQL text-search ranking](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-RANKING), and [GIN text-search indexing](https://www.postgresql.org/docs/current/textsearch-indexes.html).
 
 Develop these paths locally during stage 5. First compare dense-only and lexical-only results, then hybrid results on the same checked bilingual questions, exact financial terms, wrong-year distractors and missing-evidence cases. Record source recall, citation correctness and latency. Evaluate HNSW, learned sparse retrieval and reranking as later options rather than adding them to the baseline without evidence. Package the same tested schema and configuration in Docker during stage 7. Missing evidence returns a clear limitation; increasing the answer model's size cannot replace the absent source.
+
+### 3.4. Selected Java ownership and MCP workflow
+
+```mermaid
+flowchart TD
+    Browser[Browser and Next.js] --> REST[Spring REST API]
+    IdP[Existing identity and authorization provider] -. OIDC login .-> REST
+    Client[External AI client with OAuth access token] --> MCP[Spring MCP endpoint /mcp]
+    IdP -. OAuth authorization .-> Client
+    REST --> Services[Shared Spring application services]
+    MCP --> Policy[Token, scope, typed arguments and report ACL]
+    Policy --> Services
+    Services --> Reports[Report metadata, ACL and file lifecycle]
+    Services -->|Service authentication and trusted report scope| Python[Private FastAPI service]
+    Python --> Retrieval[Embeddings and hybrid retrieval]
+    Python --> Facts[Reviewed facts and Decimal calculations]
+    Python --> Graph[LangGraph, model routing and validation]
+    Python --> Services
+    Services -->|REST result or persisted job status| Browser
+    Services -->|Source-linked tool data| MCP
+    MCP --> Client
+    Policy -->|Reject| Denied[Unauthorized, forbidden or structured tool error]
+```
+
+The Spring application exposes two entrances on port 8080. Website REST requests use the configured OIDC login/session flow. Remote MCP clients use OAuth access tokens issued for the finance MCP resource. Configure token issuer, audience, expiry and scopes, protected resource metadata, discovery, registration and the selected HTTP transport. An ID token is not an API access token. A JWT validator alone does not implement the complete MCP authorization protocol. Use an existing compatible authorization provider rather than building a custom authorization server.
+
+Use a [Spring AI MCP server adapter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html) with Streamable HTTP and a dedicated [Spring Security](https://docs.spring.io/spring-security/reference/servlet/oauth2/index.html) configuration. Spring AI transport auto-configuration does not add authentication or tool authorization automatically. Follow the [MCP authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) and test with the intended external client.
+
+| Read-only MCP tool | Required scope | Returns |
+| --- | --- | --- |
+| `search_report_evidence` | `reports:search` | Permitted passages, chunk IDs, document versions and source pages |
+| `get_reviewed_facts` | `facts:read` | Reviewed values, units, periods and evidence IDs |
+| `get_evidence` | `evidence:read` | An authorized source excerpt and PDF page reference |
+
+Both REST and MCP call the same Spring services and enforce the same report ACLs. Derive caller identity from verified authentication, not model-provided arguments. Allowlisted typed tools cannot accept arbitrary SQL, URLs, credentials or filesystem paths. The three MCP tools return source-linked data without automatically calling a backend answer LLM. The external AI client may compose an answer using its own model and validation. Website research remains Spring → private Python → LangGraph/retrieval/model/validation → Spring → Next.js, with a persisted 202/polling contract for long jobs.
+
+Spring report-management operations end in Spring. Extraction jobs receive immutable file references and versions; Python does not update Spring-owned report records directly. Use one PostgreSQL server with a `reports` schema owned by Spring/Flyway and an `analysis` schema owned by Python/Alembic, with distinct write roles. Cross-service reads use scoped contracts or explicitly permitted read-only views; each schema has one migration owner. The n8n database remains separate. Python validates service authentication and trusted user/report context and applies filters inside retrieval. Do not pass an MCP-audience token unchanged to a downstream Python resource; use distinct service authentication or a correctly scoped token exchange.
+
+Prompt-injection controls apply at every tool and service boundary. Treat reports and tool outputs as untrusted data; they cannot change tool definitions, permissions, providers or budgets. Test expired tokens, wrong audiences, insufficient scopes, unauthorized report IDs and malicious PDF instructions. Log request/tool decisions and source IDs without secrets. Start read-only and separately design explicit approval for any future write or external-send tools. [OWASP guidance](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
+
+Implement Java login, report services and private Python integration locally first. Add the read-only MCP adapter after the website research flow works. Extend the proposed Java tree with `config/SecurityConfig.java`, `controller/ReportController.java`, `service/ReportService.java`, `mcp/FinanceTools.java`, `client/FinanceClient.java` and `src/main/resources/db/migration/`. Security evaluation fixtures belong in `evals/security.json`.
+
+At stage 7, add a `java-api` image/service. Route public `/api/*`, configured OIDC login/callback routes and `/mcp` to Spring through Caddy; expose required OAuth metadata endpoints deliberately while keeping private operator paths blocked. Python `api` and its worker stay on private service networking. MCP shares Spring's port and image. Run Flyway and Alembic against their respective schemas, carry authenticated internal calls and rerun authorization, MCP compatibility and container recovery checks. The historical Compose and migration snippets in section 10 need these changes before use for the selected architecture; they are not a ready-to-run Java/MCP deployment.
 
 ## 4. Stages and effort budget
 
@@ -416,7 +461,7 @@ finance-report-analyst/
 │   ├── alembic.ini             # Migration command configuration
 │   ├── migrations/             # Alembic schema history
 │   └── Dockerfile              # Same image, separate API and worker commands
-├── services/java-api/           # Optional extra scope
+├── services/java-api/           # Selected Spring API and MCP; added scope
 │   ├── pom.xml
 │   ├── Dockerfile              # Add in stage 7 if Java is selected
 │   └── src/main/java/hk/finance/
@@ -487,7 +532,7 @@ npm --prefix apps/web ci
 npm --prefix apps/web run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-For the optional Java service, configure the Spring Boot Maven plugin in `pom.xml` and document its tested JDK. Run `mvn spring-boot:run` from `services/java-api` with `server.address=127.0.0.1`, `server.port=8080`, and the private FastAPI base URL in its local configuration. Confirm a request reaches FastAPI before selecting Java as the frontend rewrite target.
+For the selected Java service, configure the Spring Boot Maven plugin in `pom.xml` and document its tested JDK. Run `mvn spring-boot:run` from `services/java-api` with `server.address=127.0.0.1`, `server.port=8080`, and the private FastAPI base URL in its local configuration. Use Spring on port 8080 as the frontend rewrite target. Verify a report metadata edit stays in Spring and an analysis request reaches private FastAPI. Keep the example Python-only commands below as a historical reference.
 
 Create `alembic.ini` and the migration environment with the Python project before running Alembic. The `.[dev]` extra must be defined in `pyproject.toml`. The worker command expects `celery_app` in `app/jobs/tasks.py`. These names are developer contracts to implement, not existing application commands. On Windows, use the equivalent virtual-environment activation command for the chosen shell.
 
@@ -507,7 +552,7 @@ Docker packages the tested processes. Compose describes their connections, confi
 | --- | --- | --- |
 | Database at `127.0.0.1:5432` | Database host `postgres` on the private Compose network | Migrations, extension and reviewed facts work |
 | Redis at `127.0.0.1:6379` | Broker host `redis` on the private Compose network | Jobs execute and bounded replay remains correct |
-| API at `127.0.0.1:8000` | API service name `api`; optional Java facade service in front | Permitted routes work; internal administration remains private |
+| Spring at `127.0.0.1:8080`, private Python at `127.0.0.1:8000` | `java-api` handles REST/login/MCP; `api` is private Python | Permitted routes work; internal administration remains private |
 | Files under ignored `data/local/` | Persistent test volume locally, then private S3 on EC2 | An old citation still opens the same immutable PDF |
 | Browser opens the local web server | Caddy serves the public domain with HTTPS on EC2 | Authentication, cookies, allowed routes and source viewing work |
 | Local `.env` with development values | Protected runtime configuration and secrets | No key enters an image or browser bundle |

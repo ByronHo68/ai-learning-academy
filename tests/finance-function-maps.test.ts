@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { FinanceFunctionMindmap, type BackendLayout, type BuildEnvironment } from '../app/finance-function-map';
+import { financeFunctionModelRoles } from '../lib/finance-model-guide';
 import { financeFunctionExamples } from '../lib/finance-function-examples';
 import { financeAreas } from '../lib/finance-project';
 import { financeFunctionMaps, type FinanceFunctionMap } from '../lib/finance-function-maps';
@@ -38,8 +39,10 @@ test('every function has a distinct map that matches its API, caller and domain 
         for (const backend of layouts) {
           const environments: BuildEnvironment[] = ['local', 'deployed'];
           for (const environment of environments) {
-          const html = renderToStaticMarkup(createElement(FinanceFunctionMindmap, { map, api, title: financeFunctionWorkflows[area.id][index].title, lang, backend, environment, example: financeFunctionExamples[area.id][index] }));
+          const html = renderToStaticMarkup(createElement(FinanceFunctionMindmap, { map, api, title: financeFunctionWorkflows[area.id][index].title, lang, backend, environment, example: financeFunctionExamples[area.id][index], modelRole: financeFunctionModelRoles[area.id][index] }));
           assert.ok(html.includes('VALIDATE'));
+          assert.ok(html.includes('href="#finance-models"'));
+          assert.ok(financeFunctionModelRoles[area.id][index][lang].trim().length > 0);
           assert.ok(html.includes(map.outcomes.success[lang]));
           assert.ok(html.includes(map.outcomes.failure[lang]));
           for (const step of map.steps) assert.ok(html.includes(step.keyword));

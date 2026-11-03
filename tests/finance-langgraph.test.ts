@@ -25,6 +25,7 @@ test('review pauses before saving; approval reauthorizes before new retrieval an
   assert.equal(approved.at(-1),'save');
   const rejected=financeGraphWalkthrough('review','rejected');
   assert.ok(!rejected.includes('draft'));
+  assert.equal(rejected[rejected.indexOf('review')+1],'resume');
   assert.equal(rejected.at(-1),'save');
 });
 test('the escalation demonstration uses one stronger attempt through model policy before drafting again',()=>{

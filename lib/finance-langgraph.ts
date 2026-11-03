@@ -36,7 +36,7 @@ export function financeGraphWalkthrough(scenario: FinanceGraphScenario, review: 
     case 'missing': return [...entry,...retrieval,'refine',...retrieval,'save'];
     case 'code': return [...entry,'facts','verify','save'];
     case 'escalation': return [...entry,...retrieval,'facts','route','draft','verify','escalate','route','draft','verify','save'];
-    case 'review': return [...entry,...retrieval,'review', ...(review==='pending' ? [] : review==='approved' ? ['resume',...retrieval,...answer] satisfies FinanceGraphNodeId[] : ['save'] satisfies FinanceGraphNodeId[])];
+    case 'review': return [...entry,...retrieval,'review', ...(review==='pending' ? [] : review==='approved' ? ['resume',...retrieval,...answer] satisfies FinanceGraphNodeId[] : ['resume','save'] satisfies FinanceGraphNodeId[])];
   }
 }
 

@@ -13,6 +13,7 @@ import { financeFunctionMaps } from '../lib/finance-function-maps';
 import { financeFunctionExamples } from '../lib/finance-function-examples';
 import { FinanceBuildGuide } from './finance-build-guide';
 import { FinanceModelGuide } from './finance-model-guide';
+import { FinanceRagWorkflow } from './finance-rag-workflow';
 import { financeFunctionModelRoles } from '../lib/finance-model-guide';
 import { FinanceFunctionMindmap, type BackendLayout, type BuildEnvironment } from './finance-function-map';
 
@@ -77,6 +78,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
       <a href="#finance-map">{lang === 'zh' ? '互動心智圖' : 'Mind map'}</a>
       <a href="#finance-build-guide">{lang === 'zh' ? '本機開發及檔案結構' : 'Local setup and folders'}</a>
       <a href="#finance-models">{lang === 'zh' ? '模型選擇及提示分流' : 'Models and prompt routing'}</a>
+      <a href="#finance-rag-workflow">{lang === 'zh' ? '混合 RAG 工作流程' : 'Hybrid RAG workflow'}</a>
       <a href="#finance-functions">{lang === 'zh' ? '每項功能心智圖及流程' : 'Function maps and workflows'}</a>
       <a href="#finance-workflow">{lang === 'zh' ? '答案如何產生' : 'Answer walkthrough'}</a>
       <a href="#finance-stack">{lang === 'zh' ? '技術分工' : 'Technology stack'}</a>
@@ -124,6 +126,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
 
     <FinanceBuildGuide lang={lang}/>
     <FinanceModelGuide lang={lang}/>
+    <FinanceRagWorkflow lang={lang}/>
 
     <section className="finance-section" id="finance-functions" aria-labelledby="finance-functions-title">
       <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, END TO END</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有自己的心智圖' : 'An individual mind map for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，先看例子，再沿本機呼叫者、後端、處理及驗證走到回傳結果；切換部署模式便會加入 DNS／HTTPS 及託管服務。AI 功能亦顯示檢索、RAG、LangGraph 及模型呼叫。下方保留每步技術及 API 範例；全部皆為離線設計。' : 'Choose an area and expand a function. Start with its example, then follow the local caller, backend, processing and validation to the result. Switch to deployment mode to add DNS/HTTPS and hosted services. AI functions also show retrieval, RAG, LangGraph and model calls. Step-by-step tools and API examples remain below; everything is an offline design.'}</p></div>

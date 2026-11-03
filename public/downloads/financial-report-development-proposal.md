@@ -170,6 +170,40 @@ Allow at most one paid escalation per run, including a validation-triggered esca
 
 Build one provider path first. Evaluate Luna, Sol, and Astra on the same frozen questions with the same retrieved evidence. Add the DeepSeek adapter and run those cases again before enabling its routes. Track routing mistakes, claim support, citation validity, latency, token usage, and actual cost. A small model passing the portfolio examples does not establish accuracy on arbitrary annual reports.
 
+### 3.3. Proposed hybrid RAG workflow
+
+For the first six English PDFs, build dense and keyword retrieval as separate baselines, then combine their rankings. The web guide presents this as an interactive design at `/finance-project#finance-rag-workflow`; it does not search real reports or call providers.
+
+```mermaid
+flowchart TD
+    Question[Question and selected company and years] --> Scope[Check access and exact report versions]
+    Scope --> Dense[Dense search: similar meaning]
+    Scope --> Keyword[Keyword search: specific terms]
+    Dense --> Fusion[Merge rankings with RRF and deduplicate by chunk ID]
+    Keyword --> Fusion
+    Fusion --> Rerank[Optionally rerank the bounded shortlist]
+    Rerank --> Enough{Enough supporting evidence?}
+    Enough -->|Yes| Draft[Evidence and reviewed SQL facts with Decimal calculations → selected LLM]
+    Draft --> Verify[Validate numbers, claims and citations]
+    Verify -->|Pass| Answer[Return a cited answer]
+    Verify -->|Unresolved claims| Partial[Return supported partial result or request review]
+    Enough -->|No| Missing[Skip full-answer LLM call and explain missing evidence]
+```
+
+Apply identical access, company, period and document-version constraints inside both retrieval queries. Keep source-page references and stable chunk IDs through fusion and reranking. For Chinese questions over English PDFs, evaluate a suitable multilingual embedding model and an English keyword rewrite that preserves identifiers, years and accounting terms. Store the original question with the rewrite.
+
+| Part | First implementation | Later comparison |
+| --- | --- | --- |
+| Dense retrieval | Same embedding model and dimensions for passages and queries; exact pgvector similarity search | HNSW after measuring latency and recall under real filters |
+| Lexical retrieval | PostgreSQL `tsvector`, GIN and `ts_rank_cd` | BM25 or learned sparse retrieval only when a measured gap justifies the added work |
+| Hybrid ranking | Reciprocal Rank Fusion (RRF), using ranking positions and merging by chunk ID | Tune retrieval depth on fixed evaluation cases |
+| Reranking | Optional; initially inspect the fused results | Add a bounded reranker if relevant passages are found but ranked poorly |
+| Answer validation | Reviewed SQL facts, Decimal calculations, source checks and human review for unresolved judgments | Evaluate support separately from retrieval relevance |
+
+PostgreSQL's built-in text ranking is not BM25. Learned sparse embeddings are a separate representation and are not required to combine dense and lexical retrieval. HNSW is an approximate search index, rather than another retrieval branch; keep exact search as its baseline. Filters can reduce the candidates returned from an approximate index, so compare relevant-source recall as well as query time. See [pgvector hybrid search](https://github.com/pgvector/pgvector#hybrid-search), [pgvector filtering](https://github.com/pgvector/pgvector#filtering), [PostgreSQL text-search ranking](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-RANKING), and [GIN text-search indexing](https://www.postgresql.org/docs/current/textsearch-indexes.html).
+
+Develop these paths locally during stage 5. First compare dense-only and lexical-only results, then hybrid results on the same checked bilingual questions, exact financial terms, wrong-year distractors and missing-evidence cases. Record source recall, citation correctness and latency. Evaluate HNSW, learned sparse retrieval and reranking as later options rather than adding them to the baseline without evidence. Package the same tested schema and configuration in Docker during stage 7. Missing evidence returns a clear limitation; increasing the answer model's size cannot replace the absent source.
+
 ## 4. Stages and effort budget
 
 Each stage ends with a working demonstration and recorded acceptance results. Feature tests belong in their own stage. Stage 7 consolidates evaluation and release work.

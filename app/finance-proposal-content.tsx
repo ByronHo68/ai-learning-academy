@@ -10,6 +10,7 @@ import { proposalIllustrations } from '../lib/proposal-illustrations';
 import { ProposalIllustration } from './proposal-illustration';
 import { FinanceBuildGuide } from './finance-build-guide';
 import { FinanceModelGuide } from './finance-model-guide';
+import { FinanceRagWorkflow } from './finance-rag-workflow';
 
 function proposalUrl(url: string) {
   if (url === 'FINANCIAL_REPORT_PROJECT.md') return '/finance-project';
@@ -36,6 +37,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
       <a href="#proposal-estimate">{lang === 'zh' ? '工期及範圍' : 'Timeline and scope'}</a>
       <a href="#finance-build-guide">{lang === 'zh' ? '本機開發及檔案結構' : 'Local setup and folders'}</a>
       <a href="#finance-models">{lang === 'zh' ? '模型選擇及提示分流' : 'Models and prompt routing'}</a>
+      <a href="#finance-rag-workflow">{lang === 'zh' ? '混合 RAG 工作流程' : 'Hybrid RAG workflow'}</a>
       <a href="#proposal-stages">{lang === 'zh' ? '八個開發階段' : 'Eight development stages'}</a>
       <a href="#proposal-ec2">{lang === 'zh' ? 'EC2 架構' : 'EC2 architecture'}</a>
       <a href="#proposal-deployment">{lang === 'zh' ? '部署步驟' : 'Deployment steps'}</a>
@@ -52,6 +54,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
 
     <FinanceBuildGuide lang={lang}/>
     <FinanceModelGuide lang={lang}/>
+    <FinanceRagWorkflow lang={lang}/>
 
     <section className="finance-section" id="proposal-stages" aria-labelledby="proposal-stages-title">
       <div className="finance-section-heading"><p className="eyebrow">02 · BUILD AND CHECK</p><h2 id="proposal-stages-title">{lang === 'zh' ? '每個階段都有可展示成果' : 'Every stage ends with a working result'}</h2><p>{lang === 'zh' ? '展開階段，查看開發任務、技術及驗收。第 5 至 6 週先完成一份真實報告的完整流程，第 16 週左右完成核心研究示範，再準備部署及面試材料。' : 'Expand a stage for its tasks, technology and acceptance check. Aim for one real report journey by week 5–6, the core research demo around week 16, then deployment and interview materials.'}</p></div>

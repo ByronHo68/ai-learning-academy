@@ -8,6 +8,7 @@ import './finance-project.css';
 import './finance-proposal.css';
 import './finance-build-guide.css';
 import './finance-model-guide.css';
+import './finance-rag-workflow.css';
 
 const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-academy.byronho680.chatgpt.site';
 

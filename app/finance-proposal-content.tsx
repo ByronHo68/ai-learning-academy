@@ -13,8 +13,10 @@ import { FinanceModelGuide } from './finance-model-guide';
 import { FinanceRagWorkflow } from './finance-rag-workflow';
 import { FinanceArchitecture } from './finance-architecture';
 import { FinanceLangGraph } from './finance-langgraph';
+import { FinanceMarkitdownGuide } from './finance-markitdown-guide';
 
 function proposalUrl(url: string) {
+  if (url === 'FINANCIAL_REPORT_MARKITDOWN_GUIDE.md') return '/downloads/financial-report-markitdown-guide.md';
   if (url === 'FINANCIAL_REPORT_LANGGRAPH_DESIGN.md') return '/downloads/financial-report-langgraph-design.md';
   if (url === 'FINANCIAL_REPORT_PROJECT.md') return '/finance-project';
   if (url === '../lib/finance-function-workflows.ts' || url === '../lib/finance-api-workflows.ts') {
@@ -37,6 +39,8 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
     </header>
 
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '開發提案目錄' : 'Development proposal contents'}>
+      <Link href="/finance-project/demo">{lang === 'zh' ? '操作示範' : 'Try the demo'}</Link>
+      <a href="#finance-markitdown">{lang === 'zh' ? 'MarkItDown 轉換指南' : 'MarkItDown conversion guide'}</a>
       <a href="#proposal-estimate">{lang === 'zh' ? '工期及範圍' : 'Timeline and scope'}</a>
       <a href="#finance-build-guide">{lang === 'zh' ? '本機開發及檔案結構' : 'Local setup and folders'}</a>
       <a href="#finance-models">{lang === 'zh' ? '模型選擇及提示分流' : 'Models and prompt routing'}</a>
@@ -58,6 +62,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
     </section>
 
     <FinanceArchitecture lang={lang}/>
+    <FinanceMarkitdownGuide lang={lang}/>
     <FinanceBuildGuide lang={lang}/>
     <FinanceModelGuide lang={lang}/>
     <FinanceRagWorkflow lang={lang}/>

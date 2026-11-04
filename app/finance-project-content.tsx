@@ -16,6 +16,7 @@ import { FinanceModelGuide } from './finance-model-guide';
 import { FinanceRagWorkflow } from './finance-rag-workflow';
 import { FinanceArchitecture } from './finance-architecture';
 import { FinanceLangGraph } from './finance-langgraph';
+import { FinanceMarkitdownGuide } from './finance-markitdown-guide';
 import { financeFunctionModelRoles } from '../lib/finance-model-guide';
 import { FinanceFunctionMindmap, type BackendLayout, type BuildEnvironment } from './finance-function-map';
 
@@ -76,6 +77,8 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     </header>
 
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '項目指南目錄' : 'Project guide contents'}>
+      <Link href="/finance-project/demo">{lang === 'zh' ? '操作示範：由財報到答案' : 'Try the report-analysis demo'}</Link>
+      <a href="#finance-markitdown">{lang === 'zh' ? 'MarkItDown 轉換及用量指南' : 'MarkItDown and token usage'}</a>
       <a href="#finance-pictures">{lang === 'zh' ? '圖像入門' : 'Picture guide'}</a>
       <a href="#finance-map">{lang === 'zh' ? '互動心智圖' : 'Mind map'}</a>
       <a href="#finance-build-guide">{lang === 'zh' ? '本機開發及檔案結構' : 'Local setup and folders'}</a>
@@ -128,6 +131,7 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
       </div>
     </section>
 
+    <FinanceMarkitdownGuide lang={lang}/>
     <FinanceArchitecture lang={lang}/>
     <FinanceBuildGuide lang={lang}/>
     <FinanceModelGuide lang={lang}/>

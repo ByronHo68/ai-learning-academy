@@ -11,6 +11,8 @@ import './finance-model-guide.css';
 import './finance-rag-workflow.css';
 import './finance-architecture.css';
 import './finance-langgraph.css';
+import './finance-markitdown.css';
+import './finance-demo.css';
 
 const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-academy.byronho680.chatgpt.site';
 

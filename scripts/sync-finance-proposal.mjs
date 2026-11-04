@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 const root = new URL('../', import.meta.url);
 const source = await readFile(new URL('docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md', root), 'utf8');
 const graphDesign = await readFile(new URL('docs/FINANCIAL_REPORT_LANGGRAPH_DESIGN.md', root), 'utf8');
+const markdownGuide = await readFile(new URL('docs/FINANCIAL_REPORT_MARKITDOWN_GUIDE.md', root), 'utf8');
 const headings = [...source.matchAll(/^## (\d+)\. (.+)$/gm)];
 const sections = headings.map((heading, index) => ({
   id: `proposal-document-${heading[1]}`,
@@ -14,6 +15,7 @@ const outputs = [
   ['lib/finance-proposal-document.json', JSON.stringify(sections, null, 2) + '\n'],
   ['public/downloads/financial-report-development-proposal.md', source],
   ['public/downloads/financial-report-langgraph-design.md', graphDesign],
+  ['public/downloads/financial-report-markitdown-guide.md', markdownGuide],
 ];
 for (const [path, content] of outputs) {
   const target = new URL(path, root);

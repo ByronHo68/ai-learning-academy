@@ -307,6 +307,14 @@ Keep secrets and raw model reasoning out of graph state and traces. LangGraph ch
 
 The three read-only MCP tools reuse fact and retrieval services without entering the answer-generation graph. n8n triggers ingestion; Celery carries durable background jobs; LangGraph controls analysis steps. Develop the graph locally first and package the same Python code with persistent PostgreSQL checkpoints in Docker at stage 7. Graph changes, review controls and their evaluation add implementation scope beyond the historical Python-only schedule.
 
+### 3.6. MarkItDown ingestion pilot and product demonstration
+
+Use Microsoft MarkItDown inside the private Python worker to convert text PDFs into Markdown. Start with two annual reports from one company, check table accuracy and original-page mapping, then reuse each versioned conversion for later questions. Standard local conversion uses no LLM tokens. Optional OCR, vision or Azure integrations can incur charges, and hosted embeddings have their own usage. Markdown alone does not guarantee cheaper model input. Retrieve selected evidence instead of sending an entire report on every question.
+
+Follow the [local MarkItDown developer guide](FINANCIAL_REPORT_MARKITDOWN_GUIDE.md) for commands, source/version records, page mapping, review and integration steps. Keep Spring ownership of report ACL and original files. Use the Python library directly for normal ingestion; the optional upstream conversion MCP is for private, trusted callers and does not add authentication or report permissions.
+
+The learning website's `/finance-project/demo` route walks through fictional source selection, prepared Markdown, sample indexing, preset questions, validation and a local Markdown download. It includes missing-evidence, table-review and OCR-required branches. It does not run a PDF converter, finance backend, vector search, authentication or model. It demonstrates the proposed user journey and cannot establish real extraction accuracy, retrieval quality or token savings. The historical schedule below remains unchanged; re-estimate implementation after the two-report pilot.
+
 ## 4. Stages and effort budget
 
 Each stage ends with a working demonstration and recorded acceptance results. Feature tests belong in their own stage. Stage 7 consolidates evaluation and release work.

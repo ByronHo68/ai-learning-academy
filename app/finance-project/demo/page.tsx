@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import AcademyClient from '../../academy-client';
 
 export const metadata: Metadata = {
-  title: '財報助手操作示範 | Financial Report Demo | AI 學習院',
-  description: 'Try a fictional report-analysis workflow: MarkItDown conversion, evidence retrieval, review, validation and a downloadable sample analysis.',
+  title: '股票研究操作示範 | Stock Research Demo | AI 學習院',
+  description: 'Try an offline stock-news research simulation: sourced report, insufficient evidence, injected instructions and checkpoint recovery.',
 };
 
 export default function FinanceDemoPage() {

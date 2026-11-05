@@ -4,88 +4,43 @@ import { readFile } from 'node:fs/promises';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import FinanceProposalContent from '../app/finance-proposal-content';
-import FinanceProjectContent from '../app/finance-project-content';
-import { proposalStages, proposalServices, proposalDeploymentSteps } from '../lib/finance-proposal';
-import documentSections from '../lib/finance-proposal-document.json';
-import { proposalIllustrations } from '../lib/proposal-illustrations';
-import illustrationManifest from '../docs/FINANCE_PROPOSAL_ILLUSTRATION_PROMPTS.json';
-import { createHash } from 'node:crypto';
+import { financeEngineeringWorkflows, financeFunctions, financeStages } from '../lib/finance-project';
+import { financeComposeDesign, financeRuntimeLimits } from '../lib/finance-proposal';
 
-test('proposal reader and Markdown download preserve the complete developer specification', async () => {
-  const source = await readFile(new URL('../docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md', import.meta.url), 'utf8');
-  const download = await readFile(new URL('../public/downloads/financial-report-development-proposal.md', import.meta.url), 'utf8');
-  assert.equal(download, source);
-  const headings = [...source.matchAll(/^## (\d+)\. (.+)$/gm)];
-  assert.equal(documentSections.length, 10);
-  for (const [index, section] of documentSections.entries()) {
-    const heading = headings[index];
-    assert.equal(section.title, `${heading[1]}. ${heading[2]}`);
-    assert.equal(section.markdown, source.slice(heading.index + heading[0].length, headings[index + 1]?.index ?? source.length).trim());
+test('generated downloads contain the retained specification and match their documentation', async () => {
+  for (const [document, download] of [
+    ['FINANCIAL_REPORT_PROJECT.md', 'stock-research-project.md'],
+    ['FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md', 'financial-report-development-proposal.md'],
+    ['FINANCIAL_REPORT_LANGGRAPH_DESIGN.md', 'financial-report-langgraph-design.md'],
+  ]) {
+    const source = await readFile(new URL(`../docs/${document}`, import.meta.url), 'utf8');
+    assert.equal(await readFile(new URL(`../public/downloads/${download}`, import.meta.url), 'utf8'), source);
+    assert.ok(!source.includes('Hong Kong Financial Report Analyst'));
+    assert.ok(source.includes('fictional'));
   }
-  assert.equal(proposalStages.length, 8);
-  assert.equal(proposalStages.reduce((total, stage) => total + stage.hours, 0), 240);
-  assert.equal(proposalServices.length, 9);
-  assert.equal(proposalDeploymentSteps.length, 9);
+  const proposal = await readFile(new URL('../docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md', import.meta.url), 'utf8');
+  for (const guide of [...financeFunctions, ...financeEngineeringWorkflows]) {
+    assert.ok(proposal.includes(guide.title.en));
+    assert.ok(proposal.includes(guide.title.zh));
+    for (const step of guide.steps) {
+      assert.ok(proposal.includes(step.how.en));
+      assert.ok(proposal.includes(step.why.zh));
+    }
+  }
 });
 
-test('proposal renders every stage, EC2 design and complete specification in both interface languages', () => {
-  for (const lang of ['en', 'zh'] as const) {
+test('the bilingual proposal presents local development, bounded runs and private Docker deployment', () => {
+  for (const lang of ['en', 'zh'] satisfies Array<'en' | 'zh'>) {
     const html = renderToStaticMarkup(createElement(FinanceProposalContent, { lang }));
     assert.equal((html.match(/<h1>/g) ?? []).length, 1);
-    assert.equal((html.match(/class="proposal-stage"/g) ?? []).length, 8);
-    assert.equal((html.match(/class="proposal-illustration"/g) ?? []).length, 3);
-    assert.equal((html.match(/class="proposal-illustration-dialog"/g) ?? []).length, 3);
-    for (const illustration of Object.values(proposalIllustrations)) {
-      assert.ok(html.includes(illustration.src));
-      assert.ok(html.includes(illustration.title[lang]));
-      assert.ok(html.includes(illustration.caption[lang]));
-      for (const keyword of illustration.keywords) {
-        assert.ok(html.includes(keyword.label));
-        assert.ok(html.includes(keyword.meaning[lang]));
-      }
-    }
-    assert.equal((html.match(/id="proposal-document-\d+"/g) ?? []).length, 10);
-    assert.match(html, /download="FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md"/);
-    assert.ok(html.includes('lang="en"'));
-    for (const stage of proposalStages) {
-      assert.ok(html.includes(stage.title[lang]));
-      assert.ok(html.includes(stage.acceptance[lang]));
-      for (const task of stage.tasks) assert.ok(html.includes(task[lang]));
-    }
-    assert.ok(html.includes(lang === 'en' ? 'Historical Python baseline: 21–22 weeks' : '歷史 Python 基準：21 至 22 週'));
-    assert.ok(html.includes(lang === 'en' ? 'does not provision cloud resources' : '不會啟動雲端資源'));
-    assert.ok(html.includes('docker compose --env-file deploy/production.env'));
-    assert.ok(html.includes('--wait --wait-timeout 120'));
-    assert.ok(html.includes('RequiresMountsFor=/srv/finance-data'));
-    assert.ok(html.includes('CronJobs'));
-    assert.ok(html.includes('312 to 324 hours'));
-    assert.ok(html.includes('402 to 474 hours'));
-    assert.ok(html.includes('5.2. Start native local services in dependency order'));
-    assert.ok(html.includes('services/finance/'));
-    assert.ok(html.includes('deploy/compose.yaml'));
-    assert.ok(html.includes('Caddy'));
-    assert.match(html, /href="\/finance-project"/);
-    assert.ok(!html.includes('href="FINANCIAL_REPORT_PROJECT.md"'));
-    assert.ok(!html.includes('href="../lib/'));
-    const guide = renderToStaticMarkup(createElement(FinanceProjectContent, { lang }));
-    assert.match(guide, /href="\/finance-project\/proposal"/);
+    for (const stage of financeStages) assert.ok(html.includes(stage.done[lang]));
+    for (const id of ['proposal-estimate', 'proposal-stages', 'finance-build-guide', 'proposal-ec2', 'proposal-evaluation']) assert.ok(html.includes(`id="${id}"`));
+    assert.ok(html.includes('/downloads/financial-report-development-proposal.md'));
+    assert.ok(html.includes('127.0.0.1:3000:3000'));
+    assert.ok(html.includes('http://research:8000'));
+    assert.ok(!html.includes('21–22 weeks'));
+    assert.ok(!html.includes('MarkItDown conversion guide'));
   }
-});
-
-test('labelled proposal illustrations are local WebP files matching the generation record', async () => {
-  assert.equal(illustrationManifest.assets.length, 3);
-  for (const illustration of Object.values(proposalIllustrations)) {
-    const asset = await readFile(new URL(`../public${illustration.src}`, import.meta.url));
-    assert.equal(new TextDecoder().decode(asset.subarray(0, 4)), 'RIFF');
-    assert.equal(new TextDecoder().decode(asset.subarray(8, 12)), 'WEBP');
-    const record = illustrationManifest.assets.find(item => item.asset === illustration.src);
-    assert.ok(record);
-    assert.equal(record.width, illustration.width);
-    assert.equal(record.height, illustration.height);
-    assert.equal(record.sha256, createHash('sha256').update(asset).digest('hex'));
-    for (const lang of ['en', 'zh'] as const) {
-      assert.ok(illustration.alt[lang].length > 30);
-      assert.ok(illustration.keywords.every(item => item.meaning[lang].length > 0));
-    }
-  }
+  assert.equal(financeRuntimeLimits.searchRounds, 2);
+  assert.ok(!financeComposeDesign.includes('8000:8000'));
 });

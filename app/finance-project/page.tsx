@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import AcademyClient from '../academy-client';
 
 export const metadata: Metadata = {
-  title: '香港財報分析項目 | Financial Report Project | AI 學習院',
-  description: 'Explore a bilingual financial-report project mind map, functions, evidence workflow, technology stack and build stages.',
+  title: '股票研究 Agent 項目 | Stock Research Agent | AI 學習院',
+  description: 'A job-first stock research assistant: three companies, one bounded agent, sourced reports, individual function workflows and technique explanations.',
 };
 
 export default function FinanceProjectPage() {

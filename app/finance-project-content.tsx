@@ -1,184 +1,46 @@
 'use client';
 
 import Link from 'next/link';
-import { useId, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import { useState } from 'react';
+import { ArrowDown, ArrowRight, BookOpen, Check, FileCheck2, GitBranch } from 'lucide-react';
 import { type Lang, pick } from '../lib/curriculum';
-import { financeAreas, financeBuildStages, financeStack, financeWorkflow } from '../lib/finance-project';
-import { financeFunctionWorkflows } from '../lib/finance-function-workflows';
-import { type FinanceIllustration, financeAreaIllustrations, financeOverviewIllustration } from '../lib/finance-illustrations';
-import { financeApiWorkflows } from '../lib/finance-api-workflows';
-import { FinanceApiContent } from './finance-api-content';
-import { financeFunctionMaps } from '../lib/finance-function-maps';
-import { financeFunctionExamples } from '../lib/finance-function-examples';
-import { FinanceBuildGuide } from './finance-build-guide';
-import { FinanceModelGuide } from './finance-model-guide';
-import { FinanceRagWorkflow } from './finance-rag-workflow';
-import { FinanceArchitecture } from './finance-architecture';
-import { FinanceLangGraph } from './finance-langgraph';
-import { FinanceMarkitdownGuide } from './finance-markitdown-guide';
-import { financeFunctionModelRoles } from '../lib/finance-model-guide';
-import { FinanceFunctionMindmap, type BackendLayout, type BuildEnvironment } from './finance-function-map';
-
-function IllustrationArt({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
-  return <div className="finance-illustration-art" data-layout={illustration.steps.length === 5 ? 'overview' : 'panels'}>
-    {/* eslint-disable-next-line @next/next/no-img-element -- Local WebP files are shared with the office server without an image optimizer. */}
-    <img src={illustration.src} width={illustration.width} height={illustration.height} alt={pick(illustration.alt, lang)} loading="lazy" decoding="async" />
-    <div className="finance-illustration-keywords" aria-hidden="true">{illustration.steps.map(item => <span key={item.keyword}>{item.keyword}</span>)}</div>
-  </div>;
-}
-
-function IllustratedConcept({ illustration, lang }: { illustration: FinanceIllustration; lang: Lang }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
-  return <figure className="finance-illustration">
-    <div className="finance-illustration-image">
-      <IllustrationArt illustration={illustration} lang={lang}/>
-      <button type="button" className="finance-illustration-expand" onClick={() => dialog.current?.showModal()}>{lang === 'zh' ? '開啟完整插圖' : 'Open full-size illustration'} ↗</button>
-      <dialog ref={dialog} className="finance-illustration-dialog" aria-labelledby={titleId}>
-        <div className="finance-illustration-dialog-header"><p id={titleId}>{pick(illustration.caption, lang)}</p><button type="button" onClick={() => dialog.current?.close()}>{lang === 'zh' ? '關閉' : 'Close'} ×</button></div>
-        <IllustrationArt illustration={illustration} lang={lang}/>
-        <p className="finance-illustration-dialog-legend">{illustration.steps.map((item, index) => <span key={item.keyword}>{index + 1} · <strong>{item.keyword}</strong> — {pick(item, lang)}</span>)}</p>
-      </dialog>
-    </div>
-    <figcaption><p className="eyebrow">{lang === 'zh' ? '用圖像理解' : 'THE VISUAL STORY'}</p><p className="finance-illustration-caption">{pick(illustration.caption, lang)}</p>
-      <ol>{illustration.steps.map((item, index) => <li key={item.en}><b>{index + 1}</b><span><strong>{item.keyword}</strong> — {pick(item, lang)}</span></li>)}</ol>
-      <p className="finance-illustration-note">{lang === 'zh' ? 'ChatGPT 生成的概念插圖；圖中形狀及走勢只作比喻，並非真實財務數據。實際流程與技術以下方文字為準。' : 'ChatGPT-generated concept illustration. Shapes and trends are metaphors, not real financial data. The text below specifies the actual workflow and tools.'}</p>
-    </figcaption>
-  </figure>;
-}
+import { financeCompanies, financeDeferred, financeEngineeringWorkflows, financeFunctions, financeReferences, financeRepositoryTree, financeStack, financeStages } from '../lib/finance-project';
+import { financePlan, financeRuntimeLimits } from '../lib/finance-proposal';
+import { FinanceFunctionMindmap } from './finance-function-map';
 
 export function FinanceProjectBanner({ lang }: { lang: Lang }) {
-  return <aside className="hiring-banner finance-banner">
-    <div><p className="eyebrow">FINANCE · PORTFOLIO PROJECT</p>
-      <h2>{lang === 'zh' ? '把 AI 知識連成財報研究工具' : 'Connect your AI skills in a finance project'}</h2>
-      <p>{lang === 'zh' ? '探索互動心智圖、24 項功能的逐步流程、每步技術及分階段驗收；由財報走到有引用的答案。' : 'Explore the mind map, step-by-step workflows for 24 functions, tools at each step and build stages—from reports to cited answers.'}</p>
-    </div><Link href="/finance-project">{lang === 'zh' ? '探索財報分析項目' : 'Explore the financial report project'} →</Link>
-  </aside>;
+  return <aside className="hiring-banner finance-banner"><div><p className="eyebrow">FINANCE · AGENTIC AI PORTFOLIO</p><h2>{lang === 'zh' ? '用一個股票研究 agent，連起 AI 工程能力' : 'Build one stock research agent'}</h2><p>{lang === 'zh' ? '3 間公司、1 頁有來源報告。每個功能都有流程圖、技術原因及可核對成果。' : 'Three companies and one cited report. Explore each function, its workflow, technique decisions and acceptance checks.'}</p></div><Link href="/finance-project">{lang === 'zh' ? '探索股票研究項目' : 'Explore the stock research project'} →</Link></aside>;
 }
 
 export default function FinanceProjectContent({ lang }: { lang: Lang }) {
-  const [selected, setSelected] = useState(financeAreas[0]);
-  const [step, setStep] = useState(0);
-  const [scenario, setScenario] = useState<'supported' | 'missing'>('supported');
-  const [backend, setBackend] = useState<BackendLayout>('java-python');
-  const [environment, setEnvironment] = useState<BuildEnvironment>('local');
-  const reducedMotion = useReducedMotion();
-  const currentStep = financeWorkflow[step];
-  const selectedFunctions = financeFunctionWorkflows[selected.id];
-
+  const [environment, setEnvironment] = useState<'local' | 'docker'>('local');
+  const [opened, setOpened] = useState<string[]>(['company']);
+  function openFunction(id: string) { setOpened(previous => previous.includes(id) ? previous : [...previous, id]); }
   return <main className="utility-page finance-page">
-    <header className="utility-hero finance-hero">
-      <p className="eyebrow">{lang === 'zh' ? 'FINANCE PROJECT BLUEPRINT · 證據 → 分析 → 解釋' : 'FINANCE PROJECT BLUEPRINT · EVIDENCE → ANALYSIS → EXPLANATION'}</p>
-      <h1>{lang === 'zh' ? '香港財報分析助手' : 'Hong Kong Financial Report Analyst'}</h1>
-      <p>{lang === 'zh' ? '把公開年報轉為可追溯數據，讓使用者比較公司、理解業績，並逐頁核對 AI 答案。適合結合你的銀行、Java／React、SQL 及 AI 知識。' : 'Turn public annual reports into traceable facts so a user can compare companies, understand results and verify AI answers against the source. Connect banking, Java/React, SQL and AI knowledge in one project.'}</p>
-      <div className="finance-question"><span>{lang === 'zh' ? '使用者的問題' : 'THE USER’S QUESTION'}</span><p>{lang === 'zh' ? '「經營現金流為何下跌？比較這兩年的數字，並顯示原文證據。」' : '“Why did operating cash flow fall? Compare the two years and show the original evidence.”'}</p></div>
-      <p className="finance-guide-note">{lang === 'zh' ? '這是項目設計及離線互動教學，並非已完成的財報分析服務。以下示例數字、頁碼及公司均為虛構；不會上載文件或呼叫模型。' : 'This is a project blueprint and offline learning guide, not a completed report-analysis service. The walkthrough uses fictional figures, page numbers and a fictional company. It does not upload files or call a model.'}</p>
+    <header className="utility-hero finance-hero fr-hero">
+      <div><p className="eyebrow">FINANCE PROJECT · JOB-FIRST EDITION</p><h1>{lang === 'zh' ? '股票研究助手' : 'Stock Research Agent'}</h1><p>{lang === 'zh' ? '輸入支援公司，理解相關新聞、可能影響及原因。用一個有上限的研究 agent，產生有來源、可核對的研究觀點。' : 'Choose a supported company. Understand its news, possible impact and why it matters. One bounded research agent produces a sourced, inspectable research view.'}</p><div className="fr-hero-actions"><Link className="primary-action" href="/finance-project/demo">{lang === 'zh' ? '試睇一份報告' : 'Try a sample report'} <ArrowRight size={18}/></Link><Link className="secondary-action" href="/finance-project/proposal">{lang === 'zh' ? '4–6 星期開發提案' : '4–6 week build plan'}</Link></div></div>
+      <div className="fr-hero-map" aria-label={lang === 'zh' ? '項目核心心智圖' : 'Project concept map'}><span className="fr-kicker">ONE COMPLETE USER JOURNEY</span><div className="fr-hero-root"><GitBranch size={25} aria-hidden="true"/><strong>{lang === 'zh' ? '1 個 Research Agent' : '1 research agent'}</strong></div><div className="fr-hero-leaves"><span>{lang === 'zh' ? '3 間公司' : '3 companies'}</span><span>{lang === 'zh' ? '2 個唯讀工具' : '2 read-only tools'}</span><span>{lang === 'zh' ? '1 頁有來源報告' : '1 cited report page'}</span></div><p>{lang === 'zh' ? 'Hold／Reduce／無評級 · 原因 · 新聞 · 來源' : 'Hold / Reduce / no rating · reasons · news · sources'}</p></div>
     </header>
+    <div className="fr-disclosure"><BookOpen size={21} aria-hidden="true"/><p>{lang === 'zh' ? '此頁是未來 app 嘅設計指南；操作示範係真正可點擊嘅離線模擬。網站未實作 Python 金融服務，不會抓即時新聞或呼叫 LLM。Demo 所有新聞、事件及評級均為虛構。' : 'This page designs a future app. The interactive demo is a working offline simulation. This website does not implement the Python finance services, fetch live news or call an LLM. All demo news, events and ratings are fictional.'}</p></div>
+    <nav className="finance-section-links" aria-label={lang === 'zh' ? '股票研究指南目錄' : 'Stock research guide contents'}><a href="#finance-map">{lang === 'zh' ? '首版範圍' : 'Scope'}</a><a href="#finance-functions">{lang === 'zh' ? '每個功能流程' : 'Function workflows'}</a><a href="#finance-langgraph-map">LangGraph</a><a href="#finance-architecture">{lang === 'zh' ? '本機及部署' : 'Local / Docker'}</a><a href="#finance-build-guide">{lang === 'zh' ? '檔案結構' : 'File hierarchy'}</a><a href="#finance-stack">{lang === 'zh' ? '技術原因' : 'Technique decisions'}</a><a href="#finance-stages">{lang === 'zh' ? '開發階段' : 'Build stages'}</a><a href="#finance-later">{lang === 'zh' ? '延後功能' : 'Deferred scope'}</a></nav>
 
-    <nav className="finance-section-links" aria-label={lang === 'zh' ? '項目指南目錄' : 'Project guide contents'}>
-      <Link href="/finance-project/demo">{lang === 'zh' ? '操作示範：由財報到答案' : 'Try the report-analysis demo'}</Link>
-      <a href="#finance-markitdown">{lang === 'zh' ? 'MarkItDown 轉換及用量指南' : 'MarkItDown and token usage'}</a>
-      <a href="#finance-pictures">{lang === 'zh' ? '圖像入門' : 'Picture guide'}</a>
-      <a href="#finance-map">{lang === 'zh' ? '互動心智圖' : 'Mind map'}</a>
-      <a href="#finance-build-guide">{lang === 'zh' ? '本機開發及檔案結構' : 'Local setup and folders'}</a>
-      <a href="#finance-models">{lang === 'zh' ? '模型選擇及提示分流' : 'Models and prompt routing'}</a>
-      <a href="#finance-rag-workflow">{lang === 'zh' ? '混合 RAG 工作流程' : 'Hybrid RAG workflow'}</a>
-      <a href="#finance-architecture">{lang === 'zh' ? 'Spring 及 MCP 心智圖' : 'Spring and MCP mind map'}</a>
-      <a href="#finance-langgraph">{lang === 'zh' ? 'LangGraph 分析心智圖' : 'LangGraph analysis mind map'}</a>
-      <a href="#finance-functions">{lang === 'zh' ? '每項功能心智圖及流程' : 'Function maps and workflows'}</a>
-      <a href="#finance-workflow">{lang === 'zh' ? '答案如何產生' : 'Answer walkthrough'}</a>
-      <a href="#finance-stack">{lang === 'zh' ? '技術分工' : 'Technology stack'}</a>
-      <a href="#finance-stages">{lang === 'zh' ? '建立次序' : 'Build stages'}</a>
-      <Link href="/finance-project/proposal">{lang === 'zh' ? '開發提案及 EC2 部署' : 'Development proposal and EC2'}</Link>
-    </nav>
+    <section className="finance-section" id="finance-map"><p className="eyebrow">01 · A SMALL COMPLETE PRODUCT</p><h2>{lang === 'zh' ? '先完成一條有用嘅研究流程' : 'Finish one useful research journey'}</h2><div className="fr-scope-grid"><div><h3>{lang === 'zh' ? '支援名單' : 'Supported universe'}</h3><ul className="fr-companies">{financeCompanies.map(company => <li key={company.id}><strong>{company.id}</strong><span>{company.name}</span></li>)}</ul><p>{lang === 'zh' ? '先用有日期、允許使用的小型快照。顯示資料覆蓋日期，唔會扮成即時行情。' : 'Start with a permitted, dated snapshot. Display its coverage date and keep it distinct from live market data.'}</p></div><div><h3>{lang === 'zh' ? '使用者收到咩？' : 'What does the user receive?'}</h3><ul className="fr-check-list">{(lang === 'zh' ? ['持有／減持研究觀點，或暫無評級', '相關消息、可能影響及原因', '支持證據、風險及不確定因素', '可核對來源及 Markdown 下載'] : ['Hold / Reduce research stance, or no rating', 'Related news, possible effects and reasons', 'Supporting evidence, risks and uncertainty', 'Inspectable sources and a Markdown download']).map(item => <li key={item}><Check size={16} aria-hidden="true"/>{item}</li>)}</ul><p>{lang === 'zh' ? '評級使用透明教學規則及固定研究期間，並非已驗證嘅投資策略。資料不足就清楚交代。' : 'The stance uses transparent teaching rules and a fixed research horizon. It is not a validated investment strategy. Missing evidence stays visible.'}</p></div></div></section>
 
-    <aside className="hiring-banner finance-banner finance-proposal-banner"><div><p className="eyebrow">BUILD THE PROJECT · DEPLOY ON EC2</p><h2>{lang === 'zh' ? '按八個階段，把構想變成求職作品' : 'Turn this blueprint into a portfolio project'}</h2><p>{lang === 'zh' ? '查看每週 15 小時的歷史 Python 基準、開發任務、驗收條件及 Docker／EC2 設計。已選 Java／MCP 範圍須重新估算；附完整 Markdown 下載。' : 'Read the historical Python baseline at 15 hours per week, developer tasks, acceptance checks and Docker/EC2 deployment design. Re-estimate the selected Java/MCP scope before setting its delivery date. Download the full Markdown proposal.'}</p></div><Link href="/finance-project/proposal">{lang === 'zh' ? '開啟開發提案' : 'Open the development proposal'} →</Link></aside>
+    <section className="finance-section" id="finance-functions"><p className="eyebrow">02 · EACH FUNCTION, END TO END</p><h2>{lang === 'zh' ? '8 個核心功能，各有自己嘅流程圖' : 'Eight functions, each with its own workflow'}</h2><p className="fr-section-intro">{lang === 'zh' ? '展開功能，再點選步驟。每一步都有技術、點用、點解用及建議檔案。下方三條分支交代成功、資料不足同失敗會回傳咩。所有 API 都係未來 app 嘅建議合約。' : 'Expand a function and select a step. Each step explains its tools, how and why they apply, and proposed files. The return branches show success, insufficient evidence and failure. API contracts describe the future app.'}</p><div className="fr-function-index">{financeFunctions.map((guide, index) => <a key={guide.id} href={`#finance-function-${guide.id}`} onClick={() => openFunction(guide.id)}><span>{String(index + 1).padStart(2, '0')}</span>{pick(guide.title, lang)}<ArrowRight size={14} aria-hidden="true"/></a>)}</div><div className="fr-function-list">{financeFunctions.map((guide, index) => <details id={`finance-function-${guide.id}`} className="fr-function" key={guide.id} open={opened.includes(guide.id)} onToggle={event => { const isOpen = event.currentTarget.open; setOpened(previous => isOpen ? previous.includes(guide.id) ? previous : [...previous, guide.id] : previous.filter(id => id !== guide.id)); }}><summary><span>{String(index + 1).padStart(2, '0')}</span><div><h3>{pick(guide.title, lang)}</h3><p>{pick(guide.purpose, lang)}</p></div><span className="fr-plus" aria-hidden="true">+</span></summary><FinanceFunctionMindmap guide={guide} lang={lang}/></details>)}</div></section>
 
-    <section className="finance-section" id="finance-pictures" aria-labelledby="finance-pictures-title"><div className="finance-section-heading"><p className="eyebrow">START HERE · SEE THE IDEA</p><h2 id="finance-pictures-title">{lang === 'zh' ? '先看一張圖，理解整個項目' : 'Understand the project in one picture'}</h2><p>{lang === 'zh' ? '從左至右跟隨五個場景。重點是原始來源一直保留下來，計算有根據，最後仍能由人核對。' : 'Follow the five scenes from left to right. The original source stays connected, calculations have inputs and a person can check the final answer.'}</p></div><IllustratedConcept illustration={financeOverviewIllustration} lang={lang}/></section>
+    <section className="finance-section" id="finance-langgraph-map"><span id="finance-workflow" className="fr-anchor"/><p className="eyebrow">03 · BOUNDED AGENT CONTROL</p><h2>{lang === 'zh' ? 'LangGraph 點決定下一步？' : 'How does LangGraph choose the next step?'}</h2><p className="fr-section-intro">{lang === 'zh' ? '一個研究 agent 就足夠展示工具選擇、狀態、分支同恢復。文章文字唔可以改工具權限或預算。' : 'One research agent can demonstrate tool choice, state, branching and recovery. Article text cannot change permissions or budgets.'}</p><div className="fr-graph" role="group" aria-label={lang === 'zh' ? '有限研究 graph 流程' : 'Bounded research graph workflow'}><div className="fr-graph-line"><span>START<br/><b>{lang === 'zh' ? '驗證公司／問題' : 'Validate company / question'}</b></span><ArrowRight aria-hidden="true"/><span>PLAN<br/><b>{lang === 'zh' ? '選擇唯讀工具' : 'Choose a read-only tool'}</b></span><ArrowRight aria-hidden="true"/><span>RETRIEVE<br/><b>search / read_source</b></span><ArrowRight aria-hidden="true"/><span>CHECK<br/><b>{lang === 'zh' ? '證據足夠？' : 'Enough evidence?'}</b></span></div><div className="fr-retry"><GitBranch size={20} aria-hidden="true"/><p><strong>{lang === 'zh' ? '不足 → 修正查詢一次 ↩ 回到 RETRIEVE' : 'Gap → refine once ↩ back to RETRIEVE'}</strong><span>{lang === 'zh' ? '第二次仍不足 → 有證據摘要＋無評級；超額／超時亦停止。' : 'Still insufficient after search two → supported summary + no rating. Stop on budget or timeout.'}</span></p></div><ArrowDown className="fr-down" aria-hidden="true"/><div className="fr-graph-line fr-graph-final"><span>RULES + DRAFT<br/><b>{lang === 'zh' ? 'Python 規則＋LLM 解釋' : 'Python rules + LLM explanation'}</b></span><ArrowRight aria-hidden="true"/><span>VALIDATE<br/><b>{lang === 'zh' ? '引用／日期／規則' : 'Citations / dates / rules'}</b></span><ArrowRight aria-hidden="true"/><span>RETURN<br/><b>{lang === 'zh' ? '報告／無評級／錯誤' : 'Report / no rating / error'}</b></span></div></div><div className="fr-graph-notes"><p><strong>STATE</strong>{lang === 'zh' ? '公司、期間、查詢、來源 ID、證據、工具次數、驗證錯誤、報告狀態。' : 'Company, horizon, query, source IDs, evidence, tool counts, validation errors and report status.'}</p><p><strong>CHECKPOINT</strong>{lang === 'zh' ? 'SQLite 保存單次任務進度；恢復沿用相同 run ID 及剩餘預算，唔係自動重開。' : 'SQLite persists run progress. Resume the same run ID with its remaining budget, rather than starting again.'}</p><p><strong>HUMAN INPUT</strong>{lang === 'zh' ? '公司不明確先問使用者。唯讀搜尋不用逐次批准；將來如有外發動作先加明確批准。首版沒有自動交易或發送。' : 'Ask when company identity is unclear. Read-only search needs no repeated approval. Add explicit approval before any future external action. The first release does not trade or send automatically.'}</p></div><p className="fr-budget">{lang === 'zh' ? '建議每次上限：' : 'Proposed per-run limits: '}{financeRuntimeLimits.searchRounds} searches · {financeRuntimeLimits.sourceReads} source reads · {financeRuntimeLimits.llmCalls} LLM calls · {financeRuntimeLimits.timeoutSeconds}s</p></section>
 
-    <section className="finance-section" id="finance-map" aria-labelledby="finance-map-title">
-      <div className="finance-section-heading"><p className="eyebrow">01 · EXPLORE THE PROJECT</p><h2 id="finance-map-title">{lang === 'zh' ? '由整體走入每個功能' : 'See the whole project, then explore a function'}</h2>
-        <p>{lang === 'zh' ? '每條分支都有三項功能。點選任何分支，下面會顯示輸入、輸出、技術及驗收條件。右側分支是成果及工程支援，並非單一路徑的下一步。' : 'Each branch contains three functions. Select a branch to inspect its inputs, outputs, tools and acceptance checks below. The branches describe connected responsibilities, not a strict execution sequence.'}</p>
-      </div>
-      <div className="finance-map" role="group" aria-label={lang === 'zh' ? '可選取的財報分析項目心智圖' : 'Selectable financial report project mind map'}>
-        <svg className="finance-map-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {[12.5, 37.5, 62.5, 87.5].map(y => <g key={y}><path d={`M 50 50 C 36 50 38 ${y} 25 ${y}`} /><path d={`M 50 50 C 64 50 62 ${y} 75 ${y}`} /></g>)}
-        </svg>
-        <div className="finance-map-root"><span aria-hidden="true">HK</span><strong>{lang === 'zh' ? '財報分析助手' : 'Financial Report Analyst'}</strong><p>{lang === 'zh' ? '來源可靠 · 計算可重現 · 解釋有證據' : 'Traceable sources. Reproducible calculations. Supported explanations.'}</p></div>
-        {financeAreas.map((area, index) => <button key={area.id} type="button"
-          className={`finance-map-branch ${selected.id === area.id ? 'is-selected' : ''}`}
-          data-side={index < 4 ? 'left' : 'right'} data-row={index % 4 + 1}
-          aria-pressed={selected.id === area.id} aria-controls="finance-area-detail"
-          onClick={() => setSelected(area)}>
-          <span className="finance-branch-number">{String(index + 1).padStart(2, '0')}</span><strong>{pick(area.title, lang)}</strong>
-          <span className="finance-branch-functions">{financeFunctionWorkflows[area.id].map(item => <span key={item.title.en}>{pick(item.title, lang)}</span>)}</span>
-        </button>)}
-      </div>
+    <section className="finance-section" id="finance-architecture"><p className="eyebrow">04 · LOCAL FIRST, DOCKER LATER</p><h2>{lang === 'zh' ? '先理解本機，再睇部署多咗咩' : 'Understand local development before deployment'}</h2><div className="fr-environment" role="group" aria-label={lang === 'zh' ? '架構環境' : 'Architecture environment'}><button type="button" aria-pressed={environment === 'local'} onClick={() => setEnvironment('local')}>{lang === 'zh' ? '本機開發 · 無需 Docker' : 'Local development · no Docker'}</button><button type="button" aria-pressed={environment === 'docker'} onClick={() => setEnvironment('docker')}>Docker + EC2</button></div><div className="fr-architecture" aria-live="polite"><div className="fr-architecture-path">{(environment === 'local' ? ['Browser :3000', 'Next.js server /api', 'FastAPI 127.0.0.1:8000', 'LangGraph → SQLite'] : ['Browser · controlled HTTPS', 'Next.js web container', 'Private research:8000', 'LangGraph → data volume']).map((node, index) => <div key={node}><span>{node}</span>{index < 3 && <ArrowRight size={20} aria-hidden="true"/>}</div>)}</div><p>{environment === 'local' ? lang === 'zh' ? '本機開兩個程序：Next.js 3000、FastAPI 8000。Next.js 伺服器轉送 /api 請求；SQLite 放本機資料目錄。LLM API key 只放 Python 環境。' : 'Run two native processes: Next.js on 3000 and FastAPI on 8000. The Next.js server proxies /api requests. SQLite stays in the local data directory. Keep LLM keys in the Python environment.' : lang === 'zh' ? '功能完成先建立兩個映像，本機驗證後再放 EC2。瀏覽器不能解析 research 服務名，由 Next.js 伺服器轉送；Python 不公開連接埠，SQLite 用持久磁碟。公開前加入 HTTPS、訪問控制及用量限制。' : 'Package two images after the features work, verify locally, then run on EC2. The browser cannot resolve research; the Next.js server forwards requests. Keep Python private and persist SQLite on a volume. Add HTTPS, access control and usage limits before public access.'}</p><p className="fr-network-note">{lang === 'zh' ? 'DNS：只在選用公開網域時解析名稱，可用快取；佢唔係傳送報告的處理節點。本機開發不需要購買網域。' : 'DNS resolves an optional public hostname and may be cached. It does not process report data. Local development needs no purchased domain.'}</p></div></section>
 
-      <div id="finance-area-detail" className="finance-area-detail" aria-live="polite" aria-atomic="true">
-        <motion.article key={selected.id} initial={reducedMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .18 }}>
-          <div className="finance-detail-heading"><span className="eyebrow">{lang === 'zh' ? '已選取分支' : 'SELECTED BRANCH'}</span><h3>{pick(selected.title, lang)}</h3><p>{pick(selected.purpose, lang)}</p></div>
-          <div className="finance-detail-grid">
-            <section><h4>{lang === 'zh' ? '輸入' : 'Input'}</h4><p>{pick(selected.input, lang)}</p><h4>{lang === 'zh' ? '輸出' : 'Output'}</h4><p>{pick(selected.output, lang)}</p></section>
-            <section><h4>{lang === 'zh' ? '功能清單' : 'Functions'}</h4><ul>{selectedFunctions.map(item => <li key={item.title.en}>{pick(item.title, lang)}</li>)}</ul><h4>{lang === 'zh' ? '使用技術' : 'Technology'}</h4><p className="finance-tools">{selected.technology}</p></section>
-            <section className="finance-detail-checks"><h4>{lang === 'zh' ? '怎樣證明它正確' : 'How to prove it works'}</h4><ul>{selected.checks.map(check => <li key={check.en}>{pick(check, lang)}</li>)}</ul></section>
-          </div>
-          <p className="finance-later"><b>{lang === 'zh' ? '之後擴展：' : 'Later extension: '}</b>{pick(selected.later, lang)}</p>
-          <Link className="finance-lesson-link" href={`/learn/${selected.lesson.slug}`}>{lang === 'zh' ? '連回課程：' : 'Connect to the course: '}{pick(selected.lesson.title, lang)} →</Link>
-          <a className="finance-lesson-link finance-function-jump" href="#finance-functions">{lang === 'zh' ? '查看這三項功能的完整流程' : 'See the complete workflows for these three functions'} ↓</a>
-        </motion.article>
-      </div>
-    </section>
+    <section className="finance-section" id="finance-build-guide"><p className="eyebrow">05 · WHERE THE CODE GOES</p><h2>{lang === 'zh' ? '建議檔案結構，對應每張功能圖' : 'A file hierarchy that matches the workflows'}</h2><p className="fr-section-intro">{lang === 'zh' ? '下列係將來獨立 app 嘅建議結構，並非此學習網站已實作嘅後端。點選功能步驟，可睇邊個檔案負責。' : 'This is the proposed standalone app, not an existing backend in this academy. Select a function step to see which files own the work.'}</p><pre className="fr-tree"><code>{financeRepositoryTree}</code></pre><Link className="fr-inline-link" href="/finance-project/proposal#finance-build-guide">{lang === 'zh' ? '本機啟動命令及 Docker 部署細節' : 'Local startup commands and Docker deployment details'} →</Link></section>
 
-    <FinanceMarkitdownGuide lang={lang}/>
-    <FinanceArchitecture lang={lang}/>
-    <FinanceBuildGuide lang={lang}/>
-    <FinanceModelGuide lang={lang}/>
-    <FinanceRagWorkflow lang={lang}/>
-    <FinanceLangGraph lang={lang}/>
+    <section className="finance-section" id="finance-stack"><span id="finance-rag-workflow" className="fr-anchor"/><span id="finance-models" className="fr-anchor"/><p className="eyebrow">06 · TECHNIQUES WITH A PURPOSE</p><h2>{lang === 'zh' ? '每項技術，都有一個清楚責任' : 'Give each technique a clear responsibility'}</h2><div className="fr-stack">{financeStack.map(item => <article key={item.name}><span>{item.name}</span><h3>{item.tools}</h3><dl><div><dt>{lang === 'zh' ? '如何應用' : 'How it applies'}</dt><dd>{pick(item.how, lang)}</dd></div><div><dt>{lang === 'zh' ? '為何使用' : 'Why use it'}</dt><dd>{pick(item.why, lang)}</dd></div></dl></article>)}</div></section>
 
-    <section className="finance-section" id="finance-functions" aria-labelledby="finance-functions-title">
-      <div className="finance-section-heading"><p className="eyebrow">02 · EVERY FUNCTION, END TO END</p><h2 id="finance-functions-title">{lang === 'zh' ? '24 項功能，各有自己的心智圖' : 'An individual mind map for every function'}</h2><p>{lang === 'zh' ? '選擇範疇並展開功能，先看例子，再沿本機呼叫者、後端、處理及驗證走到回傳結果；切換部署模式便會加入 DNS／HTTPS 及託管服務。AI 功能亦顯示檢索、RAG、LangGraph 及模型呼叫。下方保留每步技術及 API 範例；全部皆為離線設計。' : 'Choose an area and expand a function. Start with its example, then follow the local caller, backend, processing and validation to the result. Switch to deployment mode to add DNS/HTTPS and hosted services. AI functions also show retrieval, RAG, LangGraph and model calls. Step-by-step tools and API examples remain below; everything is an offline design.'}</p></div>
-      <fieldset className="function-map-backend function-map-environment-control"><legend>{lang === 'zh' ? '先選擇你正在做哪個階段' : 'First choose where you are building'}</legend><label><input type="radio" name="finance-map-environment" checked={environment === 'local'} onChange={() => setEnvironment('local')}/>{lang === 'zh' ? '本機開發 · 暫不用 Docker' : 'Local development · no Docker yet'}</label><label><input type="radio" name="finance-map-environment" checked={environment === 'deployed'} onChange={() => setEnvironment('deployed')}/>{lang === 'zh' ? '部署階段 · Docker + EC2' : 'Deployment stage · Docker + EC2'}</label><p>{lang === 'zh' ? '本機先使用 localhost、獨立程序與本機檔案；功能完成後才建立映像，在本機驗證容器，再部署到 EC2。下方節點會跟著切換。' : 'Start with localhost, separate processes and local files. Once the features work, build images, verify containers on your computer, then deploy to EC2. The map nodes change with this choice.'}</p></fieldset>
-      <fieldset className="function-map-backend"><legend>{lang === 'zh' ? '選擇心智圖的後端架構' : 'Choose the backend architecture shown in the maps'}</legend><label><input type="radio" name="finance-map-backend" checked={backend === 'java-python'} onChange={() => setBackend('java-python')}/>{lang === 'zh' ? 'Java API + Python 分析服務' : 'Java API + Python analysis service'}</label><label><input type="radio" name="finance-map-backend" checked={backend === 'python'} onChange={() => setBackend('python')}/>{lang === 'zh' ? '原提案：Python API' : 'Original proposal: Python API'}</label><p>{lang === 'zh' ? '已選 Spring Boot API 負責登入、權限及財報管理；下方領域範例源自 Python 基準，選定分工以架構心智圖為準。FastAPI／LangGraph 保留財報與 AI 處理。20 週提案仍以 Python 首版估算，加入 Java 須另作範圍及工時評估。兩種服務皆未在此指南實作。DNS 是解析步驟，可使用快取，並非轉送資料的服務。' : 'The selected Spring Boot API owns login, permissions and report management; the Python API owns extraction, retrieval and analysis. The detailed domain examples below originated in the Python baseline; the architecture mind map defines the selected ownership. FastAPI/LangGraph retain finance and AI processing. The 20-week estimate covers the original Python release; adding Java needs a separate scope and effort estimate. Neither finance service is implemented in this guide. DNS resolves a name, may use a cache and does not forward application data.'}</p></fieldset>
-      <div className="finance-api-reading-guide"><b>{lang === 'zh' ? '怎樣閱讀 API 流程' : 'HOW TO READ AN API WORKFLOW'}</b><p><span>Client</span> → <span>Request</span> → <span>Auth + Validation</span> → <span>Service / Worker</span> → <span>Database</span> → <span>Response</span></p><small>{lang === 'zh' ? 'GET 讀取 · POST 建立或執行動作 · PATCH 修改 · 200 成功 · 201 已建立 · 202 已接納但未完成。範例 ID、公司、網址及結果均為虛構。' : 'GET reads · POST creates or performs an action · PATCH edits · 200 success · 201 created · 202 accepted, still unfinished. Example IDs, companies, URLs and results are fictional.'}</small></div>
-      <div className="finance-function-areas" role="group" aria-label={lang === 'zh' ? '選擇功能流程範疇' : 'Choose a function workflow area'}>{financeAreas.map(area => <button key={area.id} type="button" aria-pressed={selected.id === area.id} aria-controls="finance-function-list" onClick={() => setSelected(area)}>{pick(area.title, lang)}</button>)}</div>
-      <div id="finance-function-list" className="finance-function-list" key={selected.id}>
-        <h3>{pick(selected.title, lang)} <span>· {lang === 'zh' ? '3 項功能' : '3 functions'}</span></h3>
-        <IllustratedConcept illustration={financeAreaIllustrations[selected.id]} lang={lang}/>
-        {selectedFunctions.map((item, index) => <details className="finance-function" key={item.title.en} open={index === 0}>
-          <summary><span>{String(index + 1).padStart(2, '0')}</span><h4>{pick(item.title, lang)}</h4><i aria-hidden="true">+</i></summary>
-          <div className="finance-function-body"><FinanceFunctionMindmap map={financeFunctionMaps[selected.id][index]} api={financeApiWorkflows[selected.id][index]} title={item.title} lang={lang} backend={backend} environment={environment} example={financeFunctionExamples[selected.id][index]} modelRole={financeFunctionModelRoles[selected.id][index]}/><ol className="finance-function-flow" aria-label={`${pick(item.title, lang)} · ${lang === 'zh' ? '步驟及技術' : 'steps and tools'}`}>{item.steps.map((functionStep, stepIndex) => <li key={stepIndex}><span className="finance-function-step-number">{stepIndex + 1}</span><p>{pick(functionStep.action, lang)}</p><div><b>{lang === 'zh' ? '技術' : 'Tools'}</b><span>{functionStep.tools}</span></div></li>)}</ol>
-            <dl className="finance-function-outcomes"><div><dt>{lang === 'zh' ? '預期結果' : 'Expected result'}</dt><dd>{pick(item.result, lang)}</dd></div><div><dt>{lang === 'zh' ? '失敗時怎樣處理' : 'Failure handling'}</dt><dd>{pick(item.failure, lang)}</dd></div></dl>
-            <FinanceApiContent workflow={financeApiWorkflows[selected.id][index]} lang={lang}/>
-          </div>
-        </details>)}
-      </div>
-    </section>
+    <section className="finance-section" id="finance-stages"><p className="eyebrow">07 · SHIP A CHECKABLE RESULT EACH WEEK</p><h2>{lang === 'zh' ? '由本機開始，4–6 星期做出面試作品' : 'Build an interview demo in 4–6 weeks'}</h2><p className="fr-section-intro">{financePlan.hoursMin}–{financePlan.hoursMax} {lang === 'zh' ? '總小時，每週' : 'total hours at'} {financePlan.weeklyHours} {lang === 'zh' ? '小時。60 小時核心＋30 小時緩衝已包含在總數。' : 'hours per week. The total includes 60 core hours and 30 reserve hours.'} {pick(financePlan.assumption, lang)}</p><ol className="fr-stage-list">{financeStages.map(stage => <li key={stage.week}><span>W{stage.week}<small>{stage.hours}h</small></span><div><h3>{pick(stage.title, lang)}</h3><ul>{stage.tasks.map(task => <li key={task.en}>{pick(task, lang)}</li>)}</ul><p><FileCheck2 size={17} aria-hidden="true"/>{pick(stage.done, lang)}</p></div></li>)}</ol></section>
 
-    <section className="finance-section" id="finance-workflow" aria-labelledby="finance-workflow-title">
-      <div className="finance-section-heading"><p className="eyebrow">03 · FOLLOW ONE QUESTION</p><h2 id="finance-workflow-title">{lang === 'zh' ? '從問題到有證據的答案' : 'From a question to a supported answer'}</h2><p>{lang === 'zh' ? '逐步查看 LangGraph 應協調的工作。切換「缺少原因證據」，觀察數值正確但無法解釋原因時應如何處理。所有內容均為離線教學範例。' : 'Step through the work LangGraph would coordinate. Switch to missing causal evidence to see how the answer changes even when the numbers are correct. All outputs are offline teaching examples.'}</p></div>
-      <fieldset className="finance-scenario"><legend>{lang === 'zh' ? '選擇教學情境' : 'Choose the teaching scenario'}</legend>
-        <label><input type="radio" name="finance-scenario" checked={scenario === 'supported'} onChange={() => setScenario('supported')} />{lang === 'zh' ? '有數字及原因證據' : 'Figures and explanation available'}</label>
-        <label><input type="radio" name="finance-scenario" checked={scenario === 'missing'} onChange={() => setScenario('missing')} />{lang === 'zh' ? '缺少原因證據' : 'Missing causal evidence'}</label>
-      </fieldset>
-      <ol className="finance-workflow-steps" aria-label={lang === 'zh' ? '分析步驟' : 'Analysis steps'}>{financeWorkflow.map((item, index) => <li key={item.title.en}><button type="button" aria-current={index === step ? 'step' : undefined} onClick={() => setStep(index)}><span>{index + 1}</span>{pick(item.title, lang)}</button></li>)}</ol>
-      <div className="finance-walkthrough" aria-live="polite" aria-atomic="true">
-        <p className="eyebrow">{step + 1} / {financeWorkflow.length} · {lang === 'zh' ? '虛構 DemoCo 範例' : 'FICTIONAL DEMOCO EXAMPLE'}</p>
-        <h3>{pick(currentStep.title, lang)}</h3><p>{pick(currentStep.action, lang)}</p>
-        <div className={`finance-step-output ${scenario === 'missing' ? 'needs-evidence' : ''}`}><b>{lang === 'zh' ? '這一步的結果' : 'Result of this step'}</b><p>{pick(scenario === 'supported' ? currentStep.evidence : currentStep.missing, lang)}</p></div>
-      </div>
-      <div className="finance-step-controls"><button type="button" disabled={step === 0} onClick={() => setStep(value => Math.max(0, value - 1))}>← {lang === 'zh' ? '上一步' : 'Previous'}</button><button type="button" disabled={step === financeWorkflow.length - 1} onClick={() => setStep(value => Math.min(financeWorkflow.length - 1, value + 1))}>{lang === 'zh' ? '下一步' : 'Next'} →</button></div>
-    </section>
+    <section className="finance-section" id="finance-engineering"><p className="eyebrow">08 · PROVE AND DELIVER</p><h2>{lang === 'zh' ? '評估同部署，亦有自己嘅流程' : 'Evaluation and deployment have their own workflows'}</h2>{financeEngineeringWorkflows.map((guide, index) => <details className="fr-function" id={`finance-function-${guide.id}`} key={guide.id}><summary><span>E{index + 1}</span><div><h3>{pick(guide.title, lang)}</h3><p>{pick(guide.purpose, lang)}</p></div><span className="fr-plus" aria-hidden="true">+</span></summary><FinanceFunctionMindmap guide={guide} lang={lang}/></details>)}</section>
 
-    <section className="finance-section" id="finance-stack" aria-labelledby="finance-stack-title"><div className="finance-section-heading"><p className="eyebrow">04 · TECHNOLOGY OWNERSHIP</p><h2 id="finance-stack-title">{lang === 'zh' ? '每項技術有一個清楚責任' : 'Give each technology a clear responsibility'}</h2><p>{lang === 'zh' ? 'LangGraph 管分析狀態，n8n 管外圍觸發與通知。這個項目以 Python 為主要分析服務；Spring Boot 負責登入、權限及財報管理；C# 及 UiPath 按需要整合。' : 'LangGraph owns analysis state; n8n owns surrounding triggers and notifications. Use Python for the core analysis service. Spring Boot owns login, permissions and report management. Add C# or UiPath only for a needed integration.'}</p></div>
-      <div className="finance-stack-table"><table><caption className="finance-sr-only">{lang === 'zh' ? '建議技術、責任及資料流' : 'Suggested technology, responsibility and data flow'}</caption><thead><tr><th scope="col">{lang === 'zh' ? '層面' : 'Layer'}</th><th scope="col">{lang === 'zh' ? '技術' : 'Tools'}</th><th scope="col">{lang === 'zh' ? '負責甚麼及怎樣串連' : 'Responsibility and handoffs'}</th></tr></thead><tbody>{financeStack.map(row => <tr key={row.layer.en}><th scope="row">{pick(row.layer, lang)}</th><td>{row.tools}</td><td><p>{pick(row.role, lang)}</p><p className="finance-stack-flow"><b>{lang === 'zh' ? '資料流' : 'Data flow'}</b>{pick(row.workflow, lang)}</p></td></tr>)}</tbody></table></div>
-    </section>
-
-    <section className="finance-section" id="finance-stages" aria-labelledby="finance-stages-title"><div className="finance-section-heading"><p className="eyebrow">05 · BUILD IN CHECKABLE STAGES</p><h2 id="finance-stages-title">{lang === 'zh' ? '先完成小而可靠的版本' : 'Start with a small, reliable version'}</h2><p>{lang === 'zh' ? '首版重點是來源、數字、引用及比較；完成核心後再擴展排程、OCR 及多人功能。' : 'The first version focuses on sources, figures, citations and comparisons. Add schedules, OCR and shared access after that core works.'}</p></div>
-      <ol className="finance-build-stages">{financeBuildStages.map(stage => <li key={stage.title.en}><h3>{pick(stage.title, lang)}</h3><p>{pick(stage.scope, lang)}</p><p><b>{lang === 'zh' ? '完成條件：' : 'Done when: '}</b>{pick(stage.done, lang)}</p></li>)}</ol>
-      <p className="finance-portfolio"><b>{lang === 'zh' ? '最後展示：' : 'Final demonstration: '}</b>{lang === 'zh' ? '由一個真實使用者問題開始，展示來源、計算及答案；再示範一個因證據不足而只提供部分答案的案例。附上 repo、重跑指令、評估結果及你實際負責的工作。' : 'Start with a user question, show the source, calculation and answer, then demonstrate a partial answer caused by missing evidence. Include the repository, rerun commands, evaluation results and your own contribution.'}</p>
-    </section>
+    <section className="finance-section" id="finance-later"><p className="eyebrow">09 · SAVE THESE FOR LATER</p><h2>{lang === 'zh' ? '延後擴展，集中完成首版' : 'Defer expansion and finish the first release'}</h2><div className="fr-deferred">{financeDeferred.map(item => <article key={item.name}><h3>{item.name}</h3><p>{pick(item.reason, lang)}</p></article>)}</div></section>
+    <footer className="fr-references"><h2>{lang === 'zh' ? '官方技術參考' : 'Official technical references'}</h2><ul>{financeReferences.map(item => <li key={item.url}><a href={item.url} target="_blank" rel="noreferrer">{item.title} ↗</a></li>)}</ul><a href="/downloads/stock-research-project.md" download="STOCK_RESEARCH_PROJECT.md">{lang === 'zh' ? '下載完整功能及流程指南' : 'Download the complete function and workflow guide'} ↓</a></footer>
   </main>;
 }

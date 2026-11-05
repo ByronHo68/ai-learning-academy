@@ -57,11 +57,9 @@ The test starts the real server and checks all exported files, page routes, Pyth
 
 The lessons, animations, quizzes, concept workshops, hiring guides, junior lessons, Python downloads, and browser progress run locally. Progress is saved in this browser. Use Settings to export or import it. External reference links still need internet access.
 
-The dashboard and concept map link to `/finance-project`: a bilingual Hong Kong Financial Report Analyst project guide. Its eight-branch mind map, function details, seven-step walkthrough, missing-evidence scenario, technology stack and build stages work offline. This is a blueprint for a future application; its example company, figures and page references are fictional, and it does not process real reports or call a model.
+The dashboard and concept map link to `/finance-project`, the bilingual Stock Research Agent guide. Eight core functions each have their own workflow, technique explanations and return branches. Evaluation and Docker deployment have separate engineering workflows. The proposed application supports three US companies, one agent and one cited report. The site remains an offline guide and does not run Python finance services.
 
-Open **Function workflows** to explore all 24 functions. Every function includes four processing steps, the tools at each step, an expected result and failure handling. The technology table also describes data handoffs for each layer. Select an area and expand its function guides; English and Traditional Chinese both work offline.
-
-The **Picture guide** and each selected function area include ChatGPT-generated concept illustrations with bilingual captions. All nine WebP images are bundled locally in `site/finance-illustrations/v1/`, including full-size image links; no account, API key or image-generation service is needed to view them.
+Open `/finance-project/demo` for fictional sourced-news reports, insufficient evidence, ignored article instructions and recovery from an in-session checkpoint. Exports retain fictional-data labels. Open `/finance-project/proposal` for the 60–90-hour, 4–6-week local-first plan, proposed folder hierarchy and Docker/EC2 design. The bundled Markdown downloads are generated from the same typed catalog as the website.
 
 The agent lab pages are included, but running agents and evaluations requires the separate Python and Java services and the Next.js proxy in `codex/rich-animated-ts`. This office server returns an explanation when those pages request the lab API. It does not run those services.
 
@@ -78,7 +76,3 @@ npm run office:test
 Commit the regenerated `office/site` files and `office/build-info.json` with your source changes. The build script uses an isolated temporary copy of the app and removes it afterwards. Only the temporary copy excludes the live lab API and enables static export. The source app keeps its normal backend behavior.
 
 No `node_modules`, local service data, or `.env` credentials are needed in the office download.
-
-The finance project guide also documents API workflows for all 24 functions: 23 proposed HTTP contracts and a CI/CD deployment flow, with request/response examples, asynchronous polling and failure cases. English keywords overlay all nine generated concept illustrations, including the full-size view. These are offline design examples, not live finance endpoints.
-
-Open `/finance-project/proposal` for the eight-stage development proposal, bilingual summaries, EC2 and Docker Compose architecture, deployment and recovery steps, and optional K3s work. The complete English specification and Markdown download are bundled locally. The page is a design guide and does not provision AWS services. The office server serves the Markdown download as `text/markdown`; the prebuilt browser assets include the Markdown reader and its runtime dependency notices.

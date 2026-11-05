@@ -27,9 +27,11 @@ test('office package serves every exported page and asset on Node without depend
   assert(exported.includes('index.html'));
   assert.equal(exported.filter(path => /^learn\/[^/]+\.html$/.test(path)).length, 13);
   assert.equal(exported.filter(path => /^junior-path\/labs\/[^/]+$/.test(path)).length, 6);
-  assert.equal(exported.filter(path => /^finance-illustrations\/v1\/[^/]+\.webp$/.test(path)).length, 9);
-  assert.equal(exported.filter(path => /^proposal-illustrations\/v1\/[^/]+\.webp$/.test(path)).length, 3);
+  assert.equal(exported.filter(path => /^finance-illustrations\//.test(path)).length, 0);
+  assert.equal(exported.filter(path => /^proposal-illustrations\//.test(path)).length, 0);
   assert(exported.includes('finance-project/proposal.html'));
+  assert(exported.includes('finance-project/demo.html'));
+  assert(exported.includes('downloads/stock-research-project.md'));
   assert(exported.includes('downloads/financial-report-development-proposal.md'));
   for (const path of exported) {
     const response = await fetch(`${base}/${path}`);
@@ -49,7 +51,7 @@ test('office package serves every exported page and asset on Node without depend
   }
   const finance = await fetch(base + '/finance-project');
   const financeHtml = await finance.text();
-  assert.match(financeHtml, /<title>香港財報分析項目/);
+  assert.match(financeHtml, /<title>股票研究 Agent 項目/);
   assert.match(financeHtml, /\/app\/finance-project\/page-[^" ]+\.js/);
   const proposalDownload = await fetch(base + '/downloads/financial-report-development-proposal.md');
   assert.equal(await proposalDownload.text(), await readFile(new URL('../../docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md', import.meta.url), 'utf8'));

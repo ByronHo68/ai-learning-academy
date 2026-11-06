@@ -5,6 +5,7 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { ArrowRight, Download, FileText, RotateCcw, Search, ShieldCheck } from 'lucide-react';
 import { type Copy, type Lang, pick } from '../lib/curriculum';
 import { financeCompanies } from '../lib/finance-project';
+import { FinanceGraphContent } from './finance-graph-content';
 import {
   financeDemoAsOf, financeDemoExport, financeDemoProgress, financeDemoRatingRule, financeDemoReducer,
   financeDemoSamples, initialFinanceDemo,
@@ -117,5 +118,6 @@ export default function FinanceDemoContent({ lang }: { lang: Lang }) {
 
       <aside className="fd-system" aria-labelledby="fd-system-title"><p className="eyebrow">INSIDE THE DEMONSTRATION</p><h2 id="fd-system-title">{lang === 'zh' ? '點樣證明個流程可靠？' : 'How can you inspect the workflow?'}</h2><dl className="fd-run-facts"><div><dt>{lang === 'zh' ? '模擬搜尋' : 'Simulated searches'}</dt><dd>{progress?.searches ?? 0} / 2</dd></div><div><dt>{lang === 'zh' ? '真實模型呼叫' : 'Actual model calls'}</dt><dd>0</dd></div><div><dt>{lang === 'zh' ? '真實新聞 API 呼叫' : 'Actual news API calls'}</dt><dd>0</dd></div></dl><p>{lang === 'zh' ? '下面顯示此頁實際走過的模擬工具事件，唔係預先宣稱成功。' : 'The trace below records the simulated events you actually reached on this page.'}</p><ol className="fd-trace">{progress?.trace.map(event => <li key={event.id}><code>{event.tool}</code><p>{pick(event.detail, lang)}</p></li>) ?? <li>{lang === 'zh' ? '開始研究後顯示記錄。' : 'Start research to see the trace.'}</li>}</ol><details className="fd-engineering"><summary>{lang === 'zh' ? '真實版用咩技術？' : 'What powers the proposed real app?'}</summary><p>Next.js → FastAPI → LangGraph → n8n MCP → RAG</p><p>{lang === 'zh' ? '先用本機程序開發；Python 執行檢索與規則，LLM 依證據草擬解釋。SQLite 保存報告與持久檢查點。新版真實設計加入每題 n8n MCP 刷新、准入混合重排、OTel、自架 Langfuse 及 LangSmith；此離線模擬沒有呼叫它們。' : 'Develop with local processes first. Python retrieves evidence and applies rules; the LLM drafts explanations from that evidence. SQLite stores reports and durable checkpoints. The revised live design adds per-prompt n8n MCP refresh, gated hybrid reranking, OTel, self-hosted Langfuse and LangSmith. This offline simulation does not call them.'}</p></details><Link href="/finance-project#finance-functions">{lang === 'zh' ? '逐項功能、流程及技術原因' : 'Function workflows and technology decisions'} →</Link><Link href="/finance-project/proposal">{lang === 'zh' ? '查看 8–12 星期開發計劃' : 'See the 8–12 week development plan'} →</Link></aside>
     </div>
+    <FinanceGraphContent lang={lang}/>
   </main>;
 }

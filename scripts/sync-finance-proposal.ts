@@ -1,5 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { Copy } from '../lib/curriculum';
+import { financeFunctionRoutes } from '../lib/finance-workflows';
+import { financeContextExample, financeGraphNodes, financeGraphScenarios, financeGraphState, financeGraphWiring, financeScenarioPath } from '../lib/finance-graph';
 import { financeAdrs, financeAssurance, financePromptFlow } from '../lib/finance-assurance';
 import { financeCompanies, financeDeferred, financeEngineeringWorkflows, financeFunctions, financeReferences, financeRepositoryTree, financeStack, financeStages, type FinanceFunctionGuide } from '../lib/finance-project';
 import { financeComposeDesign, financeDeploymentNotes, financeInterviewCases, financeLocalCommands, financePlan, financeRuntimeLimits } from '../lib/finance-proposal';
@@ -28,14 +30,15 @@ function entryText(entry: FinanceFunctionGuide['entry']): string {
   }
 }
 function diagram(guide: FinanceFunctionGuide): string {
-  const lines = ['flowchart TD', `  input[${JSON.stringify(guide.title.en)}]`];
-  guide.steps.forEach((step, index) => lines.push(`  s${index}[${JSON.stringify(step.keyword)}]`, `  ${index === 0 ? 'input' : `s${index - 1}`} --> s${index}`));
-  lines.push(`  s${guide.steps.length - 1} --> check{Checks pass?}`);
-  guide.branches.forEach((branch, index) => lines.push(`  check -->|${branch.kind}| b${index}[${JSON.stringify(branch.result.en)}]`));
+  const routes = financeFunctionRoutes[guide.id];
+  const names = [...new Set(routes.flatMap(route => [route.from, route.to]))];
+  const lines = ['flowchart TD', ...names.map((name, index) => `  n${index}[${JSON.stringify(name)}]`),
+    ...routes.map(route => `  n${names.indexOf(route.from)} -->|${JSON.stringify(route.when.en)}| n${names.indexOf(route.to)}`)];
   return `\`\`\`mermaid\n${lines.join('\n')}\n\`\`\``;
+
 }
 function functionMarkdown(guide: FinanceFunctionGuide): string {
-  return [`## ${guide.title.en} / ${guide.title.zh}`, both(guide.purpose), `**Input / 輸入**\n\n${both(guide.input)}`, `**Output / 輸出**\n\n${both(guide.output)}`, `### Entry contract / 入口\n\n\`\`\`text\n${entryText(guide.entry)}\n\`\`\``, diagram(guide), ...guide.steps.map((step, index) => `### ${index + 1}. ${step.keyword}\n\n${both(step.action)}\n\nTools: ${step.tools}\n\n**How / 如何應用**\n\n${both(step.how)}\n\n**Why / 為何使用**\n\n${both(step.why)}\n\nProposed files / 建議檔案: ${step.proposedFiles.map(file => `\`${file}\``).join(', ')}`), '### Return branches / 回傳分支', ...guide.branches.map(branch => `**${branch.kind}**\n\n${both(branch.condition)}\n\n${both(branch.result)}\n\n${both(branch.next)}`), '### Acceptance / 驗收', ...guide.acceptance.map(check => `- ${check.en}\n- ${check.zh}`)].join('\n\n');
+  return [`## ${guide.title.en} / ${guide.title.zh}`, both(guide.purpose), `**Input / 輸入**\n\n${both(guide.input)}`, `**Output / 輸出**\n\n${both(guide.output)}`, `### Entry contract / 入口\n\n\`\`\`text\n${entryText(guide.entry)}\n\`\`\``, diagram(guide), ...financeFunctionRoutes[guide.id].map(route => `**${route.from} → ${route.to}**\n\n${both(route.when)}\n\nHandoff / 交接資料:\n\n${both(route.payload)}`), ...guide.steps.map((step, index) => `### ${index + 1}. ${step.keyword}\n\n${both(step.action)}\n\nTools: ${step.tools}\n\n**How / 如何應用**\n\n${both(step.how)}\n\n**Why / 為何使用**\n\n${both(step.why)}\n\nProposed files / 建議檔案: ${step.proposedFiles.map(file => `\`${file}\``).join(', ')}`), '### Return branches / 回傳分支', ...guide.branches.map(branch => `**${branch.kind}**\n\n${both(branch.condition)}\n\n${both(branch.result)}\n\n${both(branch.next)}`), '### Acceptance / 驗收', ...guide.acceptance.map(check => `- ${check.en}\n- ${check.zh}`)].join('\n\n');
 }
 const assurance = `## Revised news, retrieval and observability requirements / 新版要求\n\n${financePromptFlow.join(' → ')}\n\n${financeAssurance.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${item.points.map(both).join('\n\n')}`).join('\n\n')}`;
 const adrMarkdown = (adr: typeof financeAdrs[number]) => `# ADR-${adr.id}: ${adr.title.en} / ${adr.title.zh}\n\nStatus: accepted design, implementation pending. Date: 2026-11-06.\n\n## Decision / 決定\n\n${both(adr.decision)}\n\n## Tradeoff / 取捨\n\n${both(adr.tradeoff)}\n\n## Verification / 驗證\n\n${both(adr.verification)}\n`;
@@ -56,11 +59,22 @@ const deferred = `## Deferred scope / 後續擴展\n\n${financeDeferred.map(item
 const references = `## References / 官方參考\n\n${financeReferences.map(item => `- [${item.title}](${item.url})`).join('\n')}`;
 const guide = [intro, estimate, assurance, stack, ...financeFunctions.map(functionMarkdown), folders, stages, ...financeEngineeringWorkflows.map(functionMarkdown), deferred, references].join('\n\n') + '\n';
 const proposal = [intro, estimate, assurance, stages, folders, stack, '## Function contracts and individual workflows / 每項功能及獨立流程', ...financeFunctions.map(functionMarkdown), cases, deployment, ...financeEngineeringWorkflows.map(functionMarkdown), deferred, references].join('\n\n') + '\n';
+const graphWalkthrough = [
+  '## Vector retrieval → reranking → LLM / 向量檢索 → 重排 → LLM',
+  'Assumption: news is already chunked and indexed; the live app still refreshes every accepted prompt through n8n and pins the new snapshot. The website only plays deterministic fictional scenarios. No live graph, vector, reranker or model call is made.\n\n假設新聞已切段及索引；真實版仍須經 n8n 刷新每個已接納提示並固定新快照。網站只播放固定虛構情境，沒有真實 graph、向量、重排或模型呼叫。',
+  '### State / 狀態\n\n' + both(financeGraphState),
+  ...Object.entries(financeGraphNodes).map(([id, node]) => `### ${node.label} (\`${id}\`)\n\nReads: ${node.input}\n\nWrites / handoff: ${node.output}\n\n${both(node.how)}`),
+  '## Scenario routes / 情境路徑',
+  ...financeGraphScenarios.map(scenario => `### ${scenario.title.en} / ${scenario.title.zh}\n\n${both(scenario.prompt)}\n\n\`\`\`text\n${financeScenarioPath(scenario.id).map(key => financeGraphNodes[key].label).join(' → ')}\n\`\`\`\n\n${both(scenario.result)}`),
+  '## Exact context envelope / 模型上下文\n\nFictional supported-case example. Source excerpts are untrusted data, separate from policy and user intent. Scores are not confidence. Trim within a token budget, then recheck coverage.\n\n\`\`\`json\n' + financeContextExample + '\n\`\`\`',
+  '## Python graph wiring / Python graph 接線\n\nProposed wiring only. Supply real typed nodes, enforced budgets, provider adapters and a durable checkpointer before execution. The API owns thread authorization; a resumed run retains its original deadline.\n\n\`\`\`python\n' + financeGraphWiring + '\n\`\`\`',
+].join('\n\n');
 const research = financeFunctions.find(item => item.id === 'research');
 const recovery = financeFunctions.find(item => item.id === 'recovery');
 if (!research || !recovery) throw new Error('Research and recovery guides are required.');
-const graph = [intro, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. The model then chooses between search_company_evidence and read_source. It may refine a query once. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；模型其後在兩個研究工具中選擇，最多修正搜尋一次。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} seconds per run. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
+const graph = [intro, graphWalkthrough, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. Code-owned nodes call search_company_evidence and read_source in the documented order. A query planner may refine once within the same limits; the model cannot choose a privileged route. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；程式節點其後按文件次序呼叫搜尋及讀取工具；查詢規劃最多修正一次，模型不能自行選取特權路由。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} seconds per run. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['public/downloads/stock-research-graph.py', financeGraphWiring],
   ['docs/FINANCE_REVIEW_PACK.md', reviewerPack.replaceAll('](stock-research-', '](../public/downloads/stock-research-')],
   ['public/downloads/stock-research-review-pack.md', reviewerPack],
   ...financeAdrs.map(adr => [`docs/finance-adrs/${adr.id}.md`, adrMarkdown(adr)] satisfies [string, string]),

@@ -27,7 +27,7 @@ Each new prompt must refresh news through n8n MCP and pin its permitted evidence
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-Prompt + company + horizon → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
+Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
 
 ### Fresh news for every prompt / 每個提示都取得新聞
 
@@ -234,18 +234,64 @@ Next.js proxy → GET /companies → [{"id":"MSFT","name":"Microsoft"}, …]
 
 ```mermaid
 flowchart TD
-  input["Choose a supported company"]
-  s0["SELECT"]
-  input --> s0
-  s1["VALIDATE"]
-  s0 --> s1
-  s2["CONFIRM"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["200: supported identity and coverage shown."]
-  check -->|insufficient| b1["No prior snapshot: show coverage unknown, then let the first prompt refresh news."]
-  check -->|failure| b2["422: unsupported ID or invalid horizon; do not start a run."]
+  n0["Prompt + selection"]
+  n1["Scope gate"]
+  n2["Clarify → END"]
+  n3["Out of scope → END"]
+  n4["News refresh"]
+  n0 -->|"Validate company, horizon and question intent."| n1
+  n1 -->|"Company or intent is ambiguous."| n2
+  n1 -->|"Clearly unrelated or unsupported company."| n3
+  n1 -->|"Supported company research question."| n4
 ```
+
+**Prompt + selection → Scope gate**
+
+Validate company, horizon and question intent.
+
+驗證公司、期間及問題意圖。
+
+Handoff / 交接資料:
+
+Original question + canonical company + horizon
+
+原問題＋標準公司＋期間
+
+**Scope gate → Clarify → END**
+
+Company or intent is ambiguous.
+
+公司或意圖不明確。
+
+Handoff / 交接資料:
+
+One clarification question; no news/retrieval calls
+
+一個澄清問題；不呼叫新聞或檢索
+
+**Scope gate → Out of scope → END**
+
+Clearly unrelated or unsupported company.
+
+明顯無關或公司未支援。
+
+Handoff / 交接資料:
+
+Explain scope and show a supported example prompt
+
+交代範圍並提供支援問題例子
+
+**Scope gate → News refresh**
+
+Supported company research question.
+
+支援公司研究問題。
+
+Handoff / 交接資料:
+
+Validated ResearchRequest; unknown coverage may be refreshed
+
+已驗證 ResearchRequest；未知覆蓋可刷新
 
 ### 1. SELECT
 
@@ -389,18 +435,64 @@ refresh_company_news(company_id, query, as_of, run_id, limit) → snapshot_id + 
 
 ```mermaid
 flowchart TD
-  input["Refresh news through n8n MCP for every prompt"]
-  s0["MCP REFRESH"]
-  input --> s0
-  s1["NORMALISE"]
-  s0 --> s1
-  s2["PIN SNAPSHOT"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Return a new refresh receipt and pinned snapshot before research."]
-  check -->|insufficient| b1["Partial or stale coverage: label it and abstain from an unsupported current forecast."]
-  check -->|failure| b2["News service unavailable: return a typed error or explicitly dated replay; never silently bypass refresh."]
+  n0["Validated request → n8n MCP refresh"]
+  n1["Provider response"]
+  n2["Pinned snapshot"]
+  n3["Limited result / unavailable → END"]
+  n4["Retrieve"]
+  n0 -->|"Every new accepted prompt; resume reuses its receipt."| n1
+  n1 -->|"Normalize and index records with dates, permitted text and valid identity."| n2
+  n1 -->|"Refresh failed or only stale evidence remains."| n3
+  n2 -->|"Store and index acknowledgements agree on snapshot_id."| n4
 ```
+
+**Validated request → n8n MCP refresh → Provider response**
+
+Every new accepted prompt; resume reuses its receipt.
+
+每個新接納提示；恢復時重用紀錄。
+
+Handoff / 交接資料:
+
+company + query + run_id + cutoff
+
+公司＋查詢＋任務 ID＋截止點
+
+**Provider response → Pinned snapshot**
+
+Normalize and index records with dates, permitted text and valid identity.
+
+驗證日期、允許節錄及身份，再正規化及索引。
+
+Handoff / 交接資料:
+
+source_id/chunk_id, URL, published_at, first_seen_at, content hash
+
+來源／切段 ID、URL、發布／首次取得時間及內容 hash
+
+**Provider response → Limited result / unavailable → END**
+
+Refresh failed or only stale evidence remains.
+
+刷新失敗或只有過期證據。
+
+Handoff / 交接資料:
+
+Provider status + freshness gap; no current prediction
+
+供應商狀態＋新鮮度缺口；不作當前預測
+
+**Pinned snapshot → Retrieve**
+
+Store and index acknowledgements agree on snapshot_id.
+
+儲存及索引確認相同 snapshot_id。
+
+Handoff / 交接資料:
+
+Immutable snapshot_id + allowed source IDs
+
+不可變 snapshot_id＋允許來源 ID
 
 ### 1. MCP REFRESH
 
@@ -545,18 +637,78 @@ read_source(source_id, snapshot_id) → permitted excerpt + metadata
 
 ```mermaid
 flowchart TD
-  input["Retrieve, fuse and rerank evidence"]
-  s0["FILTER"]
-  input --> s0
-  s1["SEARCH + FUSE"]
-  s0 --> s1
-  s2["RERANK"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Return attributable top-k evidence and the actual retrieval mode."]
-  check -->|insufficient| b1["Empty or weak evidence: refine once, then return insufficient evidence."]
-  check -->|failure| b2["Candidate unavailable or not admitted: use sparse and record the reason; invalid sources stay excluded."]
+  n0["Question + snapshot → filtered sparse/dense search"]
+  n1["Candidates"]
+  n2["RRF fusion + reranker"]
+  n3["Evidence gate"]
+  n4["Refine once / limited result"]
+  n5["Build context"]
+  n0 -->|"Company, permissions and both timestamps pass."| n1
+  n1 -->|"Hybrid admission passed; otherwise use sparse."| n2
+  n2 -->|"Reranker succeeds; on reranker failure use working sparse within the same deadline."| n3
+  n3 -->|"Zero hits, weak support or missing required facets."| n4
+  n3 -->|"Relevant, current passages cover the question."| n5
 ```
+
+**Question + snapshot → filtered sparse/dense search → Candidates**
+
+Company, permissions and both timestamps pass.
+
+公司、權限及兩個時間戳符合。
+
+Handoff / 交接資料:
+
+20 candidates per branch: chunk IDs + passages + original ranks
+
+每分支 20 候選：切段 ID＋原文＋初始排序
+
+**Candidates → RRF fusion + reranker**
+
+Hybrid admission passed; otherwise use sparse.
+
+混合准入已通過；否則用 sparse。
+
+Handoff / 交接資料:
+
+Deduplicated top 20 → cross-encoder top 10
+
+去重前 20 → cross-encoder 前 10
+
+**RRF fusion + reranker → Evidence gate**
+
+Reranker succeeds; on reranker failure use working sparse within the same deadline.
+
+重排成功；若重排失敗則用相同時限內仍可用的 sparse。
+
+Handoff / 交接資料:
+
+Actual fallback mode; no fabricated reranker scores
+
+實際回退模式；不捏造重排分數
+
+**Evidence gate → Refine once / limited result**
+
+Zero hits, weak support or missing required facets.
+
+零結果、支持弱或缺少所需面向。
+
+Handoff / 交接資料:
+
+Missing facets; preserve company, cutoff and snapshot
+
+缺失面向；保留公司、截止及快照
+
+**Evidence gate → Build context**
+
+Relevant, current passages cover the question.
+
+相關且當前原文足以覆蓋問題。
+
+Handoff / 交接資料:
+
+At most 6 excerpts, stable citation IDs and provenance
+
+最多 6 節錄、穩定引用 ID 及來源記錄
 
 ### 1. FILTER
 
@@ -675,9 +827,9 @@ Return an explicit error. Keep the last valid state.
 
 ## Run one bounded research agent / 運行一個有上限的研究 agent
 
-Let the agent select tools and fill an evidence gap within a controlled budget.
+Route each prompt through scope checks, retrieval, reranking and evidence gates within a controlled budget.
 
-讓 agent 選擇工具及補足證據，同時限制執行預算。
+每個提示經範圍檢查、檢索、重排及證據檢查，同時限制執行預算。
 
 **Input / 輸入**
 
@@ -701,32 +853,133 @@ Next.js proxy → POST /research → run_id + result
 
 ```mermaid
 flowchart TD
-  input["Run one bounded research agent"]
-  s0["PLAN + TOOLS"]
-  input --> s0
-  s1["CHECK GAP"]
-  s0 --> s1
-  s2["REFINE ONCE"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["200: return a validated report with run ID and source references."]
-  check -->|insufficient| b1["200, status insufficient: return supported findings and no rating after the final search."]
-  check -->|failure| b2["422 for bad input; 503 for unavailable dependencies. Preserve a resumable run when safe."]
+  n0["Validated request → scope → refresh → retrieve → rerank"]
+  n1["Evidence gate"]
+  n2["Refine → retrieve"]
+  n3["Insufficient → END"]
+  n4["Context → LLM → validation"]
+  n5["Save → answer"]
+  n6["Blocked → END"]
+  n7["Unavailable → END"]
+  n0 -->|"Code owns mandatory ordering and budgets."| n1
+  n1 -->|"First attempt only, and budget remains."| n2
+  n2 -->|"Recheck the second retrieval with the same filters."| n1
+  n1 -->|"Second attempt fails to cover the question."| n3
+  n1 -->|"All required facets have support; conflicts are retained."| n4
+  n4 -->|"Validation passes within the budget."| n5
+  n4 -->|"Citation or support validation fails."| n6
+  n4 -->|"Deadline, call limit or dependency failure."| n7
 ```
+
+**Validated request → scope → refresh → retrieve → rerank → Evidence gate**
+
+Code owns mandatory ordering and budgets.
+
+程式控制必需次序及預算。
+
+Handoff / 交接資料:
+
+Typed state, original prompt, snapshot, attempts, deadline, trace_id
+
+型別狀態、原提示、快照、次數、時限及 trace_id
+
+**Evidence gate → Refine → retrieve**
+
+First attempt only, and budget remains.
+
+只限首次嘗試，而且仍有預算。
+
+Handoff / 交接資料:
+
+Refined query; same original question and snapshot
+
+修正查詢；相同原問題及快照
+
+**Refine → retrieve → Evidence gate**
+
+Recheck the second retrieval with the same filters.
+
+以相同條件重新檢查第二輪檢索。
+
+Handoff / 交接資料:
+
+Updated evidence; attempts = 2
+
+更新證據；次數 = 2
+
+**Evidence gate → Insufficient → END**
+
+Second attempt fails to cover the question.
+
+第二次仍未覆蓋問題。
+
+Handoff / 交接資料:
+
+Supported facts + missing facets; no forecast
+
+有支持事實＋缺失面向；不作預測
+
+**Evidence gate → Context → LLM → validation**
+
+All required facets have support; conflicts are retained.
+
+所有所需面向有支持，矛盾證據保留。
+
+Handoff / 交接資料:
+
+Prompt-specific draft with citations and conditional scenarios
+
+針對提示的草稿、引用及條件式情境
+
+**Context → LLM → validation → Save → answer**
+
+Validation passes within the budget.
+
+預算內通過驗證。
+
+Handoff / 交接資料:
+
+Validated cited answer
+
+已驗證引用答案
+
+**Context → LLM → validation → Blocked → END**
+
+Citation or support validation fails.
+
+引用或支持驗證失敗。
+
+Handoff / 交接資料:
+
+Withheld draft and validation errors
+
+不發布草稿及驗證錯誤
+
+**Context → LLM → validation → Unavailable → END**
+
+Deadline, call limit or dependency failure.
+
+超時、超額或依賴失敗。
+
+Handoff / 交接資料:
+
+Typed error + resumable checkpoint when safe
+
+結構化錯誤＋安全時可恢復 checkpoint
 
 ### 1. PLAN + TOOLS
 
-Create typed run state and choose a permitted research tool.
+Create typed state, screen the prompt and route accepted research.
 
-建立有型別的任務狀態，選擇允許的研究工具。
+建立型別狀態、檢查提示範圍，路由已接納研究。
 
 Tools: LangGraph · one tool-capable LLM
 
 **How / 如何應用**
 
-First require the n8n refresh receipt. Track original prompt, snapshot, source IDs, evidence, trace ID and budgets. The agent then chooses only search_company_evidence and read_source.
+Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/rerank/context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
 
-先要求 n8n 刷新紀錄，追蹤原提示、快照、來源、證據、trace ID 及預算；agent 只選擇兩個研究工具。
+新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／重排／組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
 
 **Why / 為何使用**
 
@@ -856,18 +1109,78 @@ draft_report(question, horizon, as_of, evidence, optional_rule_result) → Resea
 
 ```mermaid
 flowchart TD
-  input["Answer the prompt with conditional forecasts"]
-  s0["APPLY RULES"]
-  input --> s0
-  s1["EXPLAIN"]
-  s0 --> s1
-  s2["PRESENT"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Validated draft becomes a dated, prompt-specific scenario report; the teaching stance is optional."]
-  check -->|insufficient| b1["Show the supported news summary with No rating and the missing evidence."]
-  check -->|failure| b2["Malformed model output stays unreleased; return a validation failure to the graph."]
+  n0["Selected passages"]
+  n1["Context envelope"]
+  n2["Draft"]
+  n3["Validation"]
+  n4["Blocked → END"]
+  n5["Display + feedback"]
+  n0 -->|"Deduplicate, read original excerpts and enforce token budget."| n1
+  n1 -->|"System policy and user question stay separate from untrusted excerpts."| n2
+  n2 -->|"Require claim support; a reranker score is not confidence."| n3
+  n3 -->|"Unknown citation or unsupported factual claim."| n4
+  n3 -->|"Persist before exposing the final answer."| n5
 ```
+
+**Selected passages → Context envelope**
+
+Deduplicate, read original excerpts and enforce token budget.
+
+去重、讀原文並限制 token。
+
+Handoff / 交接資料:
+
+Question, horizon, as_of, evidence[], missing_facets[], conflicts[]
+
+問題、期間、截止、證據、缺失面向及矛盾
+
+**Context envelope → Draft**
+
+System policy and user question stay separate from untrusted excerpts.
+
+系統規則及使用者問題與不可信原文分開。
+
+Handoff / 交接資料:
+
+Direct answer + observed facts + conditional scenarios + citation IDs
+
+直接答案＋觀察事實＋條件式情境＋引用 ID
+
+**Draft → Validation**
+
+Require claim support; a reranker score is not confidence.
+
+要求主張支持；重排分數不是信心。
+
+Handoff / 交接資料:
+
+Draft only; never stream an unvalidated recommendation
+
+只產生草稿；不串流未驗證建議
+
+**Validation → Blocked → END**
+
+Unknown citation or unsupported factual claim.
+
+未知引用或無支持事實。
+
+Handoff / 交接資料:
+
+Do not release draft
+
+不發布草稿
+
+**Validation → Display + feedback**
+
+Persist before exposing the final answer.
+
+先保存，再顯示最終答案。
+
+Handoff / 交接資料:
+
+Report ID, trace URL/status; separate feedback linked to run_id
+
+報告 ID、trace URL／狀態；回饋另存並連結 run_id
 
 ### 1. APPLY RULES
 
@@ -1011,18 +1324,50 @@ validate_report(draft, allowed_sources, rules) → valid | insufficient | errors
 
 ```mermaid
 flowchart TD
-  input["Validate citations and tool boundaries"]
-  s0["RESTRICT"]
-  input --> s0
-  s1["VERIFY"]
-  s0 --> s1
-  s2["RELEASE OR STOP"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Release validated structured content to storage and UI."]
-  check -->|insufficient| b1["Return No rating with supported facts; human approval cannot manufacture missing evidence."]
-  check -->|failure| b2["Block release and return validation_failed; do not leak keys or follow article instructions."]
+  n0["Draft + evidence"]
+  n1["Validation checks"]
+  n2["Blocked → END"]
+  n3["Persist report"]
+  n0 -->|"Ignore embedded instructions; check IDs, dates, company, coverage and factual support."| n1
+  n1 -->|"A required validation fails."| n2
+  n1 -->|"Every material factual claim has excerpt support."| n3
 ```
+
+**Draft + evidence → Validation checks**
+
+Ignore embedded instructions; check IDs, dates, company, coverage and factual support.
+
+忽略內嵌指令，檢查 ID、日期、公司、覆蓋及事實支持。
+
+Handoff / 交接資料:
+
+Validation errors or a validated report
+
+驗證錯誤或已驗證報告
+
+**Validation checks → Blocked → END**
+
+A required validation fails.
+
+必要驗證失敗。
+
+Handoff / 交接資料:
+
+validation_failed; no draft publication
+
+validation_failed；不發布草稿
+
+**Validation checks → Persist report**
+
+Every material factual claim has excerpt support.
+
+所有重要事實主張有原文支持。
+
+Handoff / 交接資料:
+
+Validated result and source references
+
+已驗證結果及來源引用
 
 ### 1. RESTRICT
 
@@ -1167,18 +1512,50 @@ Content-Type: text/markdown; charset=utf-8
 
 ```mermaid
 flowchart TD
-  input["Save and download the report"]
-  s0["SAVE"]
-  input --> s0
-  s1["SERIALISE"]
-  s0 --> s1
-  s2["DOWNLOAD"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["200: download the existing Markdown with evidence intact."]
-  check -->|insufficient| b1["An insufficient-evidence report can be saved and exported with its No rating status."]
-  check -->|failure| b2["404 for unknown report; reject unfinished or invalid report export."]
+  n0["Report ID → authorized lookup"]
+  n1["Saved result"]
+  n2["404 / conflict → END"]
+  n3["Serialize → download"]
+  n0 -->|"Caller owns the report; ID exists."| n1
+  n0 -->|"No exportable validated record exists."| n2
+  n1 -->|"Include insufficient status and fictional labels where applicable."| n3
 ```
+
+**Report ID → authorized lookup → Saved result**
+
+Caller owns the report; ID exists.
+
+呼叫者擁有報告且 ID 存在。
+
+Handoff / 交接資料:
+
+Saved question, answer, sources, dates, trace status
+
+已存問題、答案、來源、日期及 trace 狀態
+
+**Report ID → authorized lookup → 404 / conflict → END**
+
+No exportable validated record exists.
+
+沒有可下載的已驗證紀錄。
+
+Handoff / 交接資料:
+
+Typed error; no regeneration
+
+結構化錯誤；不重新生成
+
+**Saved result → Serialize → download**
+
+Include insufficient status and fictional labels where applicable.
+
+適用時保留證據不足狀態及虛構標籤。
+
+Handoff / 交接資料:
+
+Markdown identical to displayed report; zero LLM calls
+
+與畫面相同 Markdown；零 LLM 呼叫
 
 ### 1. SAVE
 
@@ -1323,18 +1700,64 @@ Resume only the selected saved run, within its existing budget.
 
 ```mermaid
 flowchart TD
-  input["Resume an interrupted research run"]
-  s0["CHECKPOINT"]
-  input --> s0
-  s1["RESUME"]
-  s0 --> s1
-  s2["RETURN STATUS"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Resume the saved run without repeating the completed search."]
-  check -->|insufficient| b1["Budget is exhausted: return supported findings and no rating instead of restarting."]
-  check -->|failure| b2["404 for unknown run; 409 for incompatible checkpoint; leave the saved state intact."]
+  n0["run_id → authenticate"]
+  n1["Checkpoint"]
+  n2["404 / 409 → END"]
+  n3["Next unfinished node"]
+  n4["Stopped → END"]
+  n0 -->|"Resolve the same thread and original request."| n1
+  n1 -->|"Cannot safely resume the saved state."| n2
+  n1 -->|"Deadline remains; replayed effects use idempotency keys."| n3
+  n1 -->|"A later fresh prompt requires a new run."| n4
 ```
+
+**run_id → authenticate → Checkpoint**
+
+Resolve the same thread and original request.
+
+解析相同 thread 及原請求。
+
+Handoff / 交接資料:
+
+Saved snapshot, completed node results, attempts and remaining budget
+
+快照、已完成結果、次數及剩餘預算
+
+**Checkpoint → 404 / 409 → END**
+
+Cannot safely resume the saved state.
+
+無法安全恢復儲存狀態。
+
+Handoff / 交接資料:
+
+Keep saved state; explain recovery failure
+
+保留狀態並交代恢復失敗
+
+**Checkpoint → Next unfinished node**
+
+Deadline remains; replayed effects use idempotency keys.
+
+未超時；重播副作用使用冪等鍵。
+
+Handoff / 交接資料:
+
+Same refresh receipt and search count; no budget reset
+
+相同刷新紀錄及搜尋次數；不重設預算
+
+**Checkpoint → Stopped → END**
+
+A later fresh prompt requires a new run.
+
+稍後新研究須建立新任務。
+
+Handoff / 交接資料:
+
+Supported partial findings and explicit expiry
+
+有支持的部分發現及明確過期狀態
 
 ### 1. CHECKPOINT
 
@@ -1656,18 +2079,64 @@ python -m app.evaluate --golden ../../evals/golden.json --injections ../../evals
 
 ```mermaid
 flowchart TD
-  input["Evaluate the agent before the interview"]
-  s0["DEFINE CASES"]
-  input --> s0
-  s1["RUN + TRACE"]
-  s0 --> s1
-  s2["DOCUMENT"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Checks pass and the measured report is saved with its configuration."]
-  check -->|insufficient| b1["Missing credentials: skip live cases explicitly and report the reduced coverage."]
-  check -->|failure| b2["Fail the check, retain traces and block release until the defect is fixed."]
+  n0["Frozen manifest → verify hash → run configurations"]
+  n1["Observed outputs"]
+  n2["Score retrieval + citations + safety"]
+  n3["Block admission"]
+  n4["Approve versioned candidate"]
+  n0 -->|"Corpus, qrels and policy match the reviewed version."| n1
+  n1 -->|"Use actual outcomes and independently judged support."| n2
+  n2 -->|"Synthetic-only, live checks missing or thresholds fail."| n3
+  n2 -->|"Real-news holdout, safety and tracing also pass."| n4
 ```
+
+**Frozen manifest → verify hash → run configurations → Observed outputs**
+
+Corpus, qrels and policy match the reviewed version.
+
+語料、qrels 及政策符合已核對版本。
+
+Handoff / 交接資料:
+
+Sparse, hybrid and reranked rankings on identical prompts
+
+相同提示的 sparse、混合及重排排序
+
+**Observed outputs → Score retrieval + citations + safety**
+
+Use actual outcomes and independently judged support.
+
+使用實際結果及獨立支持度判斷。
+
+Handoff / 交接資料:
+
+recall/nDCG, citation precision, abstentions, injection outcomes
+
+recall／nDCG、引用精準度、拒答及注入結果
+
+**Score retrieval + citations + safety → Block admission**
+
+Synthetic-only, live checks missing or thresholds fail.
+
+只有虛構測試、缺真實檢查或未達門檻。
+
+Handoff / 交接資料:
+
+Sparse remains active; NOT RUN stays visible
+
+維持 sparse；明示 NOT RUN
+
+**Score retrieval + citations + safety → Approve versioned candidate**
+
+Real-news holdout, safety and tracing also pass.
+
+真實新聞保留集、安全及追蹤亦通過。
+
+Handoff / 交接資料:
+
+Approved retrieval version + public report card
+
+核准檢索版本＋公開成績表
 
 ### 1. DEFINE CASES
 
@@ -1811,18 +2280,64 @@ trace(run_id) → OTel spans → redacting Collector → Langfuse + LangSmith
 
 ```mermaid
 flowchart TD
-  input["Trace each run in Langfuse and LangSmith"]
-  s0["INSTRUMENT"]
-  input --> s0
-  s1["REDACT + EXPORT"]
-  s0 --> s1
-  s2["VERIFY LINK"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["Report includes one verified demo trace URL and actual usage."]
-  check -->|insufficient| b1["Too few runs: publish durations and sample count, mark p50/p95 cohort incomplete."]
-  check -->|failure| b2["Exporter unavailable: retain research output, record telemetry failure and fail the observable-demo gate."]
+  n0["Run start → root span"]
+  n1["Span events"]
+  n2["Redact → Collector → Langfuse / LangSmith"]
+  n3["Mark demo evidence incomplete"]
+  n4["Report card"]
+  n0 -->|"Propagate context into MCP and provider attempts."| n1
+  n1 -->|"Keep one instrumentation tree; do not double-count tokens."| n2
+  n2 -->|"Trace cannot be flushed or opened by a reviewer."| n3
+  n2 -->|"At least 30 completed runs for latency percentiles."| n4
 ```
+
+**Run start → root span → Span events**
+
+Propagate context into MCP and provider attempts.
+
+Context 傳入 MCP 及供應商嘗試。
+
+Handoff / 交接資料:
+
+trace_id, run_id, parent spans, errors and actual usage
+
+trace_id、run_id、父 spans、錯誤及實際用量
+
+**Span events → Redact → Collector → Langfuse / LangSmith**
+
+Keep one instrumentation tree; do not double-count tokens.
+
+保留一組 instrumentation；不重複計 token。
+
+Handoff / 交接資料:
+
+Sanitized operational traces and experiment feedback
+
+清理後運行 traces 及實驗回饋
+
+**Redact → Collector → Langfuse / LangSmith → Mark demo evidence incomplete**
+
+Trace cannot be flushed or opened by a reviewer.
+
+Trace 不能 flush 或審閱者無法開啟。
+
+Handoff / 交接資料:
+
+Preserved answer + unavailable trace status
+
+保留答案＋trace 不可用狀態
+
+**Redact → Collector → Langfuse / LangSmith → Report card**
+
+At least 30 completed runs for latency percentiles.
+
+延遲百分位至少需要 30 次已完成任務。
+
+Handoff / 交接資料:
+
+One actual URL per demo; cohort p50/p95 with failures
+
+每 demo 一個實際 URL；樣本 p50／p95 及失敗數
 
 ### 1. INSTRUMENT
 
@@ -1965,18 +2480,64 @@ docker compose -f deploy/compose.yaml up -d --build
 
 ```mermaid
 flowchart TD
-  input["Package locally, then deploy privately"]
-  s0["BUILD IMAGES"]
-  input --> s0
-  s1["VERIFY LOCALLY"]
-  s0 --> s1
-  s2["PRIVATE EC2"]
-  s1 --> s2
-  s2 --> check{Checks pass?}
-  check -->|success| b0["A private smoke-tested release with recorded image tag and restored-backup proof."]
-  check -->|insufficient| b1["No cloud access yet: keep the local Docker demo and recording; continue job applications."]
-  check -->|failure| b2["Stop the release or restore the previous image without deleting the data volume."]
+  n0["Verified source + evals → build images"]
+  n1["Local containers"]
+  n2["Smoke tests → backup restore"]
+  n3["Stop / rollback"]
+  n4["Private deployment"]
+  n0 -->|"Configure private n8n, Qdrant and telemetry endpoints."| n1
+  n1 -->|"Exercise normal, insufficient, irrelevant and outage paths."| n2
+  n2 -->|"Retain the last valid image and persistent data."| n3
+  n2 -->|"Access control and backups verified."| n4
 ```
+
+**Verified source + evals → build images → Local containers**
+
+Configure private n8n, Qdrant and telemetry endpoints.
+
+設定私人 n8n、Qdrant 及追蹤端點。
+
+Handoff / 交接資料:
+
+Versioned images and server-only configuration
+
+版本化映像及只供伺服器設定
+
+**Local containers → Smoke tests → backup restore**
+
+Exercise normal, insufficient, irrelevant and outage paths.
+
+測試正常、資料不足、無關及中斷路徑。
+
+Handoff / 交接資料:
+
+Health, routing, persistence and recovery evidence
+
+健康、路由、持久性及恢復證據
+
+**Smoke tests → backup restore → Stop / rollback**
+
+Retain the last valid image and persistent data.
+
+保留最後有效映像及持久資料。
+
+Handoff / 交接資料:
+
+Failure reason and recovery action
+
+失敗原因及恢復動作
+
+**Smoke tests → backup restore → Private deployment**
+
+Access control and backups verified.
+
+已驗證訪問控制及備份。
+
+Handoff / 交接資料:
+
+Release ID + reproducible demo and trace URL
+
+發布 ID＋可重現 demo 及 trace URL
 
 ### 1. BUILD IMAGES
 
@@ -2127,6 +2688,7 @@ No PDF extraction is needed for the curated text snapshot. Add automation or ano
 - [Langfuse: OpenTelemetry ingestion](https://langfuse.com/integrations/native/opentelemetry)
 - [LangSmith: OpenTelemetry and Collector fan-out](https://docs.langchain.com/langsmith/trace-with-opentelemetry)
 - [LangSmith: sharing sanitized traces](https://docs.langchain.com/langsmith/manage-trace)
+- [LangGraph: Graph API, state and conditional edges](https://docs.langchain.com/oss/python/langgraph/graph-api)
 - [LangGraph: workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 - [LangGraph: persistence and checkpoints](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [FastAPI: typed request bodies](https://fastapi.tiangolo.com/tutorial/body/)

@@ -1,4 +1,5 @@
 import type { Copy } from './curriculum';
+import type { FinanceFunctionId } from './finance-workflows';
 
 const t = (en: string, zh: string): Copy => ({ en, zh });
 export type FinanceCompanyId = 'MSFT' | 'AAPL' | 'NVDA';
@@ -13,7 +14,7 @@ export type FinanceFlowStep = {
   id: string; keyword: string; action: Copy; tools: string; how: Copy; why: Copy; proposedFiles: string[];
 };
 export type FinanceFunctionGuide = {
-  id: string; title: Copy; purpose: Copy; input: Copy; output: Copy; entry: FinanceEntry;
+  id: FinanceFunctionId; title: Copy; purpose: Copy; input: Copy; output: Copy; entry: FinanceEntry;
   steps: [FinanceFlowStep, ...FinanceFlowStep[]];
   branches: Array<{ kind: 'success' | 'insufficient' | 'failure'; condition: Copy; result: Copy; next: Copy }>;
   acceptance: Copy[];
@@ -71,12 +72,12 @@ export const financeFunctions: FinanceFunctionGuide[] = [
   },
   {
     id: 'research', title: t('Run one bounded research agent', '運行一個有上限的研究 agent'),
-    purpose: t('Let the agent select tools and fill an evidence gap within a controlled budget.', '讓 agent 選擇工具及補足證據，同時限制執行預算。'),
+    purpose: t('Route each prompt through scope checks, retrieval, reranking and evidence gates within a controlled budget.', '每個提示經範圍檢查、檢索、重排及證據檢查，同時限制執行預算。'),
     input: t('Company ID, the original prompt, horizon, as-of time and a mandatory news refresh receipt.', '公司 ID、原提示、期間、截止時間及必需新聞刷新紀錄。'),
     output: t('A validated research result or an explicit insufficient-evidence result.', '已驗證研究結果，或明確證據不足結果。'),
     entry: { kind: 'http', method: 'POST', path: '/api/research', example: '{"company_id":"MSFT","question":"Explain recent developments","horizon":"1-3m"}\nNext.js proxy → POST /research → run_id + result' },
     steps: [
-      { id: 'plan', keyword: 'PLAN + TOOLS', action: t('Create typed run state and choose a permitted research tool.', '建立有型別的任務狀態，選擇允許的研究工具。'), tools: 'LangGraph · one tool-capable LLM', how: t('First require the n8n refresh receipt. Track original prompt, snapshot, source IDs, evidence, trace ID and budgets. The agent then chooses only search_company_evidence and read_source.', '先要求 n8n 刷新紀錄，追蹤原提示、快照、來源、證據、trace ID 及預算；agent 只選擇兩個研究工具。'), why: t('A constrained tool boundary supports useful agent decisions without broad machine access.', '受限制工具邊界支援 agent 判斷，同時避免取得廣泛系統權限。'), proposedFiles: ['services/research/app/graph.py', 'services/research/app/tools.py'] },
+      { id: 'plan', keyword: 'PLAN + TOOLS', action: t('Create typed state, screen the prompt and route accepted research.', '建立型別狀態、檢查提示範圍，路由已接納研究。'), tools: 'LangGraph · one tool-capable LLM', how: t('Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/rerank/context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.', '新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／重排／組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。'), why: t('A constrained tool boundary supports useful agent decisions without broad machine access.', '受限制工具邊界支援 agent 判斷，同時避免取得廣泛系統權限。'), proposedFiles: ['services/research/app/graph.py', 'services/research/app/tools.py'] },
       { id: 'gap', keyword: 'CHECK GAP', action: t('Assess whether the gathered evidence answers the question.', '判斷已取得證據是否足以回答。'), tools: 'Conditional edges · structured output', how: t('Use code checks for company, dates and source presence. Let the model describe any remaining information gap in a schema.', '以程式檢查公司、日期及來源；模型用固定格式描述尚欠資料。'), why: t('A fluent draft must not be treated as proof that the research is complete.', '文字流暢不代表研究已完成。'), proposedFiles: ['services/research/app/graph.py', 'services/research/app/schemas.py'] },
       { id: 'retry', keyword: 'REFINE ONCE', action: t('Refine once, or continue to reporting and validation.', '最多修正查詢一次，再進入報告及驗證。'), tools: 'Bounded loop · timeout · SQLite checkpoint', how: t('Allow two search rounds total. Persist progress and stop at the configured time, tool or model budget. Return no rating if evidence remains inadequate.', '總共最多兩輪搜尋；保存進度，到達時間、工具或模型上限就停止。仍不足則不評級。'), why: t('A bounded agent can recover and explain failure without looping or spending indefinitely.', '有上限的 agent 能恢復及解釋失敗，避免無限循環及用量。'), proposedFiles: ['services/research/app/graph.py', 'services/research/app/checkpoints.py'] },
     ],
@@ -219,6 +220,7 @@ export const financeReferences = [
   { title: 'Langfuse: OpenTelemetry ingestion', url: 'https://langfuse.com/integrations/native/opentelemetry' },
   { title: 'LangSmith: OpenTelemetry and Collector fan-out', url: 'https://docs.langchain.com/langsmith/trace-with-opentelemetry' },
   { title: 'LangSmith: sharing sanitized traces', url: 'https://docs.langchain.com/langsmith/manage-trace' },
+  { title: 'LangGraph: Graph API, state and conditional edges', url: 'https://docs.langchain.com/oss/python/langgraph/graph-api' },
   { title: 'LangGraph: workflows and agents', url: 'https://docs.langchain.com/oss/python/langgraph/workflows-agents' },
   { title: 'LangGraph: persistence and checkpoints', url: 'https://docs.langchain.com/oss/python/langgraph/persistence' },
   { title: 'FastAPI: typed request bodies', url: 'https://fastapi.tiangolo.com/tutorial/body/' },

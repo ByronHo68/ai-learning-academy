@@ -1,0 +1,13 @@
+{
+  "version": "finance-admission-v1",
+  "k": [
+    5,
+    10
+  ],
+  "recall10_absolute_gain": 0.03,
+  "ndcg10_absolute_gain": 0.05,
+  "citation_precision_min": 0.95,
+  "material_claim_coverage_min": 1.0,
+  "per_company_regression_allowed": false,
+  "production_requires": "independently reviewed licensed real-news holdout + executed live injection suite + verified demo traces; synthetic starter cannot authorize production"
+}

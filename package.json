@@ -22,6 +22,8 @@
     "lab:start": "node scripts/lab-start.mjs",
     "lab:eval": "node scripts/lab-eval.mjs",
     "lab:contracts": "node scripts/lab-contracts.mjs",
+    "finance:eval": "python3 evals/finance/evaluate.py",
+    "finance:eval:test": "python3 -m unittest discover -s evals/finance -p 'test_*.py'",
     "proposal:sync": "tsx scripts/sync-finance-proposal.ts",
     "proposal:check": "tsx scripts/sync-finance-proposal.ts --check"
   },

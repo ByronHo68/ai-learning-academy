@@ -1,17 +1,21 @@
 import type { Copy } from './curriculum';
 
 export const financePlan = {
-  weeklyHours: 15, hoursMin: 60, hoursMax: 90, weeksMin: 4, weeksMax: 6,
-  contingencyHours: 30, difficulty: '5–6 / 10',
+  weeklyHours: 15, hoursMin: 120, hoursMax: 180, weeksMin: 8, weeksMax: 12,
+  contingencyHours: 60, difficulty: '7–8 / 10',
   assumption: {
-    en: 'Planning estimate for one developer reusing the existing UI and a permitted, curated evidence snapshot. Allow 6–8 weeks if Python and asynchronous APIs are new. This is an interview demo, not a public global financial product.',
-    zh: '以一位開發者、重用現有介面及已獲准使用的小型證據快照估算。如 Python 及非同步 API 都要邊做邊學，預留 6–8 星期。目標是面試示範，並非公開全球金融產品。',
+    en: 'Provisional estimate for one developer adding per-prompt n8n MCP news, measured hybrid RAG, self-hosted Langfuse and LangSmith. Re-estimate after the first live news-and-trace slice; Python learning, provider licensing and infrastructure may extend it. This remains an interview research app.',
+    zh: '暫估一位開發者加入每題 n8n MCP 新聞、量度混合 RAG、自架 Langfuse 及 LangSmith。首條真實新聞與追蹤流程完成後重估；Python 學習、供應商授權及基建可能延長時間。目標仍是面試研究 app。',
   },
 };
-export const financeRuntimeLimits = { searchRounds: 2, sourceReads: 6, llmCalls: 3, timeoutSeconds: 60 };
+export const financeRuntimeLimits = { newsRefreshes: 1, searchRounds: 2, sourceReads: 6, llmCalls: 3, timeoutSeconds: 60 };
 
 export const financeLocalCommands = `# Proposed application repository, after its scaffold exists.
 # These commands do not start finance services in this academy repository.
+# Configure private n8n MCP and approved news-provider credentials first.
+# Start pinned Qdrant (candidate), OTel Collector and the official Langfuse stack
+# separately; configure LangSmith server credentials. Dependencies may use Docker.
+# Keep retrieval_mode=sparse until real-news evaluation and safety gates pass.
 
 # Terminal 1: Python API on loopback
 cd services/research
@@ -32,9 +36,12 @@ RESEARCH_API_URL=http://127.0.0.1:8000 npm run dev -- --hostname 127.0.0.1 --por
 cd services/research
 source .venv/bin/activate
 python -m pytest
-python -m app.evaluate --cases ../../evals/cases.jsonl`;
+python -m app.evaluate --golden ../../evals/golden.json --injections ../../evals/injections.json --policy ../../evals/retrieval-policy.json`;
 
-export const financeComposeDesign = `# Proposed deploy/compose.yaml. Package after local checks pass.
+export const financeComposeDesign = `# Proposed app-only deploy/compose.yaml; NOT the full infrastructure stack.
+# Provision n8n, Qdrant, OTel Collector and the official Langfuse stack separately.
+# Langfuse needs web/worker, PostgreSQL, ClickHouse, Redis/Valkey and object storage.
+# Set private service URLs and LangSmith credentials in research.env.
 # Copy deploy/research.env.example to deploy/research.env and set server secrets.
 # Both container processes bind to 0.0.0.0 inside their private network.
 # docker compose -f deploy/compose.yaml up -d --build
@@ -60,7 +67,7 @@ volumes:
   research-data:`;
 
 export const financeDeploymentNotes: Copy[] = [
-  { en: 'Build locally first. Run Next.js and FastAPI as native processes; Docker is a packaging stage after the research path passes its checks.', zh: '先本機開發。Next.js 與 FastAPI 用獨立程序運行；研究流程通過檢查後，先加入 Docker 包裝。' },
+  { en: 'Run Next.js and FastAPI natively first. Local n8n, Qdrant and self-hosted Langfuse dependencies may use their pinned official containers immediately; package the app after its checks pass.', zh: 'Next.js 與 FastAPI 先用本機程序；n8n、Qdrant 及自架 Langfuse 依賴可即時用固定版本官方容器。App 通過檢查後才包裝。' },
   { en: 'In containers, the Next.js server forwards requests to http://research:8000. A browser cannot resolve the Compose service name. Provider keys stay in Python.', zh: '容器內由 Next.js 伺服器轉送至 http://research:8000。瀏覽器不能解析 Compose 服務名稱；供應商金鑰只留在 Python。' },
   { en: 'On EC2, start the same images privately and verify health, the four scenarios and a restart. Use an access-controlled TLS tunnel for an interview, or add an HTTPS reverse proxy, access control and usage limits before public access.', zh: 'EC2 先以私人方式啟動相同映像，檢查健康狀態、四個情境及重啟。面試可用有訪問控制的 TLS 隧道；公開前須加入 HTTPS 反向代理、訪問控制及用量限制。' },
   { en: 'The example binds the web port to loopback and does not expose port 8000. Restrict SSH to the operator. DNS is needed only for an optional public hostname; it resolves names and does not process report data.', zh: '範例只將網站連接埠綁定 loopback，不公開 8000。SSH 限制指定操作者；只有使用公開網域時才需要 DNS，DNS 解析名稱而不處理報告資料。' },

@@ -1,0 +1,227 @@
+# Stock research reviewer pack / 股票研究審閱材料
+
+Design artifacts plus a local synthetic evaluation harness. Live n8n, Qdrant, model and telemetry integrations are not implemented in this academy. The browser demo remains fictional.
+
+## Revised news, retrieval and observability requirements / 新版要求
+
+Prompt + company + horizon → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
+
+### Fresh news for every prompt / 每個提示都取得新聞
+
+Every new valid research prompt creates a run and must call refresh_company_news through the n8n MCP Server Trigger before retrieval. A deterministic graph node enforces this; the LLM cannot skip it. Resume reuses the same refresh receipt.
+
+每個有效研究提示都建立任務，檢索前必須經 n8n MCP Server Trigger 呼叫 refresh_company_news。由固定 graph 節點強制執行，LLM 不能略過；恢復任務重用原刷新紀錄。
+
+n8n exposes a Custom Workflow Tool for approved news APIs/RSS. Validate company, query, UTC window and result limit; use fixed provider URLs, server credentials, bounded retries and run_id idempotency. A schedule may warm the store but never replaces the per-prompt call.
+
+n8n 以 Custom Workflow Tool 接駁核准新聞 API／RSS。驗證公司、問題、UTC 時段及筆數；使用固定供應商網址、伺服器憑證、有限重試及 run_id 冪等鍵。排程可預熱資料，但不能取代每個提示的呼叫。
+
+Return source_id, canonical URL, published_at, first_seen_at, fetched_at, content hash, permitted excerpt, snapshot_id and provider status. Deduplicate syndicated stories. Outage, partial coverage or stale data is visible; never silently describe old news as fresh.
+
+回傳來源 ID、原網址、發布／首次取得／擷取時間、內容 hash、允許節錄、快照 ID 及供應商狀態。同一轉載新聞去重；中斷、覆蓋不足或過期資料必須明示，不能將舊聞稱為即時。
+
+### Measured retrieval / 有量度依據的檢索
+
+Freeze corpus, prompts, graded relevance labels (0/1/2), expected abstentions and SHA-256 manifest before tuning. The checked-in v1 set has 18 fictional cases across three tickers and is a harness smoke test. A separate human-reviewed, licensed news holdout is required for production admission; do not tune on either test set.
+
+調參前凍結語料、問題、0／1／2 相關性標籤、預期拒答及 SHA-256 清單。v1 有三個 ticker 共 18 個虛構案例，只驗證評估工具；正式准入另須人工核對、獲授權的新聞保留集，不能用測試集調參。
+
+Compare SQLite FTS5/BM25 sparse, Qdrant dense + sparse with reciprocal rank fusion, and hybrid + a pinned cross-encoder reranker. Use identical chunks, company/permission/time filters and candidate budgets: 20 per branch, fuse to 20, rerank to 10, pass at most 6 excerpts to the model. Filter both published_at and first_seen_at at the as-of cutoff.
+
+比較 SQLite FTS5／BM25、Qdrant dense＋sparse 的 RRF 混合檢索，以及加固定版本 cross-encoder 的混合檢索。共用切段、公司／權限／時間條件及預算：每分支 20、融合至 20、重排至 10、最多 6 段送模型。發布及首次取得時間都須早於截止點。
+
+Report macro recall@5/10 and nDCG@5/10 on answerable cases; report empty-evidence cases separately. Before enabling hybrid + reranking, require absolute gains of at least +0.03 recall@10 and +0.05 nDCG@10 over sparse, no per-company regression, citation-precision ≥0.95 and no decline from sparse. These are proposed acceptance thresholds, not measured improvements.
+
+可回答案例報告 macro recall@5／10 及 nDCG@5／10；無證據案例分開計算。啟用混合＋重排前，對 sparse 的 recall@10 須至少增加 0.03、nDCG@10 至少增加 0.05（絕對值），各公司不可倒退，引用精準度 ≥0.95 且不低於 sparse。這些是建議門檻，並非已量度提升。
+
+Citation-precision means supported claim–source pairs / all emitted pairs, judged against the actual excerpt; an existing URL alone is insufficient. Also require 100% citation coverage for material factual claims, correct abstention on all no-evidence cases, and report sample counts. Zero citations means N/A, never a perfect score. Missing evidence blocks admission and keeps sparse active.
+
+引用精準度＝原文支持的主張與來源配對／所有輸出配對；有網址並不足夠。重要事實須 100% 附引用、所有無證據案例正確拒答，並報告樣本數。零引用是 N/A，不能算滿分；未齊評估資料則不准入，維持 sparse。
+
+### Observable runs · Langfuse + LangSmith / 可觀察任務 · Langfuse＋LangSmith
+
+Create an OpenTelemetry root span per research run and child spans for MCP refresh, each provider attempt, ingestion, sparse/dense retrieval, fusion, reranking, every model/tool call, validation and export. Propagate W3C traceparent across HTTP; explicitly instrument the n8n workflow and correlate its execution ID when automatic context propagation is unavailable.
+
+每次研究建立 OpenTelemetry 根 span，MCP 刷新、供應商每次嘗試、匯入、稀疏／向量檢索、融合、重排、每次模型／工具呼叫、驗證及下載都有子 span。HTTP 傳遞 W3C traceparent；n8n 工作流程須加 instrumentation，無自動傳遞時記錄 execution ID 關聯。
+
+Self-hosted Langfuse owns operational traces. LangSmith adds dataset experiments, prompt comparisons and evaluator feedback. Export one instrumented span tree through a redacting OTel Collector to both backends; correlate run_id, trace_id, dataset hash, model/prompt/reranker versions. Do not double-instrument LangGraph or sum duplicate token counts across products.
+
+自架 Langfuse 保存運行記錄；LangSmith 提供資料集實驗、提示比較及評估回饋。同一組 spans 經遮蔽敏感資料的 OTel Collector 分送兩邊，關聯任務／trace ID、資料 hash 及模型／提示／重排版本。避免重複 instrumentation 或將兩邊 token 相加。
+
+Record actual input/output tokens (unknown stays null), tool errors/retries and end-to-end plus stage latency. Publish p50/p95 over at least 30 completed live runs with sample size, concurrency, warm/cold conditions and failed-run counts; a single demo has duration, not its own p95. Initial end-to-end p95 target: ≤60 s; separately report timeout rate.
+
+記錄實際輸入／輸出 token（未知保留 null）、工具錯誤／重試、全程及各階段延遲。至少 30 次已完成真實任務才報 p50／p95，附樣本數、並行數、冷暖狀態及失敗數；單次 demo 只有耗時，沒有自己的 p95。初步全程 p95 目標 ≤60 秒，另報超時比例。
+
+Every live demo must save one verified shareable trace URL in its report and report card. Exporters flush before resolving the link; verify that a reviewer can open it. Redact keys, personal prompts and restricted article text before export or sharing. Private production traces remain private; share sanitized demonstration runs. If export fails, retain the report but mark the observable-demo gate incomplete.
+
+每次真實 demo 的報告及成績表須保存一條已驗證可分享 trace URL；先 flush 再取得連結，確認審閱者可開啟。匯出或分享前遮蔽金鑰、私人提示及受限文章；正式私人 trace 保持私人，只分享清理過的示範。匯出失敗可保留報告，但可觀察 demo 驗收仍未完成。
+
+### Prompt-specific feedback and prediction / 針對提示的回饋及預測
+
+Persist the original question, company, horizon, as-of time and refresh receipt with every answer. Return a direct answer, cited observed facts, base/upside/downside scenarios, assumptions, invalidation signals, conflicting evidence and limitations. Label forecasts as inference; citations support inputs, not guaranteed future outcomes.
+
+每個答案保存原問題、公司、期間、截止時間及刷新紀錄。回傳直接答案、有引用事實、基本／上行／下行情境、假設、失效訊號、矛盾證據及限制。預測須標明推論；引用支持輸入事實，不能保證未來結果。
+
+Example prompt: “How could rising costs affect MSFT margins over 1–3 months?” Discuss cost evidence and offsetting revenue or pricing evidence. Do not reuse a generic Hold/Reduce paragraph for every question. Missing current evidence returns insufficient evidence; unsupported calibrated probabilities or price targets are omitted.
+
+例如「成本上升可能如何影響 MSFT 未來 1–3 個月利潤率？」應分析成本證據及收入／定價抵銷因素，不能每題重用同一段 Hold／Reduce。缺少當前證據就回覆不足，不輸出未驗證機率或目標價。
+
+Store user helpfulness/correction feedback as a separate record tied to run_id and prompt_version. Feedback is not a market outcome label and never silently edits the frozen golden set. Predictive accuracy requires a later time-split outcome study with no future information leakage; retrieval scores do not establish trading performance.
+
+用戶有用度／更正回饋另存，連結 run_id 及 prompt_version。回饋不是市場結果標籤，不能靜默更改凍結資料集。預測準確度須日後按時間切分、避免未來資料滲漏的結果研究；檢索分數不代表交易表現。
+
+# ADR-001: n8n owns news acquisition; LangGraph owns research / n8n 管新聞擷取；LangGraph 管研究
+
+Status: accepted design, implementation pending. Date: 2026-11-06.
+
+## Decision / 決定
+
+Accept one mandatory refresh_company_news MCP call per new prompt, backed by an allowlisted n8n workflow. Keep search_company_evidence and read_source in the research service.
+
+每個新提示必須呼叫一次 refresh_company_news MCP，由核准 n8n 工作流程處理；搜尋及讀取來源由研究服務負責。
+
+## Tradeoff / 取捨
+
+Adds a network dependency and provider cost. A dated replay is reproducible but cannot be labelled fresh.
+
+增加網絡依賴及供應商成本；有日期重播可重現，但不能稱為即時。
+
+## Verification / 驗證
+
+Trace two different prompts and show two refresh receipts. Resume one run and show no duplicate acquisition. Exercise timeout and partial-provider results.
+
+追蹤兩個不同提示及兩份刷新紀錄；恢復一次任務不重複擷取；檢查超時及部分供應商結果。
+
+
+# ADR-002: Sparse is the baseline; hybrid must earn admission / Sparse 為基線；混合檢索須通過准入
+
+Status: accepted design, implementation pending. Date: 2026-11-06.
+
+## Decision / 決定
+
+Retain FTS5/BM25 as the default and rollback path. Trial Qdrant dense + sparse, RRF and a version-pinned cross-encoder on the same frozen corpus.
+
+保留 FTS5／BM25 為預設及回退路徑；同一凍結語料試行 Qdrant dense＋sparse、RRF 及固定版本 cross-encoder。
+
+## Tradeoff / 取捨
+
+Embedding storage, reranker compute and extra failure modes are justified only by measured quality; an HNSW index is not proof of relevance.
+
+向量儲存、重排計算及額外故障須以品質改善支持；HNSW 索引不代表相關性更高。
+
+## Verification / 驗證
+
+Require +0.03 recall@10, +0.05 nDCG@10, no company regression, citation and abstention gates. Publish sparse / hybrid / hybrid+rerank ablations; missing results keep the candidate blocked.
+
+要求 recall@10 +0.03、nDCG@10 +0.05、公司不倒退及引用／拒答達標；公布三種配置消融，未有結果則阻擋候選。
+
+
+# ADR-003: Freeze evidence and separate facts from forecasts / 凍結證據，分清事實與預測
+
+Status: accepted design, implementation pending. Date: 2026-11-06.
+
+## Decision / 決定
+
+Version immutable excerpts and qrels; filter published_at and first_seen_at. Generate question-specific conditional scenarios and retain explicit abstention.
+
+版本化不可變節錄及相關性標籤；檢查發布及首次取得時間；按問題產生條件式情境，保留明確拒答。
+
+## Tradeoff / 取捨
+
+Conservative answers sometimes abstain. The synthetic starter validates mechanics only; real-news evaluation needs independent human labels and a held-out time period.
+
+保守答案可能拒答；虛構種子只驗證機制，真實新聞須獨立人工標籤及保留時段。
+
+## Verification / 驗證
+
+Hash-check fixtures; reject future/late-ingested sources; manually judge claim support and record disagreement. Never claim return prediction from retrieval metrics.
+
+核對 fixture hash；拒絕未來／延後取得來源；人工核對主張並記錄分歧；不能用檢索指標聲稱回報預測能力。
+
+
+# ADR-004: One OTel trace tree, two observability destinations / 一組 OTel traces，兩個觀察平台
+
+Status: accepted design, implementation pending. Date: 2026-11-06.
+
+## Decision / 決定
+
+Self-host Langfuse for operations; use LangSmith for experiments and feedback. A Collector exports sanitized spans with common run IDs to both.
+
+自架 Langfuse 作運維，LangSmith 作實驗及回饋；Collector 將清理後 spans 及相同任務 ID 傳送兩邊。
+
+## Tradeoff / 取捨
+
+Two destinations add cost and operations. LangSmith credentials and deployment/licensing must be configured; do not assume it is a free self-hosted service. Export outages must be visible.
+
+兩個平台增加成本及運維；須設定 LangSmith 憑證及部署／授權，不能假設是免費自架服務；匯出中斷必須可見。
+
+## Verification / 驗證
+
+Check span parentage across n8n, token totals, redaction and one accessible demo trace URL. Report latency distributions only with their actual run count.
+
+核對跨 n8n span 父子關係、token 總數、遮蔽及可開啟 demo URL；延遲分佈必須附真實任務數。
+
+
+# ADR-005: Retrieved content has no tool authority / 檢索內容沒有工具權限
+
+Status: accepted design, implementation pending. Date: 2026-11-06.
+
+## Decision / 決定
+
+Treat articles, metadata and MCP results as untrusted data. Code enforces tool allowlists, provider URLs, schema limits, deadlines and citation membership. No arbitrary URL fetch, shell, credential access or trading tool.
+
+文章、metadata 及 MCP 結果都是不可信資料；程式強制工具清單、供應商網址、schema、時限及引用集合；不提供任意網址擷取、shell、憑證存取或交易工具。
+
+## Tradeoff / 取捨
+
+No prompt or injection classifier guarantees safety. Structural boundaries limit effects, while adversarial fixtures measure the remaining behavior.
+
+提示或注入分類器不能保證安全；結構邊界限制影響，對抗 fixtures 量度剩餘行為。
+
+## Verification / 驗證
+
+Replay direct/indirect override, exfiltration, forged citations, metadata attacks, poisoned tool results, future evidence and retry-budget attacks. Any unauthorized call or secret leak fails the release gate.
+
+重播直接／間接覆寫、外洩、假引用、metadata 攻擊、污染工具結果、未來證據及重試預算攻擊；任何越權呼叫或秘密洩漏都阻擋發布。
+
+
+# ADR-006: Publish evidence before adding infrastructure / 先公布證據，再增加基建
+
+Status: accepted design, implementation pending. Date: 2026-11-06.
+
+## Decision / 決定
+
+Ship six short ADRs, the frozen set, injection fixtures, rerun commands and a public report card. Mark unexecuted live checks NOT RUN. Promotion requires the approved real-news holdout and live safety/trace evidence, not just the synthetic score.
+
+交付六份短 ADR、凍結集、注入 fixtures、重跑命令及公開成績表；未執行真實檢查標明 NOT RUN。准入須真實新聞保留集及安全／trace 證據，不能只看虛構分數。
+
+## Tradeoff / 取捨
+
+The larger scope replaces the former 60–90 hour estimate with a provisional 120–180 hours at 15 hours/week. Re-estimate after the first working MCP and trace slice.
+
+新增範圍將原先 60–90 小時改為暫估 120–180 小時、每週 15 小時；完成首條 MCP 及 trace 流程後重新估算。
+
+## Verification / 驗證
+
+A reviewer can reproduce local metrics and see missing live results without reading the code. Changes to labels or thresholds create a new documented evaluation version.
+
+審閱者毋須先讀程式便可重現本機指標及看到尚欠真實結果；改標籤或門檻須建立新評估版本並解釋。
+
+
+## Reproduce and inspect
+
+Run `npm run proposal:check`, `npm run finance:eval:test` and `python3 evals/finance/evaluate.py --check`. See `evals/finance/README.md` for the live-run protocol. [Evaluation report card](stock-research-eval-report.md) · [Frozen golden set and injection fixtures](stock-research-eval-fixtures.json).
+
+## Official references
+
+- [n8n: MCP Server Trigger and workflow tools](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger/)
+- [Qdrant: hybrid and multi-stage queries](https://qdrant.tech/documentation/search/hybrid-queries/)
+- [Langfuse: self-hosting architecture](https://langfuse.com/self-hosting)
+- [Langfuse: OpenTelemetry ingestion](https://langfuse.com/integrations/native/opentelemetry)
+- [LangSmith: OpenTelemetry and Collector fan-out](https://docs.langchain.com/langsmith/trace-with-opentelemetry)
+- [LangSmith: sharing sanitized traces](https://docs.langchain.com/langsmith/manage-trace)
+- [LangGraph: workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
+- [LangGraph: persistence and checkpoints](https://docs.langchain.com/oss/python/langgraph/persistence)
+- [FastAPI: typed request bodies](https://fastapi.tiangolo.com/tutorial/body/)
+- [SQLite: FTS5 text search](https://www.sqlite.org/fts5.html)
+- [Docker Compose: production deployment](https://docs.docker.com/compose/how-tos/production/)

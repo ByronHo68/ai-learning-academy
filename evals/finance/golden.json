@@ -1,0 +1,406 @@
+{
+  "version": "finance-synthetic-v1",
+  "purpose": "synthetic-harness-only",
+  "frozen_on": "2026-11-06",
+  "label_provenance": "Authored synthetic relevance labels; no independent financial expert review. No real company news.",
+  "documents": [
+    {
+      "id": "MSFT-orders",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/orders",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Customer orders increased. Demand for products grew, but customers can cancel their orders."
+    },
+    {
+      "id": "MSFT-costs",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/costs",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Operating costs rose. Profit margins face pressure from higher energy and staffing expenses."
+    },
+    {
+      "id": "MSFT-pricing",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/pricing",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Higher prices improved revenue. Pricing changes may offset rising costs and protect margins."
+    },
+    {
+      "id": "MSFT-outlook",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/outlook",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Management maintained its earnings outlook despite higher operating costs."
+    },
+    {
+      "id": "MSFT-risk",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/risk",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. An independent analyst described weakening demand and a risk of order cancellations. This conflicts with management optimism."
+    },
+    {
+      "id": "MSFT-past",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/past",
+      "published_at": "2025-10-01",
+      "first_seen_at": "2025-10-01",
+      "text": "Fictional teaching excerpt. Last year earnings outlook was lowered because customer demand slowed."
+    },
+    {
+      "id": "MSFT-future",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/future",
+      "published_at": "2026-12-01",
+      "first_seen_at": "2026-12-01",
+      "text": "Fictional teaching excerpt. Next month management lowered its earnings outlook. This future article must not be visible."
+    },
+    {
+      "id": "MSFT-late",
+      "company": "MSFT",
+      "url": "https://example.invalid/fictional/MSFT/late",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-12-01",
+      "text": "Fictional teaching excerpt. Management secretly lowered its earnings outlook. This old-dated article was only first seen after the cutoff."
+    },
+    {
+      "id": "AAPL-orders",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/orders",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Customer orders increased. Demand for products grew, but customers can cancel their orders."
+    },
+    {
+      "id": "AAPL-costs",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/costs",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Operating costs rose. Profit margins face pressure from higher energy and staffing expenses."
+    },
+    {
+      "id": "AAPL-pricing",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/pricing",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Higher prices improved revenue. Pricing changes may offset rising costs and protect margins."
+    },
+    {
+      "id": "AAPL-outlook",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/outlook",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Management maintained its earnings outlook despite higher operating costs."
+    },
+    {
+      "id": "AAPL-risk",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/risk",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. An independent analyst described weakening demand and a risk of order cancellations. This conflicts with management optimism."
+    },
+    {
+      "id": "AAPL-past",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/past",
+      "published_at": "2025-10-01",
+      "first_seen_at": "2025-10-01",
+      "text": "Fictional teaching excerpt. Last year earnings outlook was lowered because customer demand slowed."
+    },
+    {
+      "id": "AAPL-future",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/future",
+      "published_at": "2026-12-01",
+      "first_seen_at": "2026-12-01",
+      "text": "Fictional teaching excerpt. Next month management lowered its earnings outlook. This future article must not be visible."
+    },
+    {
+      "id": "AAPL-late",
+      "company": "AAPL",
+      "url": "https://example.invalid/fictional/AAPL/late",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-12-01",
+      "text": "Fictional teaching excerpt. Management secretly lowered its earnings outlook. This old-dated article was only first seen after the cutoff."
+    },
+    {
+      "id": "NVDA-orders",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/orders",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Customer orders increased. Demand for products grew, but customers can cancel their orders."
+    },
+    {
+      "id": "NVDA-costs",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/costs",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Operating costs rose. Profit margins face pressure from higher energy and staffing expenses."
+    },
+    {
+      "id": "NVDA-pricing",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/pricing",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Higher prices improved revenue. Pricing changes may offset rising costs and protect margins."
+    },
+    {
+      "id": "NVDA-outlook",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/outlook",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. Management maintained its earnings outlook despite higher operating costs."
+    },
+    {
+      "id": "NVDA-risk",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/risk",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-10-01",
+      "text": "Fictional teaching excerpt. An independent analyst described weakening demand and a risk of order cancellations. This conflicts with management optimism."
+    },
+    {
+      "id": "NVDA-past",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/past",
+      "published_at": "2025-10-01",
+      "first_seen_at": "2025-10-01",
+      "text": "Fictional teaching excerpt. Last year earnings outlook was lowered because customer demand slowed."
+    },
+    {
+      "id": "NVDA-future",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/future",
+      "published_at": "2026-12-01",
+      "first_seen_at": "2026-12-01",
+      "text": "Fictional teaching excerpt. Next month management lowered its earnings outlook. This future article must not be visible."
+    },
+    {
+      "id": "NVDA-late",
+      "company": "NVDA",
+      "url": "https://example.invalid/fictional/NVDA/late",
+      "published_at": "2026-10-01",
+      "first_seen_at": "2026-12-01",
+      "text": "Fictional teaching excerpt. Management secretly lowered its earnings outlook. This old-dated article was only first seen after the cutoff."
+    }
+  ],
+  "cases": [
+    {
+      "id": "MSFT-demand",
+      "company": "MSFT",
+      "query": "customer orders demand",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "MSFT-orders": 2,
+        "MSFT-risk": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "MSFT-margin",
+      "company": "MSFT",
+      "query": "profit margins costs",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "MSFT-costs": 2,
+        "MSFT-pricing": 2
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "MSFT-paraphrase",
+      "company": "MSFT",
+      "query": "spending squeeze profitability",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "MSFT-costs": 2,
+        "MSFT-pricing": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "MSFT-outlook",
+      "company": "MSFT",
+      "query": "earnings outlook",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "MSFT-outlook": 2
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "MSFT-conflict",
+      "company": "MSFT",
+      "query": "weakening demand cancellations optimism",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "MSFT-risk": 2,
+        "MSFT-orders": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "MSFT-absent",
+      "company": "MSFT",
+      "query": "regulatory antitrust lawsuit settlement",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {},
+      "expected": "abstain"
+    },
+    {
+      "id": "AAPL-demand",
+      "company": "AAPL",
+      "query": "customer orders demand",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "AAPL-orders": 2,
+        "AAPL-risk": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "AAPL-margin",
+      "company": "AAPL",
+      "query": "profit margins costs",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "AAPL-costs": 2,
+        "AAPL-pricing": 2
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "AAPL-paraphrase",
+      "company": "AAPL",
+      "query": "spending squeeze profitability",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "AAPL-costs": 2,
+        "AAPL-pricing": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "AAPL-outlook",
+      "company": "AAPL",
+      "query": "earnings outlook",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "AAPL-outlook": 2
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "AAPL-conflict",
+      "company": "AAPL",
+      "query": "weakening demand cancellations optimism",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "AAPL-risk": 2,
+        "AAPL-orders": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "AAPL-absent",
+      "company": "AAPL",
+      "query": "regulatory antitrust lawsuit settlement",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {},
+      "expected": "abstain"
+    },
+    {
+      "id": "NVDA-demand",
+      "company": "NVDA",
+      "query": "customer orders demand",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "NVDA-orders": 2,
+        "NVDA-risk": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "NVDA-margin",
+      "company": "NVDA",
+      "query": "profit margins costs",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "NVDA-costs": 2,
+        "NVDA-pricing": 2
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "NVDA-paraphrase",
+      "company": "NVDA",
+      "query": "spending squeeze profitability",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "NVDA-costs": 2,
+        "NVDA-pricing": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "NVDA-outlook",
+      "company": "NVDA",
+      "query": "earnings outlook",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "NVDA-outlook": 2
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "NVDA-conflict",
+      "company": "NVDA",
+      "query": "weakening demand cancellations optimism",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {
+        "NVDA-risk": 2,
+        "NVDA-orders": 1
+      },
+      "expected": "answerable"
+    },
+    {
+      "id": "NVDA-absent",
+      "company": "NVDA",
+      "query": "regulatory antitrust lawsuit settlement",
+      "published_after": "2026-09-01",
+      "as_of": "2026-10-31",
+      "relevance": {},
+      "expected": "abstain"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "version": "finance-freeze-v1",
+  "sha256": {
+    "golden.json": "169b6bf1c5398f7fb20cdf0588e1d181267a061a0e36cff802a13e782acd6145",
+    "injections.json": "c66b6b5566c2c0b27a5f6dfd129e9fe6c213db0ff016e8bb88954cb1e1b73666",
+    "policy.json": "7c505bcd9307828d6a9fa1705c75b4d5617724fe392c498b984e0df0bc277c61"
+  }
+}

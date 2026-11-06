@@ -78,5 +78,11 @@ jobs:
           node-version: 22.13.0
           cache: npm
       - run: npm ci
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: npm run proposal:check
+      - run: npm run finance:eval:test
+      - run: python3 evals/finance/evaluate.py --check
       - run: npm run check
       - run: npm run build

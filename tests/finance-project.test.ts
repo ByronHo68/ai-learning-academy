@@ -10,7 +10,7 @@ import { financePlan } from '../lib/finance-proposal';
 test('the bounded scope and cumulative delivery estimate stay consistent', () => {
   assert.deepEqual(financeCompanies.map(company => company.id), ['MSFT', 'AAPL', 'NVDA']);
   assert.deepEqual(new Set(financeFunctions.map(guide => guide.id)), new Set(['company', 'sources', 'retrieval', 'research', 'report', 'validation', 'export', 'recovery']));
-  assert.deepEqual(new Set(financeEngineeringWorkflows.map(guide => guide.id)), new Set(['evaluation', 'deployment']));
+  assert.deepEqual(new Set(financeEngineeringWorkflows.map(guide => guide.id)), new Set(['evaluation', 'observability', 'deployment']));
   assert.equal(financeStages.reduce((total, stage) => total + stage.hours, 0), financePlan.hoursMin);
   assert.equal(financePlan.hoursMin + financePlan.contingencyHours, financePlan.hoursMax);
   assert.equal(financePlan.hoursMax / financePlan.weeklyHours, financePlan.weeksMax);

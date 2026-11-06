@@ -15,77 +15,189 @@ Generated from `lib/finance-project.ts` and `lib/finance-proposal.ts`. Run `npm 
 
 ## Scope and estimate / 範圍及工時
 
-60–90 total hours at 15 hours per week, approximately 4–6 weeks. Core stages total 60 hours. The 30-hour reserve is included, not additional. Subjective difficulty: 5–6 / 10.
+120–180 total hours at 15 hours per week, approximately 8–12 weeks. Core stages total 120 hours. The 60-hour reserve is included, not additional. Subjective difficulty: 7–8 / 10.
 
-Planning estimate for one developer reusing the existing UI and a permitted, curated evidence snapshot. Allow 6–8 weeks if Python and asynchronous APIs are new. This is an interview demo, not a public global financial product.
+Provisional estimate for one developer adding per-prompt n8n MCP news, measured hybrid RAG, self-hosted Langfuse and LangSmith. Re-estimate after the first live news-and-trace slice; Python learning, provider licensing and infrastructure may extend it. This remains an interview research app.
 
-以一位開發者、重用現有介面及已獲准使用的小型證據快照估算。如 Python 及非同步 API 都要邊做邊學，預留 6–8 星期。目標是面試示範，並非公開全球金融產品。
+暫估一位開發者加入每題 n8n MCP 新聞、量度混合 RAG、自架 Langfuse 及 LangSmith。首條真實新聞與追蹤流程完成後重估；Python 學習、供應商授權及基建可能延長時間。目標仍是面試研究 app。
 
-The first release uses a permitted, curated and dated evidence snapshot. Show its coverage date. Do not label snapshots as live news. Verify source identity, reuse permission and publication time before ingestion.
+Each new prompt must refresh news through n8n MCP and pin its permitted evidence snapshot. Show provider status, publication/first-seen times and refresh time. An offline replay is not current news.
 
-首版先用允許使用、有日期的小型證據快照，顯示覆蓋日期，不當作即時新聞。匯入前確認來源、使用範圍及發布時間。
+每個新提示須經 n8n MCP 刷新並固定允許使用的證據快照；顯示供應商狀態、發布／首次取得及刷新時間。離線重播不等於即時新聞。
+
+## Revised news, retrieval and observability requirements / 新版要求
+
+Prompt + company + horizon → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
+
+### Fresh news for every prompt / 每個提示都取得新聞
+
+Every new valid research prompt creates a run and must call refresh_company_news through the n8n MCP Server Trigger before retrieval. A deterministic graph node enforces this; the LLM cannot skip it. Resume reuses the same refresh receipt.
+
+每個有效研究提示都建立任務，檢索前必須經 n8n MCP Server Trigger 呼叫 refresh_company_news。由固定 graph 節點強制執行，LLM 不能略過；恢復任務重用原刷新紀錄。
+
+n8n exposes a Custom Workflow Tool for approved news APIs/RSS. Validate company, query, UTC window and result limit; use fixed provider URLs, server credentials, bounded retries and run_id idempotency. A schedule may warm the store but never replaces the per-prompt call.
+
+n8n 以 Custom Workflow Tool 接駁核准新聞 API／RSS。驗證公司、問題、UTC 時段及筆數；使用固定供應商網址、伺服器憑證、有限重試及 run_id 冪等鍵。排程可預熱資料，但不能取代每個提示的呼叫。
+
+Return source_id, canonical URL, published_at, first_seen_at, fetched_at, content hash, permitted excerpt, snapshot_id and provider status. Deduplicate syndicated stories. Outage, partial coverage or stale data is visible; never silently describe old news as fresh.
+
+回傳來源 ID、原網址、發布／首次取得／擷取時間、內容 hash、允許節錄、快照 ID 及供應商狀態。同一轉載新聞去重；中斷、覆蓋不足或過期資料必須明示，不能將舊聞稱為即時。
+
+### Measured retrieval / 有量度依據的檢索
+
+Freeze corpus, prompts, graded relevance labels (0/1/2), expected abstentions and SHA-256 manifest before tuning. The checked-in v1 set has 18 fictional cases across three tickers and is a harness smoke test. A separate human-reviewed, licensed news holdout is required for production admission; do not tune on either test set.
+
+調參前凍結語料、問題、0／1／2 相關性標籤、預期拒答及 SHA-256 清單。v1 有三個 ticker 共 18 個虛構案例，只驗證評估工具；正式准入另須人工核對、獲授權的新聞保留集，不能用測試集調參。
+
+Compare SQLite FTS5/BM25 sparse, Qdrant dense + sparse with reciprocal rank fusion, and hybrid + a pinned cross-encoder reranker. Use identical chunks, company/permission/time filters and candidate budgets: 20 per branch, fuse to 20, rerank to 10, pass at most 6 excerpts to the model. Filter both published_at and first_seen_at at the as-of cutoff.
+
+比較 SQLite FTS5／BM25、Qdrant dense＋sparse 的 RRF 混合檢索，以及加固定版本 cross-encoder 的混合檢索。共用切段、公司／權限／時間條件及預算：每分支 20、融合至 20、重排至 10、最多 6 段送模型。發布及首次取得時間都須早於截止點。
+
+Report macro recall@5/10 and nDCG@5/10 on answerable cases; report empty-evidence cases separately. Before enabling hybrid + reranking, require absolute gains of at least +0.03 recall@10 and +0.05 nDCG@10 over sparse, no per-company regression, citation-precision ≥0.95 and no decline from sparse. These are proposed acceptance thresholds, not measured improvements.
+
+可回答案例報告 macro recall@5／10 及 nDCG@5／10；無證據案例分開計算。啟用混合＋重排前，對 sparse 的 recall@10 須至少增加 0.03、nDCG@10 至少增加 0.05（絕對值），各公司不可倒退，引用精準度 ≥0.95 且不低於 sparse。這些是建議門檻，並非已量度提升。
+
+Citation-precision means supported claim–source pairs / all emitted pairs, judged against the actual excerpt; an existing URL alone is insufficient. Also require 100% citation coverage for material factual claims, correct abstention on all no-evidence cases, and report sample counts. Zero citations means N/A, never a perfect score. Missing evidence blocks admission and keeps sparse active.
+
+引用精準度＝原文支持的主張與來源配對／所有輸出配對；有網址並不足夠。重要事實須 100% 附引用、所有無證據案例正確拒答，並報告樣本數。零引用是 N/A，不能算滿分；未齊評估資料則不准入，維持 sparse。
+
+### Observable runs · Langfuse + LangSmith / 可觀察任務 · Langfuse＋LangSmith
+
+Create an OpenTelemetry root span per research run and child spans for MCP refresh, each provider attempt, ingestion, sparse/dense retrieval, fusion, reranking, every model/tool call, validation and export. Propagate W3C traceparent across HTTP; explicitly instrument the n8n workflow and correlate its execution ID when automatic context propagation is unavailable.
+
+每次研究建立 OpenTelemetry 根 span，MCP 刷新、供應商每次嘗試、匯入、稀疏／向量檢索、融合、重排、每次模型／工具呼叫、驗證及下載都有子 span。HTTP 傳遞 W3C traceparent；n8n 工作流程須加 instrumentation，無自動傳遞時記錄 execution ID 關聯。
+
+Self-hosted Langfuse owns operational traces. LangSmith adds dataset experiments, prompt comparisons and evaluator feedback. Export one instrumented span tree through a redacting OTel Collector to both backends; correlate run_id, trace_id, dataset hash, model/prompt/reranker versions. Do not double-instrument LangGraph or sum duplicate token counts across products.
+
+自架 Langfuse 保存運行記錄；LangSmith 提供資料集實驗、提示比較及評估回饋。同一組 spans 經遮蔽敏感資料的 OTel Collector 分送兩邊，關聯任務／trace ID、資料 hash 及模型／提示／重排版本。避免重複 instrumentation 或將兩邊 token 相加。
+
+Record actual input/output tokens (unknown stays null), tool errors/retries and end-to-end plus stage latency. Publish p50/p95 over at least 30 completed live runs with sample size, concurrency, warm/cold conditions and failed-run counts; a single demo has duration, not its own p95. Initial end-to-end p95 target: ≤60 s; separately report timeout rate.
+
+記錄實際輸入／輸出 token（未知保留 null）、工具錯誤／重試、全程及各階段延遲。至少 30 次已完成真實任務才報 p50／p95，附樣本數、並行數、冷暖狀態及失敗數；單次 demo 只有耗時，沒有自己的 p95。初步全程 p95 目標 ≤60 秒，另報超時比例。
+
+Every live demo must save one verified shareable trace URL in its report and report card. Exporters flush before resolving the link; verify that a reviewer can open it. Redact keys, personal prompts and restricted article text before export or sharing. Private production traces remain private; share sanitized demonstration runs. If export fails, retain the report but mark the observable-demo gate incomplete.
+
+每次真實 demo 的報告及成績表須保存一條已驗證可分享 trace URL；先 flush 再取得連結，確認審閱者可開啟。匯出或分享前遮蔽金鑰、私人提示及受限文章；正式私人 trace 保持私人，只分享清理過的示範。匯出失敗可保留報告，但可觀察 demo 驗收仍未完成。
+
+### Prompt-specific feedback and prediction / 針對提示的回饋及預測
+
+Persist the original question, company, horizon, as-of time and refresh receipt with every answer. Return a direct answer, cited observed facts, base/upside/downside scenarios, assumptions, invalidation signals, conflicting evidence and limitations. Label forecasts as inference; citations support inputs, not guaranteed future outcomes.
+
+每個答案保存原問題、公司、期間、截止時間及刷新紀錄。回傳直接答案、有引用事實、基本／上行／下行情境、假設、失效訊號、矛盾證據及限制。預測須標明推論；引用支持輸入事實，不能保證未來結果。
+
+Example prompt: “How could rising costs affect MSFT margins over 1–3 months?” Discuss cost evidence and offsetting revenue or pricing evidence. Do not reuse a generic Hold/Reduce paragraph for every question. Missing current evidence returns insufficient evidence; unsupported calibrated probabilities or price targets are omitted.
+
+例如「成本上升可能如何影響 MSFT 未來 1–3 個月利潤率？」應分析成本證據及收入／定價抵銷因素，不能每題重用同一段 Hold／Reduce。缺少當前證據就回覆不足，不輸出未驗證機率或目標價。
+
+Store user helpfulness/correction feedback as a separate record tied to run_id and prompt_version. Feedback is not a market outcome label and never silently edits the frozen golden set. Predictive accuracy requires a later time-split outcome study with no future information leakage; retrieval scores do not establish trading performance.
+
+用戶有用度／更正回饋另存，連結 run_id 及 prompt_version。回饋不是市場結果標籤，不能靜默更改凍結資料集。預測準確度須日後按時間切分、避免未來資料滲漏的結果研究；檢索分數不代表交易表現。
 
 ## Delivery stages / 開發階段
 
-### Week 1: Prepare evidence and the report contract / 準備證據及報告格式
+### Week 1: Contracts and frozen evaluation / 合約及凍結評估
 
 15 hours
 
-- Choose three companies and a permitted dated snapshot.
-- 選定三間公司及允許使用的有日期快照。
-- Define schemas, ingestion and the company selector.
-- 定義 schema、匯入流程及公司選單。
+- Freeze permitted evidence, qrels and the retrieval margins; write ADRs 001–003.
+- 凍結允許證據、qrels 及檢索門檻，撰寫 ADR 001–003。
 
 Acceptance / 驗收:
 
-Resolve a supported company and retrieve its stored evidence reproducibly.
+Sparse baseline and a rerunnable report card with honest missing results.
 
-可重現地選定支援公司並檢索其已儲存證據。
+Sparse 基線及可重跑、誠實交代缺項的成績表。
 
-### Week 2: Complete the bounded research path / 完成有上限的研究路徑
+### Week 2: Per-prompt n8n MCP refresh / 每題 n8n MCP 刷新
 
 15 hours
 
-- Add two tools, one LangGraph agent and one model.
-- 加入兩個工具、一個 LangGraph agent 及一個模型。
-- Validate a sourced report and the insufficient-evidence path.
-- 驗證有來源報告及證據不足路徑。
+- Connect approved providers, validate records and pin each run snapshot.
+- 接駁核准供應商、驗證紀錄並固定每次快照。
 
 Acceptance / 驗收:
 
-Produce one cited report or an honest no-rating result. Start applying with the project in progress.
+Two prompts produce separate refresh receipts; timeout and replay are explicit.
 
-產生有引用報告或誠實的無評級結果；可以進行中項目開始申請。
+兩題各有刷新紀錄，超時及重播明確交代。
 
-### Week 3: Polish one page and test failures / 完善一頁介面並測試失敗情境
+### Week 3: Bounded prompt-specific research / 有上限且針對提示的研究
 
 15 hours
 
-- Add source inspection, export and checkpoint recovery.
-- 加入來源核對、下載及 checkpoint 恢復。
-- Prepare about 15–20 concrete evaluation cases and record actual outcomes.
-- 準備約 15–20 個明確評估案例，記錄真實結果。
+- Complete the graph, question-specific scenarios, citations and abstention.
+- 完成 graph、針對問題的情境、引用及拒答。
 
 Acceptance / 驗收:
 
-Demonstrate success, missing evidence, injected instructions and recovery.
+One cited answer or an explicit insufficient-evidence response.
 
-可展示正常、缺證據、注入指令及恢復情境。
+一份有引用答案或明確證據不足回覆。
 
-### Week 4: Package and explain the work / 包裝並解釋作品
+### Week 4: Hybrid vector index and reranking / 混合向量索引及重排
 
 15 hours
 
-- Verify Docker locally; add private EC2 deployment if ready.
-- 本機驗證 Docker；準備好先加入私人 EC2 部署。
-- Write the README and record a 2–3 minute walkthrough.
-- 撰寫 README，錄製 2–3 分鐘示範。
+- Build Qdrant dense/sparse retrieval and a pinned reranker; run ablations.
+- 建立 Qdrant dense／sparse 及固定版本重排，跑消融評估。
 
 Acceptance / 驗收:
 
-A reviewer can run the app, understand its limits and reproduce the evaluation.
+Publish the margin comparison; keep sparse if hybrid fails admission.
 
-審閱者可運行 app、理解限制及重跑評估。
+公布門檻比較，混合未准入則保持 sparse。
+
+### Week 5: OpenTelemetry and both trace backends / OpenTelemetry 及兩個追蹤平台
+
+15 hours
+
+- Self-host Langfuse; connect LangSmith experiments via the shared trace pipeline.
+- 自架 Langfuse；經共用追蹤流程接駁 LangSmith 實驗。
+
+Acceptance / 驗收:
+
+One accessible sanitized demo trace; actual token and latency records.
+
+一條可開啟、清理後 demo trace，以及實際 token／延遲紀錄。
+
+### Week 6: Safety suite and recovery / 安全套件及恢復
+
+15 hours
+
+- Run injection fixtures, validate citation support and prove checkpoint recovery.
+- 跑注入 fixtures、驗證引用支持及 checkpoint 恢復。
+
+Acceptance / 驗收:
+
+No unauthorized actions in the executed suite; publish failures and coverage limits.
+
+已執行套件無越權動作，公布失敗及覆蓋限制。
+
+### Week 7: Feedback and public reviewer artifacts / 回饋及公開審閱材料
+
+15 hours
+
+- Complete feedback/export, six ADRs, real-news holdout evaluation and report card.
+- 完成回饋／下載、六份 ADR、真實新聞保留集評估及成績表。
+
+Acceptance / 驗收:
+
+A reviewer can reproduce results and follow one trace per recorded demo.
+
+審閱者可重現結果，並查看每個已錄 demo 的 trace。
+
+### Week 8: Package and demonstrate / 包裝及示範
+
+15 hours
+
+- Verify app containers and dependency backups; deploy privately if ready.
+- 驗證 app 容器及依賴備份，準備好再私人部署。
+
+Acceptance / 驗收:
+
+Record a walkthrough, recovery proof and a measured latency cohort.
+
+錄製示範、恢復證據及已量度延遲樣本。
 
 ## Proposed file hierarchy and local startup / 建議檔案及本機啟動
 
@@ -103,6 +215,7 @@ stock-research-agent/                 # proposed standalone app
 │   ├── app/
 │   │   ├── main.py / schemas.py / companies.py
 │   │   ├── ingest.py / storage.py / retrieval.py
+│   │   ├── news.py / indexing.py / rerank.py / telemetry.py
 │   │   ├── graph.py / tools.py / checkpoints.py
 │   │   ├── rules.py / report.py / prompts.py
 │   │   └── validation.py / export.py / evaluate.py
@@ -111,9 +224,11 @@ stock-research-agent/                 # proposed standalone app
 │   ├── .env.example                   # no secrets
 │   └── Dockerfile
 ├── data/manifest.json / README.md      # approved, dated evidence
-├── evals/cases.jsonl
+├── workflows/n8n/news-refresh.json     # MCP workflow export, no credentials
+├── evals/golden.json / injections.json / retrieval-policy.json
+├── docs/adr/001–006.md / eval-report.md
 ├── deploy/
-│   ├── compose.yaml
+│   ├── compose.yaml / otel-collector.yaml
 │   ├── research.env.example / README.md
 │   └── research.env                   # ignored, server secrets
 ├── .github/workflows/check.yml
@@ -123,11 +238,17 @@ stock-research-agent/                 # proposed standalone app
 Native local: browser :3000 → Next.js server → FastAPI 127.0.0.1:8000
 Docker later: browser → controlled HTTPS → web → research:8000 → data volume
 SQLite reports/checkpoints persist on the data volume. Provider keys remain server-side.
+Dependencies: private n8n MCP, candidate Qdrant, OTel Collector, official self-hosted
+Langfuse stack and configured LangSmith project. These are not provisioned by this guide.
 ```
 
 ```sh
 # Proposed application repository, after its scaffold exists.
 # These commands do not start finance services in this academy repository.
+# Configure private n8n MCP and approved news-provider credentials first.
+# Start pinned Qdrant (candidate), OTel Collector and the official Langfuse stack
+# separately; configure LangSmith server credentials. Dependencies may use Docker.
+# Keep retrieval_mode=sparse until real-news evaluation and safety gates pass.
 
 # Terminal 1: Python API on loopback
 cd services/research
@@ -148,10 +269,26 @@ RESEARCH_API_URL=http://127.0.0.1:8000 npm run dev -- --hostname 127.0.0.1 --por
 cd services/research
 source .venv/bin/activate
 python -m pytest
-python -m app.evaluate --cases ../../evals/cases.jsonl
+python -m app.evaluate --golden ../../evals/golden.json --injections ../../evals/injections.json --policy ../../evals/retrieval-policy.json
 ```
 
 ## Technique ownership / 技術責任
+
+### News acquisition
+
+n8n · MCP Server Trigger · approved APIs/RSS
+
+**How / 如何應用**
+
+Every new prompt calls the authenticated news workflow before snapshot retrieval.
+
+每個新提示在快照檢索前呼叫已驗證新聞流程。
+
+**Why / 為何使用**
+
+The required refresh belongs in deterministic orchestration, with visible provider failures.
+
+必要刷新由固定流程負責，供應商失敗須可見。
 
 ### Frontend
 
@@ -203,7 +340,7 @@ Demonstrate tool selection and controlled recovery rather than adding multiple a
 
 ### Evidence
 
-SQLite · FTS5 · basic RAG
+SQLite FTS5/BM25 · Qdrant · RRF · cross-encoder
 
 **How / 如何應用**
 
@@ -213,19 +350,19 @@ Filter company/date, retrieve approved excerpts and attach stable source IDs to 
 
 **Why / 為何使用**
 
-Simple retrieval is sufficient for the small first corpus; vector search needs a measured reason to add it.
+Sparse is the reference; a hybrid vector index and reranking must beat the written margins before activation.
 
-小型首版資料集先用簡單檢索；有量度依據後再加向量搜尋。
+Sparse 為參考，混合向量索引及重排須超越書面門檻才可啟用。
 
 ### Reliability
 
-pytest · structured logs · GitHub Actions
+OpenTelemetry · self-hosted Langfuse · LangSmith · eval gates
 
 **How / 如何應用**
 
-Test source support, malicious text, budgets and recovery; record actual latency and usage.
+Publish frozen retrieval metrics, injection outcomes, six ADRs and real trace links. Langfuse owns operations; LangSmith owns experiments and feedback.
 
-測試來源支持、惡意文字、預算及恢復，記錄真實延遲及用量。
+公布凍結檢索指標、注入結果、六份 ADR 及真實 trace；Langfuse 管運維，LangSmith 管實驗及回饋。
 
 **Why / 為何使用**
 
@@ -287,7 +424,7 @@ flowchart TD
   s1 --> s2
   s2 --> check{Checks pass?}
   check -->|success| b0["200: supported identity and coverage shown."]
-  check -->|insufficient| b1["Supported company has no snapshot: explain that research is unavailable."]
+  check -->|insufficient| b1["No prior snapshot: show coverage unknown, then let the first prompt refresh news."]
   check -->|failure| b2["422: unsupported ID or invalid horizon; do not start a run."]
 ```
 
@@ -379,9 +516,9 @@ Valid request, incomplete evidence
 
 請求有效，但證據未齊
 
-Supported company has no snapshot: explain that research is unavailable.
+No prior snapshot: show coverage unknown, then let the first prompt refresh news.
 
-支援公司尚無快照：交代暫時無法研究。
+尚無快照：顯示覆蓋未知，再由首個提示刷新新聞。
 
 Explain the limitation and the next permitted step.
 
@@ -406,110 +543,111 @@ Return an explicit error. Keep the last valid state.
 - A forged unsupported ticker is rejected by the backend, not merely hidden in the UI.
 - 偽造未支援 ticker 會由後端拒絕，不只在介面隱藏。
 
-## Prepare a dated evidence snapshot / 準備有日期的證據快照
+## Refresh news through n8n MCP for every prompt / 每題經 n8n MCP 刷新新聞
 
-Start with a small reproducible corpus instead of building a global news crawler.
+Acquire prompt-relevant news before the agent searches a pinned evidence snapshot.
 
-先做可重跑的小型資料集，減少建立全球新聞爬蟲的工作。
+Agent 搜尋固定證據快照前，先取得與提示相關新聞。
 
 **Input / 輸入**
 
-A developer-reviewed manifest of permitted company announcements or news excerpts.
+Validated company, original question, UTC date window and run_id.
 
-開發者核對過、允許使用的公司公告或新聞節錄清單。
+已驗證公司、原問題、UTC 日期範圍及 run_id。
 
 **Output / 輸出**
 
-Stored evidence with source ID, company, URL, publication time and excerpt.
+Refresh receipt, provider statuses, dated source records and immutable snapshot_id.
 
-已儲存的來源 ID、公司、網址、發布時間及原文節錄。
+刷新紀錄、供應商狀態、有日期來源及不可變 snapshot_id。
 
 ### Entry contract / 入口
 
 ```text
-python -m app.ingest --manifest ../../data/manifest.json
+Mandatory LangGraph refresh node → n8n MCP Server Trigger
+refresh_company_news(company_id, query, as_of, run_id, limit) → snapshot_id + sources + provider_status
 ```
 
 ```mermaid
 flowchart TD
-  input["Prepare a dated evidence snapshot"]
-  s0["REVIEW"]
+  input["Refresh news through n8n MCP for every prompt"]
+  s0["MCP REFRESH"]
   input --> s0
   s1["NORMALISE"]
   s0 --> s1
-  s2["STORE"]
+  s2["PIN SNAPSHOT"]
   s1 --> s2
   s2 --> check{Checks pass?}
-  check -->|success| b0["CLI exits 0 with imported, unchanged and rejected record counts."]
-  check -->|insufficient| b1["Quarantine incomplete records; expose the remaining coverage gap."]
-  check -->|failure| b2["Invalid manifest or storage failure: stop and keep the previous valid snapshot."]
+  check -->|success| b0["Return a new refresh receipt and pinned snapshot before research."]
+  check -->|insufficient| b1["Partial or stale coverage: label it and abstain from an unsupported current forecast."]
+  check -->|failure| b2["News service unavailable: return a typed error or explicitly dated replay; never silently bypass refresh."]
 ```
 
-### 1. REVIEW
+### 1. MCP REFRESH
 
-Choose a small set of sources for each supported company.
+Call the approved n8n news workflow for every new prompt.
 
-為每間支援公司選取少量來源。
+每個新提示呼叫核准 n8n 新聞流程。
 
-Tools: Curated manifest · source review
+Tools: MCP client · n8n MCP Server Trigger · Custom Workflow Tool
 
 **How / 如何應用**
 
-Record the original URL, publication time, company and permitted reuse. Keep excerpts within the allowed scope.
+A deterministic node calls the authenticated MCP endpoint before retrieval. The workflow searches fixed news API/RSS providers with validated arguments and a bounded deadline; run_id prevents duplicate acquisition on resume.
 
-記錄原網址、發布時間、公司及允許使用範圍；節錄遵守來源限制。
+固定節點在檢索前呼叫已驗證 MCP 端點；工作流程用已驗證參數及時限搜尋固定新聞 API／RSS，run_id 避免恢復時重複擷取。
 
 **Why / 為何使用**
 
-A public page is not automatically a licence for full-text redistribution.
+Per-prompt refresh is a product requirement and must not depend on optional LLM tool selection or a scheduled crawl.
 
-公開網頁不等於可以任意轉載全文。
+每題刷新是產品要求，不能依賴 LLM 選擇工具或排程爬取。
 
-Proposed files / 建議檔案: `data/manifest.json`, `data/README.md`
+Proposed files / 建議檔案: `workflows/n8n/news-refresh.json`, `services/research/app/news.py`, `services/research/app/graph.py`
 
 ### 2. NORMALISE
 
-Validate and deduplicate source records.
+Validate, deduplicate and record provenance.
 
-驗證並去除重複來源。
+驗證、去重及記錄來源。
 
-Tools: Python · Pydantic · content hash
+Tools: Pydantic · canonical URL · content hash
 
 **How / 如何應用**
 
-Parse records at ingestion, reject missing dates or mismatched company IDs, and derive a stable source key.
+Keep source ID, company, URL, permitted excerpt, published_at, first_seen_at and fetched_at. Quarantine invalid records; group syndicated duplicates. Keep article text outside instruction messages.
 
-匯入時解析欄位，拒絕缺日期或公司不符的紀錄，並產生穩定來源鍵。
+保存來源 ID、公司、網址、允許節錄及發布／首次取得／擷取時間；隔離無效資料及分組轉載；文章不可進入指令訊息。
 
 **Why / 為何使用**
 
-Repeated ingestion should not duplicate articles or change existing evidence silently.
+A timestamp alone does not prove the information was available at the forecast cutoff.
 
-重跑匯入不應產生重複文章或靜默改寫證據。
+只有發布時間，不能證明預測截止時已取得資料。
 
 Proposed files / 建議檔案: `services/research/app/ingest.py`, `services/research/app/schemas.py`
 
-### 3. STORE
+### 3. PIN SNAPSHOT
 
-Store approved excerpts and publish a coverage date.
+Pin the evidence version and return refresh status.
 
-儲存核准節錄，公布覆蓋日期。
+固定證據版本並回傳刷新狀態。
 
-Tools: SQLite · FTS5
+Tools: SQLite source store · candidate Qdrant collection
 
 **How / 如何應用**
 
-Upsert approved records and index searchable text. Save the snapshot version and ingestion outcome.
+Upsert source versions, create an immutable run snapshot and index only permitted excerpts. Record provider failure, partial coverage and freshness; never claim a failed refresh is current news.
 
-以 upsert 儲存核准紀錄並建立文字索引，保存快照版本及匯入結果。
+Upsert 來源版本並建立不可變任務快照，只索引允許節錄；記錄供應商失敗、部分覆蓋及新鮮度，刷新失敗不能稱為即時新聞。
 
 **Why / 為何使用**
 
-A versioned local corpus makes the same interview case reproducible without live API access.
+Each answer remains reproducible even when a later prompt finds newer news.
 
-版本化本機資料集，讓面試案例可在沒有即時 API 下重跑。
+下一題取得更新新聞後，上一題答案仍可重現。
 
-Proposed files / 建議檔案: `services/research/app/storage.py`, `data/manifest.json`
+Proposed files / 建議檔案: `services/research/app/storage.py`, `services/research/app/indexing.py`
 
 ### Return branches / 回傳分支
 
@@ -519,9 +657,9 @@ Required checks pass
 
 所需檢查通過
 
-CLI exits 0 with imported, unchanged and rejected record counts.
+Return a new refresh receipt and pinned snapshot before research.
 
-CLI 以 0 結束，列出新增、未改動及拒絕紀錄數。
+研究前回傳新刷新紀錄及固定快照。
 
 Return the validated output to the caller.
 
@@ -533,9 +671,9 @@ Valid request, incomplete evidence
 
 請求有效，但證據未齊
 
-Quarantine incomplete records; expose the remaining coverage gap.
+Partial or stale coverage: label it and abstain from an unsupported current forecast.
 
-隔離不完整紀錄，顯示資料覆蓋缺口。
+部分或過期覆蓋：明示限制，拒絕無證據當前預測。
 
 Explain the limitation and the next permitted step.
 
@@ -547,9 +685,9 @@ Invalid input or an operational error
 
 輸入無效或程序出錯
 
-Invalid manifest or storage failure: stop and keep the previous valid snapshot.
+News service unavailable: return a typed error or explicitly dated replay; never silently bypass refresh.
 
-清單無效或儲存失敗：停止並保留上一個有效快照。
+新聞服務不可用：回傳結構化錯誤或明確有日期重播，不能靜默略過刷新。
 
 Return an explicit error. Keep the last valid state.
 
@@ -557,115 +695,115 @@ Return an explicit error. Keep the last valid state.
 
 ### Acceptance / 驗收
 
-- Running the same manifest twice produces no duplicate sources.
-- 同一清單匯入兩次不會產生重複來源。
+- Two new prompts produce two MCP refresh receipts; resuming one run reuses its receipt and snapshot.
+- 兩個新提示產生兩份 MCP 刷新紀錄；恢復任務重用原紀錄及快照。
 
-## Retrieve and read the evidence / 檢索及閱讀證據
+## Retrieve, fuse and rerank evidence / 檢索、融合及重排證據
 
-Find relevant passages and retain their source identities for the report.
+Use a measured retrieval policy to select attributable context for the exact prompt.
 
-找相關原文，並保留來源身份供報告引用。
+以已量度的檢索策略，為當前提示選取可追溯上下文。
 
 **Input / 輸入**
 
-Validated company ID, research question and publication-date window.
+Original question, company, snapshot_id, cutoff and approved retrieval configuration.
 
-已驗證公司 ID、研究問題及發布日期範圍。
+原問題、公司、snapshot_id、截止時間及已核准檢索設定。
 
 **Output / 輸出**
 
-Ranked source IDs and selected excerpts, or an explicit empty result.
+Ranked evidence with source/chunk IDs, original rank, rerank score and configuration version.
 
-排序後來源 ID 及節錄，或明確空結果。
+排序證據附來源／切段 ID、原排序、重排分數及設定版本。
 
 ### Entry contract / 入口
 
 ```text
 LangGraph tool node
-search_company_evidence(company_id, query, published_before) → source IDs
-read_source(source_id) → approved excerpt + metadata
+search_company_evidence(company_id, query, snapshot_id, as_of) → ranked IDs
+read_source(source_id, snapshot_id) → permitted excerpt + metadata
 ```
 
 ```mermaid
 flowchart TD
-  input["Retrieve and read the evidence"]
+  input["Retrieve, fuse and rerank evidence"]
   s0["FILTER"]
   input --> s0
-  s1["SEARCH"]
+  s1["SEARCH + FUSE"]
   s0 --> s1
-  s2["READ SOURCE"]
+  s2["RERANK"]
   s1 --> s2
   s2 --> check{Checks pass?}
-  check -->|success| b0["Return relevant excerpts with source IDs and dates to the graph."]
-  check -->|insufficient| b1["Return an empty or limited result; let the graph refine once."]
-  check -->|failure| b2["Reject an invalid source ID; return a typed tool error without exposing storage details."]
+  check -->|success| b0["Return attributable top-k evidence and the actual retrieval mode."]
+  check -->|insufficient| b1["Empty or weak evidence: refine once, then return insufficient evidence."]
+  check -->|failure| b2["Candidate unavailable or not admitted: use sparse and record the reason; invalid sources stay excluded."]
 ```
 
 ### 1. FILTER
 
-Restrict evidence to the selected company and time window.
+Apply identical company, permission and time constraints in both branches.
 
-先限制所選公司及日期範圍。
+兩分支套用相同公司、權限及時間條件。
 
-Tools: SQLite · SQL parameters
+Tools: SQL parameters · Qdrant payload filters
 
 **How / 如何應用**
 
-Apply company and date filters before ranking. Query only approved snapshot records.
+Restrict to the pinned snapshot and require published_at and first_seen_at ≤ as_of. Filter before both sparse and dense search; recheck returned IDs before context assembly.
 
-排序前先套用公司及日期條件，只查詢已核准快照紀錄。
+限制固定快照，發布及首次取得時間均須 ≤ 截止；稀疏及向量搜尋前都過濾，組合上下文前再核對 ID。
 
 **Why / 為何使用**
 
-A relevant sentence about a different company or a later event is still wrong evidence.
+Dense similarity cannot excuse wrong-company, unlicensed or future evidence.
 
-另一間公司或未來事件的相關句子，仍然係錯誤證據。
+向量相似度不能合理化錯公司、未授權或未來證據。
 
 Proposed files / 建議檔案: `services/research/app/retrieval.py`, `services/research/app/storage.py`
 
-### 2. SEARCH
+### 2. SEARCH + FUSE
 
-Search passages with a simple text index.
+Keep sparse as default; trial the hybrid vector index behind its admission gate.
 
-用簡單文字索引搜尋原文。
+預設使用 sparse；混合向量索引須通過准入。
 
-Tools: SQLite FTS5 · basic RAG
-
-**How / 如何應用**
-
-Rank matches for the question and return a small top-k with stable source IDs. Start without embeddings.
-
-按問題排序文字匹配，回傳少量 top-k 及穩定來源 ID；首版先不用 embeddings。
-
-**Why / 為何使用**
-
-A small curated corpus can demonstrate retrieval grounding before adding vector infrastructure.
-
-小型資料集已可展示檢索及證據支持，先減少向量基建工作。
-
-Proposed files / 建議檔案: `services/research/app/retrieval.py`
-
-### 3. READ SOURCE
-
-Read a selected source through a restricted tool.
-
-透過受限制工具讀取指定來源。
-
-Tools: read_source · typed tool output
+Tools: SQLite FTS5/BM25 · Qdrant dense + sparse · RRF
 
 **How / 如何應用**
 
-Resolve an allowed source ID from the database. Return its excerpt, URL and publication date; do not fetch arbitrary URLs.
+Retrieve 20 candidates per branch, fuse duplicate chunk IDs with reciprocal rank fusion and retain 20. Compare sparse, hybrid and hybrid+rerank on frozen labels. Admission requires +0.03 recall@10 and +0.05 nDCG@10 plus the citation and safety gates.
 
-從資料庫解析允許的來源 ID，回傳原文、網址及日期；不接受任意網址擷取。
+每分支取 20 候選，以 RRF 融合重複切段 ID 並保留 20；用凍結標籤比較三種配置。准入須 recall@10 +0.03、nDCG@10 +0.05 及引用與安全達標。
 
 **Why / 為何使用**
 
-The model receives attributable evidence while the tool retains control over what can be read.
+Vectors and extra infrastructure need measured benefit over the sparse baseline.
 
-模型取得可追溯證據，工具仍控制可讀資料範圍。
+向量及額外基建須以超越 sparse 基線的量度效益支持。
 
-Proposed files / 建議檔案: `services/research/app/tools.py`, `services/research/app/schemas.py`
+Proposed files / 建議檔案: `services/research/app/retrieval.py`, `services/research/app/indexing.py`, `evals/retrieval-policy.json`
+
+### 3. RERANK
+
+Rescore query–passage pairs and read the selected sources.
+
+重評問題與原文配對，再讀取選中來源。
+
+Tools: Pinned cross-encoder · read_source
+
+**How / 如何應用**
+
+Rerank the fused 20 to top 10; supply at most 6 permitted excerpts within the token budget. Store model version and ranks. On candidate failure use sparse with a visible fallback flag; never substitute fabricated scores.
+
+將融合 20 筆重排成前 10，token 預算內最多提供 6 段；記錄模型版本及排序。候選失敗明示回退 sparse，不能捏造分數。
+
+**Why / 為何使用**
+
+Retrieval recall and answer context have different budgets; reranking must prove it improves useful evidence.
+
+檢索召回與答案上下文有不同預算；重排須證明改善可用證據。
+
+Proposed files / 建議檔案: `services/research/app/rerank.py`, `services/research/app/tools.py`
 
 ### Return branches / 回傳分支
 
@@ -675,9 +813,9 @@ Required checks pass
 
 所需檢查通過
 
-Return relevant excerpts with source IDs and dates to the graph.
+Return attributable top-k evidence and the actual retrieval mode.
 
-向 graph 回傳相關節錄、來源 ID 及日期。
+回傳可追溯 top-k 證據及實際檢索模式。
 
 Return the validated output to the caller.
 
@@ -689,9 +827,9 @@ Valid request, incomplete evidence
 
 請求有效，但證據未齊
 
-Return an empty or limited result; let the graph refine once.
+Empty or weak evidence: refine once, then return insufficient evidence.
 
-回傳空或有限結果，由 graph 決定補查一次。
+無或弱證據：補查一次，再回傳證據不足。
 
 Explain the limitation and the next permitted step.
 
@@ -703,9 +841,9 @@ Invalid input or an operational error
 
 輸入無效或程序出錯
 
-Reject an invalid source ID; return a typed tool error without exposing storage details.
+Candidate unavailable or not admitted: use sparse and record the reason; invalid sources stay excluded.
 
-拒絕無效來源 ID，以結構化工具錯誤回覆，不公開儲存細節。
+候選不可用或未准入：使用 sparse 並記錄原因；無效來源保持排除。
 
 Return an explicit error. Keep the last valid state.
 
@@ -713,8 +851,8 @@ Return an explicit error. Keep the last valid state.
 
 ### Acceptance / 驗收
 
-- Wrong-company and future-dated records never enter the allowed evidence set.
-- 其他公司及未來日期的紀錄不會進入允許證據集。
+- Published metrics, fixed dataset hashes and the written margins are required before enabling the candidate; missing scores never count as a pass.
+- 啟用候選前須公布指標、固定資料 hash 及書面門檻；缺少分數不能當通過。
 
 ## Run one bounded research agent / 運行一個有上限的研究 agent
 
@@ -724,9 +862,9 @@ Let the agent select tools and fill an evidence gap within a controlled budget.
 
 **Input / 輸入**
 
-Company ID, a news-research question and a snapshot date.
+Company ID, the original prompt, horizon, as-of time and a mandatory news refresh receipt.
 
-公司 ID、新聞研究問題及快照日期。
+公司 ID、原提示、期間、截止時間及必需新聞刷新紀錄。
 
 **Output / 輸出**
 
@@ -767,9 +905,9 @@ Tools: LangGraph · one tool-capable LLM
 
 **How / 如何應用**
 
-Track identity, query, source IDs, evidence and budgets. Expose only search_company_evidence and read_source.
+First require the n8n refresh receipt. Track original prompt, snapshot, source IDs, evidence, trace ID and budgets. The agent then chooses only search_company_evidence and read_source.
 
-追蹤身份、查詢、來源、證據及預算，只提供兩個唯讀研究工具。
+先要求 n8n 刷新紀錄，追蹤原提示、快照、來源、證據、trace ID 及預算；agent 只選擇兩個研究工具。
 
 **Why / 為何使用**
 
@@ -872,34 +1010,34 @@ Return an explicit error. Keep the last valid state.
 - The missing-evidence path performs at most one refinement and never invents the absent fact.
 - 資料不足路徑最多補查一次，不能捏造缺失事實。
 
-## Explain news and the research stance / 解釋新聞及研究觀點
+## Answer the prompt with conditional forecasts / 以條件式預測回答提示
 
-Produce a readable Hold or Reduce view with evidence, risks and uncertainty.
+Answer the exact question with cited facts, conditional scenarios and explicit uncertainty.
 
-以易讀方式呈現持有或減持觀點、證據、風險及不確定因素。
+以引用事實、條件式情境及明確不確定性，回答當前問題。
 
 **Input / 輸入**
 
-Approved evidence and the versioned research-rule result.
+Original prompt, horizon, as-of time, approved evidence and optional teaching-rule result.
 
-核准證據及有版本的研究規則結果。
+原提示、期間、截止時間、核准證據及可選教學規則結果。
 
 **Output / 輸出**
 
-Structured draft: stance, reasons, news impacts, citations and what to watch.
+Structured draft: direct answer, facts, base/upside/downside scenarios, assumptions, citations and invalidation signals.
 
-結構化草稿：觀點、原因、新聞影響、引用及後續觀察。
+結構化草稿：直接答案、事實、基本／上行／下行情境、假設、引用及失效訊號。
 
 ### Entry contract / 入口
 
 ```text
 LangGraph report node
-draft_report(evidence, rule_result) → ResearchReport draft
+draft_report(question, horizon, as_of, evidence, optional_rule_result) → ResearchReport draft
 ```
 
 ```mermaid
 flowchart TD
-  input["Explain news and the research stance"]
+  input["Answer the prompt with conditional forecasts"]
   s0["APPLY RULES"]
   input --> s0
   s1["EXPLAIN"]
@@ -907,16 +1045,16 @@ flowchart TD
   s2["PRESENT"]
   s1 --> s2
   s2 --> check{Checks pass?}
-  check -->|success| b0["Validated draft becomes a dated Hold or Reduce research report."]
+  check -->|success| b0["Validated draft becomes a dated, prompt-specific scenario report; the teaching stance is optional."]
   check -->|insufficient| b1["Show the supported news summary with No rating and the missing evidence."]
   check -->|failure| b2["Malformed model output stays unreleased; return a validation failure to the graph."]
 ```
 
 ### 1. APPLY RULES
 
-Determine a transparent research stance in Python.
+Apply the optional teaching stance only when the question calls for it.
 
-由 Python 按透明規則產生研究觀點。
+只有問題需要時才套用可選教學評級。
 
 Tools: Pure Python · versioned rules
 
@@ -944,9 +1082,9 @@ Tools: One LLM · prompt template · Pydantic schema
 
 **How / 如何應用**
 
-Provide approved excerpts and the fixed rule result. Require source IDs, possible impact and uncertainty in each material explanation.
+Provide the original question, horizon, refreshed excerpts and optional teaching-rule result. Separate observed facts from conditional forecasts; include base/upside/downside scenarios, assumptions, source IDs and what would invalidate each view.
 
-提供核准原文及固定規則結果；每項重要解釋須有來源 ID、可能影響及不確定因素。
+提供原問題、期間、刷新節錄及可選教學規則結果；分清事實與條件式預測，列基本／上行／下行情境、假設、來源及失效訊號。
 
 **Why / 為何使用**
 
@@ -966,9 +1104,9 @@ Tools: Next.js · typed response
 
 **How / 如何應用**
 
-Show the dated stance, related news, reasons, risks and source controls on one page. Keep detailed traces expandable.
+Show the prompt-specific answer, scenarios and cited news on one page, with as-of date and one verified demo trace URL. Save helpfulness or correction feedback separately by run_id and prompt_version.
 
-同一頁展示有日期的觀點、新聞、原因、風險及來源；詳細執行記錄可展開。
+同頁展示針對問題的答案、情境、引用新聞、截止日期及已驗證 demo trace URL；有用度或更正回饋按 run_id 及 prompt_version 另存。
 
 **Why / 為何使用**
 
@@ -986,9 +1124,9 @@ Required checks pass
 
 所需檢查通過
 
-Validated draft becomes a dated Hold or Reduce research report.
+Validated draft becomes a dated, prompt-specific scenario report; the teaching stance is optional.
 
-已驗證草稿成為有日期的 Hold 或 Reduce 研究報告。
+已驗證草稿成為有日期、針對提示的情境報告；教學評級為可選。
 
 Return the validated output to the caller.
 
@@ -1233,9 +1371,9 @@ Tools: SQLite · transactions
 
 **How / 如何應用**
 
-Save the validated report, rule version, source IDs, snapshot date and run ID together. Use a stable report ID.
+Save the original question, horizon, validated scenarios, source IDs, snapshot, prompt/model versions, refresh receipt, run ID and trace URL. Feedback records reference the run without changing the frozen evidence.
 
-一起保存報告、規則版本、來源 ID、快照日期及任務 ID，使用穩定報告 ID。
+一起保存原問題、期間、驗證情境、來源、快照、提示／模型版本、刷新紀錄、任務 ID 及 trace URL；回饋關聯任務但不能改凍結證據。
 
 **Why / 為何使用**
 
@@ -1255,9 +1393,9 @@ Tools: Python serializer · no LLM call
 
 **How / 如何應用**
 
-Include stance, horizon, source URLs, publication dates, possible effects and uncertainty. Preserve demo labels for fixtures.
+Include the original question, scenarios, horizon, source URLs/dates, assumptions, uncertainty and actual trace URL. Preserve fictional labels and unavailable telemetry status in offline fixtures.
 
-包含觀點、期間、來源網址、發布日期、可能影響及不確定因素；範例保留虛構標籤。
+包含原問題、情境、期間、來源網址／日期、假設、不確定性及真實 trace URL；離線範例保留虛構標籤及未有追蹤狀態。
 
 **Why / 為何使用**
 
@@ -1508,14 +1646,17 @@ Return an explicit error. Keep the last valid state.
 - Interrupted research: resume the correct run from a checkpoint without repeating the completed search.
 - 研究中斷：由正確任務的 checkpoint 恢復，不重複已完成的搜尋。
 
-Prepare about 15–20 cases and publish actual results with the dataset version and run command. Test factual support and failure behavior. A Hold label has no universal correct answer and is not proof of a profitable strategy.
+Start with the frozen 18-case synthetic set and eight injection fixtures. Add a separately reviewed real-news holdout; publish actual results, dataset hashes and rerun commands. Test factual support and failure behavior. A Hold label has no universal correct answer and is not proof of a profitable strategy.
 
-準備約 15–20 個案例，附資料版本、執行命令及真實結果。評估事實支持度及失敗處理；Hold 標籤沒有普遍標準答案，亦不能證明策略盈利。
+先用凍結 18 個虛構案例及八個注入 fixtures，再加獨立審閱真實新聞保留集；附資料 hash、執行命令及真實結果。評估事實支持度及失敗處理；Hold 標籤沒有普遍標準答案，亦不能證明策略盈利。
 
 ## Docker and EC2 / Docker 及 EC2
 
 ```yaml
-# Proposed deploy/compose.yaml. Package after local checks pass.
+# Proposed app-only deploy/compose.yaml; NOT the full infrastructure stack.
+# Provision n8n, Qdrant, OTel Collector and the official Langfuse stack separately.
+# Langfuse needs web/worker, PostgreSQL, ClickHouse, Redis/Valkey and object storage.
+# Set private service URLs and LangSmith credentials in research.env.
 # Copy deploy/research.env.example to deploy/research.env and set server secrets.
 # Both container processes bind to 0.0.0.0 inside their private network.
 # docker compose -f deploy/compose.yaml up -d --build
@@ -1541,8 +1682,8 @@ volumes:
   research-data:
 ```
 
-- Build locally first. Run Next.js and FastAPI as native processes; Docker is a packaging stage after the research path passes its checks.
-- 先本機開發。Next.js 與 FastAPI 用獨立程序運行；研究流程通過檢查後，先加入 Docker 包裝。
+- Run Next.js and FastAPI natively first. Local n8n, Qdrant and self-hosted Langfuse dependencies may use their pinned official containers immediately; package the app after its checks pass.
+- Next.js 與 FastAPI 先用本機程序；n8n、Qdrant 及自架 Langfuse 依賴可即時用固定版本官方容器。App 通過檢查後才包裝。
 
 - In containers, the Next.js server forwards requests to http://research:8000. A browser cannot resolve the Compose service name. Provider keys stay in Python.
 - 容器內由 Next.js 伺服器轉送至 http://research:8000。瀏覽器不能解析 Compose 服務名稱；供應商金鑰只留在 Python。
@@ -1567,9 +1708,9 @@ Demonstrate factual support and controlled failures with repeatable tests.
 
 **Input / 輸入**
 
-Versioned evidence and about 15–20 explicit evaluation cases.
+Frozen corpus, graded qrels, 18 synthetic starter cases, eight injection fixtures and a separate real-news holdout.
 
-版本化證據及約 15–20 個明確評估案例。
+凍結語料、分級 qrels、18 個虛構種子案例、八個注入 fixtures 及獨立真實新聞保留集。
 
 **Output / 輸出**
 
@@ -1580,7 +1721,7 @@ Actual case outcomes, tool traces, latency and model-usage records.
 ### Entry contract / 入口
 
 ```text
-python -m app.evaluate --cases ../../evals/cases.jsonl
+python -m app.evaluate --golden ../../evals/golden.json --injections ../../evals/injections.json --policy ../../evals/retrieval-policy.json
 ```
 
 ```mermaid
@@ -1618,7 +1759,7 @@ A happy-path screenshot alone does not establish how the app behaves when eviden
 
 只有成功畫面，無法展示證據有問題時 app 點處理。
 
-Proposed files / 建議檔案: `evals/cases.jsonl`, `services/research/tests/test_research.py`
+Proposed files / 建議檔案: `evals/golden.json`, `evals/injections.json`, `services/research/tests/test_research.py`
 
 ### 2. RUN + TRACE
 
@@ -1630,9 +1771,9 @@ Tools: pytest · evaluation runner · structured logs
 
 **How / 如何應用**
 
-Assert citation membership, factual support, bounded tools and recovery. Measure actual latency and provider usage without logging secrets.
+Measure recall@5/10, nDCG@5/10 and independently judged citation-precision. Compare sparse / hybrid / hybrid+rerank; apply the written admission margin. Run injection fixtures against the actual agent and record unauthorized actions, leaks, latency and token usage.
 
-檢查引用、事實支持、工具上限及恢復；量度真實延遲及供應商用量，避免記錄秘密。
+量度 recall@5／10、nDCG@5／10 及獨立評審引用精準度，按書面門檻比較三配置；對真實 agent 跑注入 fixtures，記錄越權、外洩、延遲及 token。
 
 **Why / 為何使用**
 
@@ -1652,9 +1793,9 @@ Tools: README · GitHub Actions
 
 **How / 如何應用**
 
-Run deterministic tests in CI and keep live-provider evaluations opt-in. Record actual results and the model/configuration used.
+Publish six ADRs, frozen hashes, the injection suite and a public eval report card with per-case outcomes and demo trace URLs. CI runs the local harness; absent live-provider or vector results remain NOT RUN and block candidate admission.
 
-CI 跑確定性測試，真實供應商評估由操作者啟動；記錄真實結果及模型設定。
+公布六份 ADR、凍結 hash、注入套件及公開成績表，附逐案結果與 demo trace URL；CI 跑本機工具，缺少真實供應商或向量結果須標 NOT RUN 並阻擋准入。
 
 **Why / 為何使用**
 
@@ -1713,11 +1854,166 @@ Return an explicit error. Keep the last valid state.
 - Show success, missing evidence, injected instructions and recovery using the same rerunnable dataset.
 - 用同一可重跑資料集展示正常、缺證據、注入指令及恢復四種情境。
 
+## Trace each run in Langfuse and LangSmith / 在 Langfuse 及 LangSmith 追蹤每次任務
+
+Make the evidence path, cost and failures inspectable from one demo trace URL.
+
+從一條 demo trace URL 核對證據流程、用量及失敗。
+
+**Input / 輸入**
+
+Run ID, trace context, tool/model events and sanitized metadata.
+
+任務 ID、trace context、工具／模型事件及清理後 metadata。
+
+**Output / 輸出**
+
+A correlated span tree, usage and latency metrics, and a verified shareable demo link.
+
+可關聯 span tree、用量與延遲指標，以及已驗證可分享 demo 連結。
+
+### Entry contract / 入口
+
+```text
+Research lifecycle and instrumented n8n workflow
+trace(run_id) → OTel spans → redacting Collector → Langfuse + LangSmith
+```
+
+```mermaid
+flowchart TD
+  input["Trace each run in Langfuse and LangSmith"]
+  s0["INSTRUMENT"]
+  input --> s0
+  s1["REDACT + EXPORT"]
+  s0 --> s1
+  s2["VERIFY LINK"]
+  s1 --> s2
+  s2 --> check{Checks pass?}
+  check -->|success| b0["Report includes one verified demo trace URL and actual usage."]
+  check -->|insufficient| b1["Too few runs: publish durations and sample count, mark p50/p95 cohort incomplete."]
+  check -->|failure| b2["Exporter unavailable: retain research output, record telemetry failure and fail the observable-demo gate."]
+```
+
+### 1. INSTRUMENT
+
+Create one root and spans for every actual stage and attempt.
+
+建立根 span，記錄每個實際階段及嘗試。
+
+Tools: OpenTelemetry · W3C traceparent
+
+**How / 如何應用**
+
+Propagate context across MCP/HTTP, instrument n8n explicitly and correlate execution IDs. Include retrieval, rerank, tools, model usage and validation; never infer tokens from text length.
+
+跨 MCP／HTTP 傳 context，明確 instrument n8n 並關聯 execution ID；記錄檢索、重排、工具、模型用量及驗證，不能以文字長度估 token。
+
+**Why / 為何使用**
+
+A complete trace explains where time and evidence were spent.
+
+完整 trace 解釋時間及證據用在何處。
+
+Proposed files / 建議檔案: `services/research/app/telemetry.py`, `workflows/n8n/news-refresh.json`
+
+### 2. REDACT + EXPORT
+
+Send one span tree to the two configured destinations.
+
+同一 span tree 傳送兩個已設定平台。
+
+Tools: OTel Collector · self-hosted Langfuse · LangSmith
+
+**How / 如何應用**
+
+Redact secrets and restricted content before fan-out. Keep common run IDs and prompt/dataset versions; avoid duplicate SDK instrumentation. Langfuse serves operations, LangSmith serves experiments and feedback.
+
+分送前遮蔽秘密及受限內容；共用任務 ID 及提示／資料版本，避免重複 SDK instrumentation；Langfuse 管運維，LangSmith 管實驗及回饋。
+
+**Why / 為何使用**
+
+Explicit ownership prevents duplicate token accounting and disconnected traces.
+
+清楚責任避免重複計算 token 及斷裂 trace。
+
+Proposed files / 建議檔案: `deploy/otel-collector.yaml`, `services/research/app/telemetry.py`
+
+### 3. VERIFY LINK
+
+Verify a sanitized demo trace and publish actual measurements.
+
+驗證清理後 demo trace，公布真實量度。
+
+Tools: Trace share API/UI · report card
+
+**How / 如何應用**
+
+Flush exporters, obtain an actual share URL and test reviewer access. Record per-run duration and token usage. Compute p50/p95 only over a documented live cohort of at least 30 completed runs, with failures reported separately.
+
+Flush 後取得真實分享 URL 並測試審閱者存取；記錄單次耗時及 token。至少 30 次已完成真實任務才計 p50／p95，另報失敗。
+
+**Why / 為何使用**
+
+A local trace ID is not a shareable link, and one duration is not a percentile distribution.
+
+本機 trace ID 不是可分享連結，一次耗時亦不是百分位分佈。
+
+Proposed files / 建議檔案: `services/research/app/evaluate.py`, `docs/eval-report.md`
+
+### Return branches / 回傳分支
+
+**success**
+
+Required checks pass
+
+所需檢查通過
+
+Report includes one verified demo trace URL and actual usage.
+
+報告附一條已驗證 demo trace URL 及實際用量。
+
+Return the validated output to the caller.
+
+向呼叫者回傳已驗證結果。
+
+**insufficient**
+
+Valid request, incomplete evidence
+
+請求有效，但證據未齊
+
+Too few runs: publish durations and sample count, mark p50/p95 cohort incomplete.
+
+任務不足：公布耗時及樣本數，標明 p50／p95 樣本未齊。
+
+Explain the limitation and the next permitted step.
+
+交代限制及下一個允許步驟。
+
+**failure**
+
+Invalid input or an operational error
+
+輸入無效或程序出錯
+
+Exporter unavailable: retain research output, record telemetry failure and fail the observable-demo gate.
+
+Exporter 不可用：保留研究結果，記錄追蹤失敗，demo 可觀察驗收不通過。
+
+Return an explicit error. Keep the last valid state.
+
+回傳明確錯誤，保留最後有效狀態。
+
+### Acceptance / 驗收
+
+- A reviewer opens a sanitized trace with MCP, retrieval, rerank, model and validation spans; no invented links or token totals.
+- 審閱者可開啟包含 MCP、檢索、重排、模型及驗證的清理 trace，沒有捏造連結或 token 總數。
+
 ## Package locally, then deploy privately / 本機包裝，再私人部署
 
-Add Docker only after the native app works; keep the first EC2 release small.
+Package the native app after checks; configure private news, index and telemetry dependencies.
 
-本機 app 跑通後才加入 Docker，首個 EC2 發布保持簡單。
+本機 app 通過檢查後才包裝；設定私人新聞、索引及追蹤依賴。
 
 **Input / 輸入**
 
@@ -1762,9 +2058,9 @@ Tools: Docker · Compose
 
 **How / 如何應用**
 
-Create separate images, keep provider keys out of build layers, mount SQLite data and use the private research service name.
+Create separate app images; provision private n8n, candidate Qdrant, Collector and the official Langfuse dependency stack. Keep keys out of images and mount persistent storage; configure LangSmith credentials.
 
-建立獨立映像，不將供應商金鑰寫入映像層，掛載 SQLite 資料，使用私人 research 服務名稱。
+建立獨立 app 映像，設定私人 n8n、候選 Qdrant、Collector 及官方 Langfuse 依賴；金鑰不入映像，掛載持久儲存並設定 LangSmith 憑證。
 
 **Why / 為何使用**
 
@@ -1875,29 +2171,17 @@ Add for Java-focused roles or real shared workspaces. The first app is private a
 
 投 Java 職位或真正多人工作區時再加。首版私人單用戶；公開或多人使用前須完成適當授權。
 
-### MCP · n8n · multi-agent
-
-Add MCP for real tool interoperability, n8n for an actual schedule, and more agents only after demonstrating a benefit.
-
-有跨工具接駁需要才加 MCP，有實際排程才用 n8n，多 agent 須先證明有幫助。
-
-### Dense + sparse · HNSW · reranking
-
-First measure retrieval errors on the small corpus. Add embeddings, hybrid ranking or ANN indexing only if they improve a documented evaluation.
-
-先量度小型資料集檢索錯誤，再按評估改善加入 embeddings、混合排序或 ANN 索引。
-
 ### Model routing · fine-tuning
 
 Start with one provider/model. Add routing only after traces reveal a cost or quality problem. Fine-tuning is not required for the first cited report.
 
 先用一個供應商及模型；記錄顯示成本或品質問題後才加分流。首份有引用報告不需要微調。
 
-### Global markets · forecasting · strategies
+### Global markets · calibrated price forecasts · strategies
 
-Global coverage, personal background searches, price targets, five strategy families, backtesting and the VIX filter are outside this job-first release.
+Conditional news scenarios are included. Global coverage, calibrated price targets, automated trading and strategy backtesting remain outside this release.
 
-全球市場、人物背景、目標價、五類策略、回測及 VIX 過濾器不屬於今次求職首版。
+包含條件式新聞情境；全球市場、經校準目標價、自動交易及策略回測仍不屬此版。
 
 ### PDF · UiPath · C# · Kubernetes
 
@@ -1907,6 +2191,12 @@ No PDF extraction is needed for the curated text snapshot. Add automation or ano
 
 ## References / 官方參考
 
+- [n8n: MCP Server Trigger and workflow tools](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger/)
+- [Qdrant: hybrid and multi-stage queries](https://qdrant.tech/documentation/search/hybrid-queries/)
+- [Langfuse: self-hosting architecture](https://langfuse.com/self-hosting)
+- [Langfuse: OpenTelemetry ingestion](https://langfuse.com/integrations/native/opentelemetry)
+- [LangSmith: OpenTelemetry and Collector fan-out](https://docs.langchain.com/langsmith/trace-with-opentelemetry)
+- [LangSmith: sharing sanitized traces](https://docs.langchain.com/langsmith/manage-trace)
 - [LangGraph: workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 - [LangGraph: persistence and checkpoints](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [FastAPI: typed request bodies](https://fastapi.tiangolo.com/tutorial/body/)

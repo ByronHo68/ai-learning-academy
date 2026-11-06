@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { ArrowDown, ArrowRight, Check, GitBranch, ShieldCheck, X } from 'lucide-react';
 import { type Lang, pick } from '../lib/curriculum';
 import type { FinanceFunctionGuide } from '../lib/finance-project';
+import { financeFunctionRoutes } from '../lib/finance-workflows';
 
 export function FinanceFunctionMindmap({ guide, lang }: { guide: FinanceFunctionGuide; lang: Lang }) {
   const [selected, setSelected] = useState(0);
@@ -14,6 +15,8 @@ export function FinanceFunctionMindmap({ guide, lang }: { guide: FinanceFunction
   return <div className="fr-mindmap" data-function={guide.id}>
     <dl className="fr-contract"><div><dt>{lang === 'zh' ? '輸入' : 'Input'}</dt><dd>{pick(guide.input, lang)}</dd></div><div><dt>{lang === 'zh' ? '輸出' : 'Output'}</dt><dd>{pick(guide.output, lang)}</dd></div></dl>
     <div className="fr-entry"><span>{entry.kind === 'http' ? 'HTTP · PROPOSED API' : entry.kind === 'developer' ? 'DEVELOPER / CLI' : 'INTERNAL CALL'} · {lang === 'zh' ? '建議入口，未在此網站實作' : 'Proposed entry, not implemented by this website'}</span><pre><code>{entryText}</code></pre></div>
+    <h4>{lang === 'zh' ? '條件路由及資料交接' : 'Conditional routing and data handoffs'}</h4>
+    <ol className="fr-route-list">{financeFunctionRoutes[guide.id].map((route, index) => <li key={index}><strong>{route.from} → {route.to}</strong><p>{pick(route.when, lang)}</p><small>{lang === 'zh' ? '交接資料：' : 'Handoff: '}{pick(route.payload, lang)}</small></li>)}</ol>
     <div className="fr-flow-root"><GitBranch size={20} aria-hidden="true"/><strong>{pick(guide.title, lang)}</strong><span>{lang === 'zh' ? '沿箭嘴閱讀，點選步驟了解技術' : 'Follow the arrows; select a step to inspect its technique'}</span></div>
     <ArrowDown className="fr-down" size={20} aria-hidden="true"/>
     <ol className="fr-flow-steps" aria-label={`${pick(guide.title, lang)} · ${lang === 'zh' ? '處理流程' : 'processing workflow'}`}>

@@ -3,7 +3,7 @@ import type { Copy } from './curriculum';
 const t = (en: string, zh: string): Copy => ({ en, zh });
 
 export const financePromptFlow = [
-  'Prompt + company + horizon', 'n8n MCP → refresh_company_news', 'Versioned evidence + time filters',
+  'Prompt + company + horizon → scope gate', 'n8n MCP → refresh_company_news', 'Versioned evidence + time filters',
   'Sparse / gated hybrid → rerank', 'Conditional forecast + citations', 'Validate → feedback + trace URL',
 ];
 

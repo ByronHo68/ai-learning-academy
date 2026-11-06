@@ -4,7 +4,7 @@ Design artifacts plus a local synthetic evaluation harness. Live n8n, Qdrant, mo
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-Prompt + company + horizon → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
+Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
 
 ### Fresh news for every prompt / 每個提示都取得新聞
 
@@ -220,6 +220,7 @@ Run `npm run proposal:check`, `npm run finance:eval:test` and `python3 evals/fin
 - [Langfuse: OpenTelemetry ingestion](https://langfuse.com/integrations/native/opentelemetry)
 - [LangSmith: OpenTelemetry and Collector fan-out](https://docs.langchain.com/langsmith/trace-with-opentelemetry)
 - [LangSmith: sharing sanitized traces](https://docs.langchain.com/langsmith/manage-trace)
+- [LangGraph: Graph API, state and conditional edges](https://docs.langchain.com/oss/python/langgraph/graph-api)
 - [LangGraph: workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 - [LangGraph: persistence and checkpoints](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [FastAPI: typed request bodies](https://fastapi.tiangolo.com/tutorial/body/)

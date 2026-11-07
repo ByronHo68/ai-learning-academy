@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { Copy } from '../lib/curriculum';
+import { mcpExamples, mcpIntroduction, mcpMindmap, mcpMindmapMermaid, mcpOwnership, mcpReferences, mcpScenarios, mcpSetup, mcpStorySteps, mcpToolDefinition, mcpVersionNote, mcpWorkflowMermaid } from '../lib/finance-mcp';
 import { financeFunctionRoutes } from '../lib/finance-workflows';
 import { financeContextExample, financeGraphNodes, financeGraphScenarios, financeGraphState, financeGraphWiring, financeScenarioPath } from '../lib/finance-graph';
 import { financeAdrs, financeAssurance, financePromptFlow } from '../lib/finance-assurance';
@@ -73,7 +74,32 @@ const research = financeFunctions.find(item => item.id === 'research');
 const recovery = financeFunctions.find(item => item.id === 'recovery');
 if (!research || !recovery) throw new Error('Research and recovery guides are required.');
 const graph = [intro, graphWalkthrough, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. Code-owned nodes call search_company_evidence and read_source in the documented order. A query planner may refine once within the same limits; the model cannot choose a privileged route. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；程式節點其後按文件次序呼叫搜尋及讀取工具；查詢規劃最多修正一次，模型不能自行選取特權路由。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} seconds per run. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
+const mcpGuide = [
+  '# MCP visual guide / MCP 圖解指南',
+  'Generated from `lib/finance-mcp.ts`. Open `/finance-project/mcp` for the playable bilingual animation and interactive mind map. Run `npm run proposal:sync` to regenerate this guide.',
+  'Teaching simulation only. All example news and tool-result data are fictional; no live n8n, vector database or model calls occur. Setup steps describe the future finance app.\n\n純教學模擬；新聞及工具回傳均為虛構，沒有真實 n8n、向量資料庫或模型呼叫。設定步驟描述未來金融 app。',
+  both(mcpIntroduction),
+  '## Mind map / 心智圖\n\n```mermaid\n' + mcpMindmapMermaid + '\n```',
+  ...mcpMindmap.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.detail)}`),
+  'The counts describe core roles, server capabilities and standard transports; they are not an exhaustive list of optional protocol features. Servers may offer a subset of capabilities.\n\n數目是核心角色、server 功能及標準傳輸的分類，並非所有選用功能；server 可只提供部分功能。',
+  '## Workflow / 工作流程\n\n```mermaid\n' + mcpWorkflowMermaid + '\n```',
+  'RAG retrieves evidence before generation. MCP connects the host to the news tool. In this design, database/reranking and LLM APIs are separate from MCP. The candidate hybrid index is allowed only after passing the existing written evaluation gates.\n\nRAG 先檢索證據再生成；MCP 連接 host 與新聞工具。此設計的資料庫／重排及 LLM API 與 MCP 分開；候選混合索引須通過現有書面評估門檻。',
+  ...mcpOwnership.map(item => `- **${item.name}**: ${item.job.en} / ${item.job.zh}`),
+  '## Animation scenarios / 動畫情境',
+  ...mcpScenarios.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.prompt)}\n\n${item.path.map((id, index) => `${index + 1}. ${mcpStorySteps[id].title.en} / ${mcpStorySteps[id].title.zh}${mcpStorySteps[id].channel === 'mcp' ? ' [MCP]' : ''}`).join('\n')}`),
+  '## Step explanations / 每步解說',
+  ...Object.values(mcpStorySteps).map(item => `### ${item.title.en} / ${item.title.zh}\n\n${item.from.en} → ${item.to.en}\n\n${both(item.explanation)}\n\n\`\`\`text\n${item.message}\n\`\`\``),
+  '## Three examples / 三種例子',
+  ...mcpExamples.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.purpose)}\n\nRequest fragment / 要求片段:\n\n\`\`\`json\n${JSON.stringify(item.request, null, 2)}\n\`\`\`\n\nSimplified result data / 簡化回傳資料:\n\n\`\`\`json\n${JSON.stringify(item.result, null, 2)}\n\`\`\`\n\n${both(item.note)}`),
+  '### Proposed tool definition / 建議工具定義\n\n```json\n' + JSON.stringify(mcpToolDefinition, null, 2) + '\n```',
+  '## Connect n8n / 連接 n8n\n\nResearch app MCP client → n8n MCP Server Trigger → Custom n8n Workflow Tool → news sub-workflow. The reverse direction uses an n8n MCP Client Tool to consume another server. The Server Trigger supports Streamable HTTP and legacy SSE, not stdio.\n\n研究 app 作 client，n8n 作 server；相反方向由 n8n MCP Client Tool 使用外部 server。Server Trigger 支援 Streamable HTTP 及舊 SSE，未支援 stdio。',
+  ...mcpSetup.map((item, i) => `${i + 1}. ${item.en}\n\n   ${item.zh}`),
+  '## Version compatibility / 版本相容\n\n' + both(mcpVersionNote),
+  '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
+].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_MCP_GUIDE.md', mcpGuide],
+  ['public/downloads/stock-research-mcp-guide.md', mcpGuide],
   ['public/downloads/stock-research-graph.py', financeGraphWiring],
   ['docs/FINANCE_REVIEW_PACK.md', reviewerPack.replaceAll('](stock-research-', '](../public/downloads/stock-research-')],
   ['public/downloads/stock-research-review-pack.md', reviewerPack],

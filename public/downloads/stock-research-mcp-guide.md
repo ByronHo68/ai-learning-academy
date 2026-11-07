@@ -1,0 +1,519 @@
+# MCP visual guide / MCP 圖解指南
+
+Generated from `lib/finance-mcp.ts`. Open `/finance-project/mcp` for the playable bilingual animation and interactive mind map. Run `npm run proposal:sync` to regenerate this guide.
+
+Teaching simulation only. All example news and tool-result data are fictional; no live n8n, vector database or model calls occur. Setup steps describe the future finance app.
+
+純教學模擬；新聞及工具回傳均為虛構，沒有真實 n8n、向量資料庫或模型呼叫。設定步驟描述未來金融 app。
+
+MCP means Model Context Protocol: a shared message format that lets an AI application discover and use another program’s capabilities. Think of a common plug: the app asks for a named operation, and the connected program does the work.
+
+MCP 即 Model Context Protocol（模型上下文協定）：讓 AI 應用程式用統一格式，查詢及使用另一個程式的功能。可以想像成通用插頭：app 提出指定要求，接駁的程式負責執行。
+
+## Mind map / 心智圖
+
+```mermaid
+mindmap
+  root((MCP))
+    Purpose
+      Discover capabilities
+      Reuse a tool contract
+    Roles
+      Host - research app
+      Client - inside host
+      Server - n8n endpoint
+    Server capabilities
+      Tools - execute
+      Resources - read
+      Prompts - templates
+    Standard transports
+      stdio - local process
+      Streamable HTTP - local or remote endpoint
+```
+
+### Why connect? / 點解要連接？
+
+For this project, the research app asks n8n to refresh approved news. A common interface helps when several AI applications need the same tool. A direct API is also a valid choice for one fixed integration; MCP adds discovery and a reusable contract.
+
+此項目由研究 app 要求 n8n 刷新核准新聞。多個 AI app 要用同一工具時，統一介面方便重用。單一固定整合亦可直接用 API；MCP 增加功能發現及可重用合約。
+
+### Roles: who talks? / 角色：邊個同邊個講？
+
+Host = the research application. Client = its MCP connector, inside the host. Server = the n8n endpoint exposing the news tool. These are roles, not three separate machines. The host can connect to several servers. An LLM can suggest a tool; host code decides whether it may run.
+
+Host 是研究應用程式；client 是 app 內的 MCP 連接器；server 是提供新聞工具的 n8n 端點。這是三個角色，毋須三部電腦。Host 可連接多個 server。LLM 可建議工具，由 host 程式決定是否執行。
+
+### Capabilities: what is offered? / 功能：提供啲咩？
+
+Tool: run refresh_company_news. Resource: read a saved article by URI. Prompt: load a reusable research template. A server can offer a subset. This project’s proposed n8n endpoint exposes tools; the resource and prompt examples below illustrate other possible servers. Your typed question is not automatically an MCP prompt template.
+
+Tool 執行 refresh_company_news；resource 按 URI 讀取已儲存文章；prompt 載入研究提示範本。Server 可以只提供部分功能。本項目的 n8n 端點計劃提供 tools；下方 resource 及 prompt 示範其他 server 的可能功能。你輸入的問題不會自動變成 MCP prompt 範本。
+
+### Transports: how do messages travel? / 傳輸：訊息點樣傳？
+
+stdio carries messages through a local process’s input/output. Streamable HTTP connects to an HTTP endpoint, local or remote; this is the proposed n8n route. Older HTTP+SSE transport is legacy. SSE streaming can also be used inside Streamable HTTP. Local/remote describes location, not another capability type; custom transports can exist.
+
+stdio 用本機程序的輸入／輸出傳訊；Streamable HTTP 連接本機或遠端 HTTP 端點，本項目計劃用它連 n8n。舊 HTTP+SSE 傳輸屬舊版；Streamable HTTP 本身亦可用 SSE 串流。本機／遠端是位置分類，並非額外功能種類；亦可有自訂傳輸。
+
+The counts describe core roles, server capabilities and standard transports; they are not an exhaustive list of optional protocol features. Servers may offer a subset of capabilities.
+
+數目是核心角色、server 功能及標準傳輸的分類，並非所有選用功能；server 可只提供部分功能。
+
+## Workflow / 工作流程
+
+```mermaid
+flowchart TD
+  Q[User question] --> S{Scope check}
+  S -->|Irrelevant| O[Explain supported scope]
+  S -->|Supported| C[Host MCP client]
+  C -->|MCP tools/call| N[n8n MCP Server Trigger + Workflow Tool]
+  N -->|Provider API| A[Fetch, normalize and index news]
+  A --> N
+  N -->|MCP tool result| P[Validate and pin snapshot]
+  C -->|Failure| U[Service unavailable]
+  P --> R[Sparse baseline or admitted hybrid retrieval]
+  R --> K[Rerank eligible excerpts]
+  K --> E{Enough evidence?}
+  E -->|No, first search| F[Refine once]
+  F --> R
+  E -->|No, second search| I[Insufficient evidence]
+  E -->|Yes| X[Question + policy + cited context]
+  X --> L[LLM API]
+  L --> V{Citation validation}
+  V -->|Pass| B[Cited report]
+  V -->|Fail| W[Withhold draft]
+```
+
+RAG retrieves evidence before generation. MCP connects the host to the news tool. In this design, database/reranking and LLM APIs are separate from MCP. The candidate hybrid index is allowed only after passing the existing written evaluation gates.
+
+RAG 先檢索證據再生成；MCP 連接 host 與新聞工具。此設計的資料庫／重排及 LLM API 與 MCP 分開；候選混合索引須通過現有書面評估門檻。
+
+- **LangGraph**: Chooses the next step and enforces budgets. / 決定下一步，執行用量及次數上限。
+
+- **MCP**: Carries tool discovery, calls and results. / 傳送功能發現、工具呼叫及結果。
+
+- **n8n**: Runs the news-fetching workflow. / 執行抓取新聞的工作流程。
+
+- **Vector DB / sparse index**: Finds candidate evidence by meaning / words. / 按語意／字詞搜尋候選證據。
+
+- **Reranker**: Reorders candidates for this question. / 按這條問題重排候選證據。
+
+- **LLM + validator**: Writes from selected evidence; checks support. / 按選定證據撰寫，再核對支持度。
+
+## Animation scenarios / 動畫情境
+
+### Enough evidence / 證據足夠
+
+How might cloud costs affect MSFT margins next quarter?
+
+雲端成本可能點影響 MSFT 下季利潤率？
+
+1. Check the question / 先睇問題
+2. Read the tool menu / 睇工具餐牌 [MCP]
+3. Ask n8n to refresh / 叫 n8n 刷新 [MCP]
+4. Fetch and store news / 抓新聞及儲存
+5. Return a snapshot / 交回快照 [MCP]
+6. Find candidate excerpts / 搵候選段落
+7. Put useful evidence first / 把有用證據排前
+8. Pack the LLM input / 準備 LLM 輸入
+9. Write a grounded draft / 按證據寫草稿
+10. Validate and return / 驗證再回覆
+
+### Insufficient evidence / 證據不足
+
+What do the available sources say about MSFT margins next quarter?
+
+現有來源點講 MSFT 下季利潤率？
+
+1. Check the question / 先睇問題
+2. Read the tool menu / 睇工具餐牌 [MCP]
+3. Ask n8n to refresh / 叫 n8n 刷新 [MCP]
+4. Fetch and store news / 抓新聞及儲存
+5. Return a snapshot / 交回快照 [MCP]
+6. Find candidate excerpts / 搵候選段落
+7. Put useful evidence first / 把有用證據排前
+8. Evidence is too thin: try once more / 證據太少：再試一次
+9. Find candidate excerpts / 搵候選段落
+10. Put useful evidence first / 把有用證據排前
+11. Say what is missing / 講清楚欠缺咩
+
+### Irrelevant prompt / 問題不相關
+
+Write a birthday poem.
+
+寫一首生日詩。
+
+1. Check the question / 先睇問題
+2. Return to the supported scope / 帶返支援範圍
+
+### n8n unavailable / n8n 無法使用
+
+Research the risks to MSFT cloud margins.
+
+研究 MSFT 雲端利潤率風險。
+
+1. Check the question / 先睇問題
+2. Read the tool menu / 睇工具餐牌 [MCP]
+3. Ask n8n to refresh / 叫 n8n 刷新 [MCP]
+4. Report a service failure / 交代服務故障
+
+## Step explanations / 每步解說
+
+### Check the question / 先睇問題
+
+You → Research app · LangGraph
+
+Code checks company, topic and horizon before any external call. A valid question can continue.
+
+程式先檢查公司、題目及期間，合適才可進行外部呼叫。
+
+```text
+MSFT · cloud margins · next quarter
+```
+
+### Read the tool menu / 睇工具餐牌
+
+MCP client inside the app → n8n · MCP server
+
+After compatible setup, the client learns the tool name and accepted arguments. Discovery can be cached; it need not repeat for each prompt.
+
+完成相容設定後，client 讀取工具名稱及參數格式。工具發現可快取，毋須每題重做。
+
+```text
+tools/list → refresh_company_news + inputSchema
+```
+
+### Ask n8n to refresh / 叫 n8n 刷新
+
+MCP client inside the app → n8n · MCP server
+
+The graph’s refresh node sends the named tool call. MCP carries the request; n8n owns the work. This is one proposed news-tool call.
+
+Graph 的 refresh 節點傳送具名工具要求；MCP 負責傳訊，n8n 負責工作。這是一次建議的新聞工具呼叫。
+
+```text
+tools/call → refresh_company_news({ company: "MSFT", query: "cloud margins", as_of: "…" })
+```
+
+### Fetch and store news / 抓新聞及儲存
+
+n8n · MCP server → News API → evidence store
+
+n8n calls the provider API, records publication/first-seen times and stores evidence. That provider request uses its API; it is not automatically MCP.
+
+n8n 用供應商 API，記錄發布／首次取得時間並儲存證據。這段使用供應商 API，不會自動變成 MCP。
+
+```text
+approved API → normalize → deduplicate → chunks + metadata
+```
+
+### Return a snapshot / 交回快照
+
+n8n · MCP server → MCP client inside the app
+
+The result travels back over MCP. The host validates it and freezes the eligible evidence snapshot for this run.
+
+結果經 MCP 回傳；host 驗證後固定本次可用的證據快照。
+
+```text
+{ snapshot_id: "fictional-msft-001", provider_status: "ok", articles_added: 3 }
+```
+
+### Find candidate excerpts / 搵候選段落
+
+Research app · LangGraph → Evidence index
+
+Assume articles are indexed. Sparse search matches words; a vector search matches meaning. The vector/hybrid candidate stays experimental until it passes the written evaluation margin.
+
+假設文章已有索引：稀疏搜尋比對字詞，向量搜尋比對語意。向量／混合候選方案須通過指定評估差距才可採用。
+
+```text
+question + company + snapshot + date filters → candidate excerpts
+```
+
+### Put useful evidence first / 把有用證據排前
+
+Evidence index → Reranker → evidence check
+
+Reranking changes the order; it does not create missing facts. Check freshness, company and question coverage. Scores are relevance signals, not forecast confidence.
+
+重排改變次序，不會創造缺失事實。核對新鮮度、公司及問題覆蓋；分數代表相關性，並非預測信心。
+
+```text
+candidate list → question-specific order → selected source IDs
+```
+
+### Pack the LLM input / 準備 LLM 輸入
+
+Evidence check → Context builder
+
+Keep retrieved text separate from instructions. Include only eligible excerpts within the token budget; reject embedded commands. A database is not passed wholesale to the model.
+
+檢索文字與指令分開。只加入 token 上限內合資格段落，排除內嵌指令；不會把整個資料庫塞入模型。
+
+```text
+policy + original question + dated excerpts + source IDs
+```
+
+### Write a grounded draft / 按證據寫草稿
+
+Context builder → LLM
+
+The LLM API produces a draft addressing the question. This call is separate from MCP. A price guarantee or unsupported probability cannot be inferred from retrieval scores.
+
+LLM API 按問題產生草稿，這次呼叫與 MCP 分開。檢索分數不能推出價格保證或無支持的機率。
+
+```text
+selected evidence → cited facts + conditional scenarios
+```
+
+### Validate and return / 驗證再回覆
+
+Citation validator → You
+
+Check source IDs and material claims before showing the report. A live run should include its trace URL. This animation uses fictional data and makes zero external calls.
+
+顯示報告前核對來源 ID 及重要主張。真實執行應附 trace URL；此動畫使用虛構資料，外部呼叫次數是零。
+
+```text
+supported claims → report; invalid claims → withhold
+```
+
+### Evidence is too thin: try once more / 證據太少：再試一次
+
+Evidence check → Research app · LangGraph
+
+Keep the original question and snapshot. One narrower retrieval attempt is allowed; do not refresh news again or reset the search budget.
+
+保留原問題及快照，只容許一次較精準檢索；不重新刷新新聞或重設搜尋上限。
+
+```text
+coverage missing → refine query once, same snapshot
+```
+
+### Say what is missing / 講清楚欠缺咩
+
+Evidence check → You
+
+After two searches, stop without an LLM forecast. Explain the missing evidence and suggest a narrower question or a better source.
+
+兩次搜尋後停止，不生成 LLM 預測。說明欠缺證據，建議收窄問題或補充來源。
+
+```text
+insufficient_evidence · missing: dated evidence about margins
+```
+
+### Return to the supported scope / 帶返支援範圍
+
+Research app · LangGraph → You
+
+For “Write a birthday poem”, the scope gate returns immediately. No MCP news call, retrieval or financial generation is needed.
+
+遇到「寫一首生日詩」，範圍檢查即時回覆，毋須 MCP 新聞呼叫、檢索或金融生成。
+
+```text
+out_of_scope · try a question about MSFT, AAPL or NVDA
+```
+
+### Report a service failure / 交代服務故障
+
+Research app · LangGraph → You
+
+A failed tool is different from an empty evidence set. Show the failed dependency and allow a later retry; do not claim news is fresh or invent a report.
+
+工具失敗與沒有證據不同。顯示失敗服務，容許稍後重試；不能聲稱新聞已刷新或編造報告。
+
+```text
+service_unavailable · news refresh timed out
+```
+
+## Three examples / 三種例子
+
+### Tool: refresh the news / Tool：刷新新聞
+
+Run work with validated arguments. This tool may fetch approved provider APIs and update the evidence store. Its name is our proposed contract, not a built-in MCP command.
+
+用已驗證參數執行工作。此工具可讀取核准供應商 API 及更新證據庫。這是我們建議的工具名稱，並非 MCP 內建指令。
+
+Request fragment / 要求片段:
+
+```json
+{
+  "method": "tools/call",
+  "params": {
+    "name": "refresh_company_news",
+    "arguments": {
+      "company": "MSFT",
+      "query": "cloud margins",
+      "as_of": "2026-10-30T16:00:00Z"
+    }
+  }
+}
+```
+
+Simplified result data / 簡化回傳資料:
+
+```json
+{
+  "snapshot_id": "fictional-msft-001",
+  "provider_status": "ok",
+  "articles_added": 3,
+  "refreshed_at": "2026-10-30T16:00:00Z"
+}
+```
+
+Fictional tool-result data. The client validates it before the graph retrieves evidence; the refresh result is not yet a financial answer.
+
+虛構工具回傳資料。Client 先驗證，graph 再檢索證據；刷新結果仍未是金融答案。
+
+### Resource: read an article / Resource：讀取文章
+
+Read content identified by a URI from a resource-capable server. The host chooses what to include in context. Article text has no authority to change application rules.
+
+從支援 resources 的 server 按 URI 讀取內容。Host 決定放哪些內容入上下文；文章文字不能改寫應用程式規則。
+
+Request fragment / 要求片段:
+
+```json
+{
+  "method": "resources/read",
+  "params": {
+    "uri": "news://fictional-msft-001/article-01"
+  }
+}
+```
+
+Simplified result data / 簡化回傳資料:
+
+```json
+{
+  "uri": "news://fictional-msft-001/article-01",
+  "text": "Fictional excerpt: infrastructure costs may pressure cloud margins."
+}
+```
+
+Illustrative resource URI, not a live link. The current finance design uses a read_source tool; resources are an alternative interface.
+
+示範 resource URI，並非真實連結。目前金融設計用 read_source 工具；resource 是另一種介面選擇。
+
+### Prompt: reuse a template / Prompt：重用範本
+
+Load a named template selected by the user. Retrieving the template does not call the LLM or generate an answer.
+
+載入使用者選擇的具名範本。取回範本本身不會呼叫 LLM 或生成答案。
+
+Request fragment / 要求片段:
+
+```json
+{
+  "method": "prompts/get",
+  "params": {
+    "name": "company_research",
+    "arguments": {
+      "company": "MSFT"
+    }
+  }
+}
+```
+
+Simplified result data / 簡化回傳資料:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": {
+        "type": "text",
+        "text": "Research MSFT. Separate cited facts, assumptions and conditional scenarios."
+      }
+    }
+  ]
+}
+```
+
+Illustrative prompt-capable server. This n8n design only needs the news tool; it does not assume prompts/get is available.
+
+示範支援 prompts 的 server。此 n8n 設計只需新聞工具，沒有假設端點支援 prompts/get。
+
+### Proposed tool definition / 建議工具定義
+
+```json
+{
+  "name": "refresh_company_news",
+  "description": "Refresh approved news for one supported company and return snapshot metadata.",
+  "inputSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "company": {
+        "type": "string",
+        "enum": [
+          "MSFT",
+          "AAPL",
+          "NVDA"
+        ]
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+      },
+      "as_of": {
+        "type": "string",
+        "format": "date-time"
+      }
+    },
+    "required": [
+      "company",
+      "query",
+      "as_of"
+    ]
+  }
+}
+```
+
+## Connect n8n / 連接 n8n
+
+Research app MCP client → n8n MCP Server Trigger → Custom n8n Workflow Tool → news sub-workflow. The reverse direction uses an n8n MCP Client Tool to consume another server. The Server Trigger supports Streamable HTTP and legacy SSE, not stdio.
+
+研究 app 作 client，n8n 作 server；相反方向由 n8n MCP Client Tool 使用外部 server。Server Trigger 支援 Streamable HTTP 及舊 SSE，未支援 stdio。
+
+1. Build the news sub-workflow: validate company/query/cutoff → call approved news APIs → normalize dates and deduplicate → store articles/chunks → return snapshot metadata. Keep provider keys in n8n credentials.
+
+   建立新聞子流程：驗證公司／問題／截止時間 → 呼叫核准新聞 API → 整理日期及去重 → 儲存文章／切段 → 回傳快照資料。供應商金鑰放 n8n credentials。
+
+2. Add an MCP Server Trigger. Attach a Custom n8n Workflow Tool that exposes this sub-workflow as refresh_company_news. Ordinary workflow nodes belong inside the sub-workflow; the trigger connects to tool nodes.
+
+   加入 MCP Server Trigger，接 Custom n8n Workflow Tool，把子流程公開為 refresh_company_news。一般工作流程節點放在子流程內；trigger 連接的是 tool 節點。
+
+3. Configure authentication and copy the displayed test endpoint. Test while n8n is listening; publish the workflow before using its production endpoint. Use a compatible Streamable HTTP client.
+
+   設定認證及複製畫面上的測試端點；n8n 監聽時測試。發布流程後才使用正式端點，並選相容的 Streamable HTTP client。
+
+4. In the Python host, configure the endpoint and credentials server-side. Check the SDK/server protocol versions, discover capabilities, list tools and verify the tool schema. The browser never receives these credentials.
+
+   在 Python host 伺服器端設定端點及憑證，確認 SDK／server 協定版本相容，發現功能、列出工具及核對 schema。憑證不傳到瀏覽器。
+
+5. The LangGraph scope gate accepts a supported question, then its refresh node calls the tool once. Validate the result and pin its snapshot. Retrieve and rerank only eligible evidence, check sufficiency, then build LLM context and validate the answer.
+
+   LangGraph 範圍檢查接納支援問題後，refresh 節點呼叫工具一次。驗證回傳及固定快照，再檢索和重排合資格證據、檢查是否足夠，最後建立 LLM 上下文及驗證答案。
+
+6. Record sanitized spans for refresh, retrieval, reranking and generation. Send OpenTelemetry to the configured Langfuse/LangSmith setup. Test empty results, irrelevant requests and outages; attach a real trace only after a real run.
+
+   為刷新、檢索、重排及生成記錄已去敏感資料的 spans，把 OpenTelemetry 送到已設定的 Langfuse／LangSmith。測試空結果、不相關問題及服務故障；真實執行後才附真實 trace。
+
+## Version compatibility / 版本相容
+
+Checked 8 November 2026. The 2026-07-28 MCP specification uses per-request version metadata and server/discover. Older 2025-11-25 integrations use initialize → notifications/initialized. Use the setup supported by your actual SDK and n8n version. Examples here show method/argument fragments and domain data, not complete wire messages or a tested n8n export.
+
+2026 年 11 月 8 日核對：2026-07-28 規格使用每次請求的版本 metadata 及 server/discover；舊 2025-11-25 整合用 initialize → notifications/initialized。請依實際 SDK 及 n8n 版本設定。此處只示範方法／參數片段及業務資料，並非完整線上訊息或經測試的 n8n 匯出檔。
+
+## References / 官方參考
+
+- [MCP architecture & roles](https://modelcontextprotocol.io/docs/learn/architecture)
+- [Tools, resources & prompts](https://modelcontextprotocol.io/docs/learn/server-concepts)
+- [Standard transports](https://modelcontextprotocol.io/specification/2026-07-28/basic/transports)
+- [Protocol versions & compatibility](https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning)
+- [n8n MCP Server Trigger](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger/)
+- [n8n MCP Client Tool](https://docs.n8n.io/integrations/builtin/cluster-nodes/sub-nodes/n8n-nodes-langchain.toolmcp/)

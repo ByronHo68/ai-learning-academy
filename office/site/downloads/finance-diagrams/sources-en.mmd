@@ -1,0 +1,12 @@
+flowchart TD
+  n0["Validated request → n8n MCP refresh"]
+  n1["Provider response"]
+  n2["Pinned snapshot"]
+  n3["Unavailable → END"]
+  n4["Insufficient → END"]
+  n5["Retrieve"]
+  n0 -- "Once per new prompt" --> n1
+  n1 -- "Valid records" --> n2
+  n1 -- "Provider failed" --> n3
+  n1 -- "Only stale evidence" --> n4
+  n2 -- "Snapshot ready" --> n5

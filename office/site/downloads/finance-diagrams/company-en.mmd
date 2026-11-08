@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Prompt + selection"]
+  n1["Scope gate"]
+  n2["Clarify → END"]
+  n3["Out of scope → END"]
+  n4["News refresh"]
+  n0 -- "Validate" --> n1
+  n1 -- "Ambiguous" --> n2
+  n1 -- "Unrelated" --> n3
+  n1 -- "Supported" --> n4

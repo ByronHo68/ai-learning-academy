@@ -1,0 +1,20 @@
+flowchart TD
+  n0["Question + snapshot → filtered sparse/dense search"]
+  n1["Candidates"]
+  n2["RRF fusion + reranker"]
+  n3["Evidence gate"]
+  n4["Sparse fallback"]
+  n5["Unavailable → END"]
+  n6["Refine query once"]
+  n7["Insufficient → END"]
+  n8["Build context"]
+  n0 -- "Apply filters" --> n1
+  n1 -- "Admitted mode" --> n2
+  n2 -- "Ranking succeeds" --> n3
+  n2 -- "Reranker fails" --> n4
+  n4 -- "Sparse works" --> n3
+  n4 -- "No working path" --> n5
+  n3 -. "Gap after search 1" .-> n6
+  n6 -. "Search 2 of 2" .-> n0
+  n3 -- "Still insufficient" --> n7
+  n3 -- "Enough support" --> n8

@@ -438,12 +438,14 @@ flowchart TD
   n0["Validated request → n8n MCP refresh"]
   n1["Provider response"]
   n2["Pinned snapshot"]
-  n3["Limited result / unavailable → END"]
-  n4["Retrieve"]
+  n3["Unavailable → END"]
+  n4["Insufficient → END"]
+  n5["Retrieve"]
   n0 -->|"Every new accepted prompt; resume reuses its receipt."| n1
   n1 -->|"Normalize and index records with dates, permitted text and valid identity."| n2
-  n1 -->|"Refresh failed or only stale evidence remains."| n3
-  n2 -->|"Store and index acknowledgements agree on snapshot_id."| n4
+  n1 -->|"Refresh failed; do not treat an outage as zero relevant news."| n3
+  n1 -->|"The refresh completed but only stale evidence remains."| n4
+  n2 -->|"Store and index acknowledgements agree on snapshot_id."| n5
 ```
 
 **Validated request → n8n MCP refresh → Provider response**
@@ -470,17 +472,29 @@ source_id/chunk_id, URL, published_at, first_seen_at, content hash
 
 來源／切段 ID、URL、發布／首次取得時間及內容 hash
 
-**Provider response → Limited result / unavailable → END**
+**Provider response → Unavailable → END**
 
-Refresh failed or only stale evidence remains.
+Refresh failed; do not treat an outage as zero relevant news.
 
-刷新失敗或只有過期證據。
+刷新失敗；不能把故障當成沒有相關新聞。
 
 Handoff / 交接資料:
 
-Provider status + freshness gap; no current prediction
+Provider status and typed error; no current prediction
 
-供應商狀態＋新鮮度缺口；不作當前預測
+供應商狀態及結構化錯誤；不作當前預測
+
+**Provider response → Insufficient → END**
+
+The refresh completed but only stale evidence remains.
+
+刷新完成，但只有過期證據。
+
+Handoff / 交接資料:
+
+Freshness gap and dated supported facts; no current prediction
+
+新鮮度缺口及有日期支持事實；不作當前預測
 
 **Pinned snapshot → Retrieve**
 
@@ -641,13 +655,21 @@ flowchart TD
   n1["Candidates"]
   n2["RRF fusion + reranker"]
   n3["Evidence gate"]
-  n4["Refine once / limited result"]
-  n5["Build context"]
+  n4["Sparse fallback"]
+  n5["Unavailable → END"]
+  n6["Refine query once"]
+  n7["Insufficient → END"]
+  n8["Build context"]
   n0 -->|"Company, permissions and both timestamps pass."| n1
   n1 -->|"Hybrid admission passed; otherwise use sparse."| n2
-  n2 -->|"Reranker succeeds; on reranker failure use working sparse within the same deadline."| n3
-  n3 -->|"Zero hits, weak support or missing required facets."| n4
-  n3 -->|"Relevant, current passages cover the question."| n5
+  n2 -->|"Ranking succeeds using the admitted mode."| n3
+  n2 -->|"Reranker fails while a working sparse path remains within the deadline."| n4
+  n4 -->|"Use the working sparse result within the original budget."| n3
+  n4 -->|"Sparse also fails or the deadline expires."| n5
+  n3 -->|"First search lacks coverage and the original budget remains."| n6
+  n6 -->|"Search again with a narrower query; at most two searches total, including failed attempts."| n0
+  n3 -->|"The second search still lacks support, or no refinement budget remains."| n7
+  n3 -->|"Relevant, current passages cover the question."| n8
 ```
 
 **Question + snapshot → filtered sparse/dense search → Candidates**
@@ -676,27 +698,87 @@ Deduplicated top 20 → cross-encoder top 10
 
 **RRF fusion + reranker → Evidence gate**
 
-Reranker succeeds; on reranker failure use working sparse within the same deadline.
+Ranking succeeds using the admitted mode.
 
-重排成功；若重排失敗則用相同時限內仍可用的 sparse。
+使用已准入模式成功排序。
 
 Handoff / 交接資料:
 
-Actual fallback mode; no fabricated reranker scores
+Ranked passages and actual mode
 
-實際回退模式；不捏造重排分數
+已排序原文及實際模式
 
-**Evidence gate → Refine once / limited result**
+**RRF fusion + reranker → Sparse fallback**
 
-Zero hits, weak support or missing required facets.
+Reranker fails while a working sparse path remains within the deadline.
 
-零結果、支持弱或缺少所需面向。
+重排失敗，但時限內 sparse 仍可用。
+
+Handoff / 交接資料:
+
+Original question and snapshot; no fabricated scores
+
+原問題及快照；不捏造分數
+
+**Sparse fallback → Evidence gate**
+
+Use the working sparse result within the original budget.
+
+原預算內使用可用 sparse 結果。
+
+Handoff / 交接資料:
+
+Passages + fallback_reason
+
+原文＋回退原因
+
+**Sparse fallback → Unavailable → END**
+
+Sparse also fails or the deadline expires.
+
+Sparse 亦失敗或已超時。
+
+Handoff / 交接資料:
+
+Dependency error, not an empty evidence claim
+
+依賴錯誤，不聲稱沒有證據
+
+**Evidence gate → Refine query once**
+
+First search lacks coverage and the original budget remains.
+
+首次搜尋覆蓋不足，原預算仍有餘額。
 
 Handoff / 交接資料:
 
 Missing facets; preserve company, cutoff and snapshot
 
 缺失面向；保留公司、截止及快照
+
+**Refine query once → Question + snapshot → filtered sparse/dense search**
+
+Search again with a narrower query; at most two searches total, including failed attempts.
+
+收窄查詢再搜尋；包含失敗嘗試總共最多兩次。
+
+Handoff / 交接資料:
+
+Same snapshot, new query, retained search counter
+
+相同快照、新查詢、保留搜尋計數
+
+**Evidence gate → Insufficient → END**
+
+The second search still lacks support, or no refinement budget remains.
+
+第二次搜尋仍不足，或沒有補查預算。
+
+Handoff / 交接資料:
+
+Missing facets; no forecast
+
+缺失面向；不作預測
 
 **Evidence gate → Build context**
 

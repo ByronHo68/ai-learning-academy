@@ -1,4 +1,7 @@
 :HL["/_next/static/css/b86b764b626f0b8c.css","style"]
 :HL["/_next/static/css/d3d2d9b9e7a373b0.css","style"]
-:HL["/_next/static/css/8e49ef0a1213a3dd.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"agent-lab","param":null,"prefetchHints":4192,"slots":{"children":{"name":"compare","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}}}},"staleTime":300,"buildId":"4lZPQO5IDIqyfwBsknjRE"}
+:HL["/_next/static/css/6b2d5a2ab665ab27.css","style"]
+3:[["children",{"s":"__PAGE__","h":160}]]
+2:[["children",{"s":"compare","h":96,"c":"$Q3"}]]
+1:[["children",{"s":"agent-lab","h":96,"c":"$Q2"}]]
+0:{"b":"JrEbFQ8obN8Yf6O9qgSVp","t":{"t":{"s":"","h":80,"c":"$Q1"}}}

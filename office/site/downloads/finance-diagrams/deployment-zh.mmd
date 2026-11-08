@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Verified source + evals → build images"]
+  n1["Local containers"]
+  n2["Smoke tests → backup restore"]
+  n3["Stop / rollback"]
+  n4["Private deployment"]
+  n0 -- "建置＋設定" --> n1
+  n1 -- "驗證恢復" --> n2
+  n2 -- "檢查失敗" --> n3
+  n2 -- "檢查通過" --> n4

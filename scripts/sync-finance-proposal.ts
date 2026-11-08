@@ -1,5 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import type { Copy } from '../lib/curriculum';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { FinanceDiagramSvg } from '../app/finance-diagram-svg';
+import { financeDiagrams, financeDiagramMermaid, financeRetryRules } from '../lib/finance-diagrams';
 import { mcpExamples, mcpIntroduction, mcpMindmap, mcpMindmapMermaid, mcpOwnership, mcpReferences, mcpScenarios, mcpSetup, mcpStorySteps, mcpToolDefinition, mcpVersionNote, mcpWorkflowMermaid } from '../lib/finance-mcp';
 import { financeFunctionRoutes } from '../lib/finance-workflows';
 import { financeContextExample, financeGraphNodes, financeGraphScenarios, financeGraphState, financeGraphWiring, financeScenarioPath } from '../lib/finance-graph';
@@ -111,6 +115,19 @@ const outputs: Array<[string, string]> = [
   ['public/downloads/financial-report-development-proposal.md', proposal],
   ['public/downloads/financial-report-langgraph-design.md', graph],
 ];
+const atlas = [
+  '# Stock research workflow atlas / 股票研究流程圖集',
+  'Open `/finance-project/workflows` for the interactive mind map and twelve connected diagrams. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及十二張連線圖。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and the original ${financeRuntimeLimits.timeoutSeconds}s deadline. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
+  ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),
+  ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),
+].join('\n\n') + '\n';
+outputs.push(['public/downloads/stock-research-workflow-atlas.md', atlas], ['docs/FINANCE_WORKFLOW_ATLAS.md', atlas.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')]);
+for (const diagram of financeDiagrams) for (const lang of ['en', 'zh'] satisfies Array<'en' | 'zh'>) {
+  const svg = renderToStaticMarkup(createElement(FinanceDiagramSvg, { diagram, lang, prefix: `${diagram.id}-${lang}` }));
+  outputs.push([`public/downloads/finance-diagrams/${diagram.id}-${lang}.svg`, svg + '\n'], [`public/downloads/finance-diagrams/${diagram.id}-${lang}.mmd`, financeDiagramMermaid(diagram, lang) + '\n']);
+}
 for (const [path, content] of outputs) {
   const target = new URL(path, root);
   if (process.argv.includes('--check')) {

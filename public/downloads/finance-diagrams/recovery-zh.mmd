@@ -1,0 +1,10 @@
+flowchart TD
+  n0["run_id → authenticate"]
+  n1["Checkpoint"]
+  n2["404 / 409 → END"]
+  n3["Next unfinished node"]
+  n4["Stopped → END"]
+  n0 -- "相同擁有者／任務" --> n1
+  n1 -- "狀態不安全" --> n2
+  n1 -. "原預算恢復" .-> n3
+  n1 -- "已過期" --> n4

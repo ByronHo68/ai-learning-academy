@@ -1,0 +1,17 @@
+flowchart TD
+  n0["Validated request → scope → refresh → retrieve → rerank"]
+  n1["Evidence gate"]
+  n2["Refine → retrieve"]
+  n3["Insufficient → END"]
+  n4["Context → LLM → validation"]
+  n5["Save → answer"]
+  n6["Blocked → END"]
+  n7["Unavailable → END"]
+  n0 -- "有限次執行" --> n1
+  n1 -. "缺口＋有預算" .-> n2
+  n2 -. "第 2／2 次搜尋" .-> n1
+  n1 -- "仍不足" --> n3
+  n1 -- "證據足夠" --> n4
+  n4 -- "驗證通過" --> n5
+  n4 -- "引用無效" --> n6
+  n4 -- "超時／錯誤" --> n7

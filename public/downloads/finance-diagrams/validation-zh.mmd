@@ -1,0 +1,8 @@
+flowchart TD
+  n0["Draft + evidence"]
+  n1["Validation checks"]
+  n2["Blocked → END"]
+  n3["Persist report"]
+  n0 -- "核對主張" --> n1
+  n1 -- "任一失敗" --> n2
+  n1 -- "全部通過" --> n3

@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Prompt + selection"]
+  n1["Scope gate"]
+  n2["Clarify → END"]
+  n3["Out of scope → END"]
+  n4["News refresh"]
+  n0 -- "驗證" --> n1
+  n1 -- "不明確" --> n2
+  n1 -- "不相關" --> n3
+  n1 -- "範圍符合" --> n4

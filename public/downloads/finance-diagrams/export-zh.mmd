@@ -1,0 +1,8 @@
+flowchart TD
+  n0["Report ID → authorized lookup"]
+  n1["Saved result"]
+  n2["404 / conflict → END"]
+  n3["Serialize → download"]
+  n0 -- "有權限" --> n1
+  n0 -- "不能匯出" --> n2
+  n1 -- "不再呼叫 LLM" --> n3

@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Frozen manifest → verify hash → run configurations"]
+  n1["Observed outputs"]
+  n2["Score retrieval + citations + safety"]
+  n3["Block admission"]
+  n4["Approve versioned candidate"]
+  n0 -- "凍結輸入" --> n1
+  n1 -- "量度" --> n2
+  n2 -- "未過門檻" --> n3
+  n2 -- "全部通過" --> n4

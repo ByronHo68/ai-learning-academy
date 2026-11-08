@@ -1,0 +1,10 @@
+flowchart TD
+  n0["run_id → authenticate"]
+  n1["Checkpoint"]
+  n2["404 / 409 → END"]
+  n3["Next unfinished node"]
+  n4["Stopped → END"]
+  n0 -- "Same owner / run" --> n1
+  n1 -- "Unsafe state" --> n2
+  n1 -. "Resume, same budget" .-> n3
+  n1 -- "Expired" --> n4

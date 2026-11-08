@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Run start → root span"]
+  n1["Span events"]
+  n2["Redact → Collector → Langfuse / LangSmith"]
+  n3["Mark demo evidence incomplete"]
+  n4["Report card"]
+  n0 -- "記錄實際工作" --> n1
+  n1 -- "去敏感資料＋匯出" --> n2
+  n2 -- "Trace 不可用" --> n3
+  n2 -- "Trace 已核對" --> n4

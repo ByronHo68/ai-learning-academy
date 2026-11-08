@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Frozen manifest → verify hash → run configurations"]
+  n1["Observed outputs"]
+  n2["Score retrieval + citations + safety"]
+  n3["Block admission"]
+  n4["Approve versioned candidate"]
+  n0 -- "Frozen inputs" --> n1
+  n1 -- "Measure" --> n2
+  n2 -- "Gate failed" --> n3
+  n2 -- "All gates pass" --> n4

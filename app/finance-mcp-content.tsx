@@ -103,6 +103,7 @@ export default function FinanceMcpContent({ lang }: { lang: Lang }) {
       <p className="mcp-caption">{lang === 'zh' ? '以上是核心入門分類，並非全部選用功能或擴充的數目。每個 server 支援甚麼，須讀取它宣告的 capabilities。' : 'These are the core beginner categories, not a count of every optional feature or extension. Check each server’s advertised capabilities.'}</p>
     </section>
 
+    <Link className="mcp-entry" href="/finance-project/workflows"><Plug size={24}/><div><h2>{lang === 'zh' ? '由 MCP 走到整個項目' : 'See where MCP fits in the complete project'}</h2><p>{lang === 'zh' ? '整體工作流程、11 個功能圖、補查回圈、回退及停止條件。' : 'The overall workflow, 11 function graphs, retry loops, fallbacks and stopping conditions.'}</p></div><ArrowRight size={20}/></Link>
     <McpAnimation lang={lang}/>
 
     <section className="finance-section" id="mcp-responsibilities"><p className="eyebrow">03 · WHO DOES WHICH JOB?</p><h2>{lang === 'zh' ? 'MCP、RAG 同 LangGraph 點分？' : 'Where do MCP, RAG and LangGraph fit?'}</h2>

@@ -1,0 +1,12 @@
+flowchart TD
+  n0["Validated request → n8n MCP refresh"]
+  n1["Provider response"]
+  n2["Pinned snapshot"]
+  n3["Unavailable → END"]
+  n4["Insufficient → END"]
+  n5["Retrieve"]
+  n0 -- "每新問題一次" --> n1
+  n1 -- "有效記錄" --> n2
+  n1 -- "供應商失敗" --> n3
+  n1 -- "只有過期證據" --> n4
+  n2 -- "快照就緒" --> n5

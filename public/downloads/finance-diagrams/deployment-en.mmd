@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Verified source + evals → build images"]
+  n1["Local containers"]
+  n2["Smoke tests → backup restore"]
+  n3["Stop / rollback"]
+  n4["Private deployment"]
+  n0 -- "Build + configure" --> n1
+  n1 -- "Verify recovery" --> n2
+  n2 -- "Checks fail" --> n3
+  n2 -- "Checks pass" --> n4

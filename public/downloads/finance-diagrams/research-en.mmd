@@ -1,0 +1,17 @@
+flowchart TD
+  n0["Validated request → scope → refresh → retrieve → rerank"]
+  n1["Evidence gate"]
+  n2["Refine → retrieve"]
+  n3["Insufficient → END"]
+  n4["Context → LLM → validation"]
+  n5["Save → answer"]
+  n6["Blocked → END"]
+  n7["Unavailable → END"]
+  n0 -- "Bounded run" --> n1
+  n1 -. "Gap + budget" .-> n2
+  n2 -. "Search 2 of 2" .-> n1
+  n1 -- "Still insufficient" --> n3
+  n1 -- "Enough evidence" --> n4
+  n4 -- "Validation passed" --> n5
+  n4 -- "Invalid citation" --> n6
+  n4 -- "Timeout / error" --> n7

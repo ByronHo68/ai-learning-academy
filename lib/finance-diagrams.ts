@@ -1,0 +1,156 @@
+import type { Copy } from './curriculum';
+import { financeGraphNodes } from './finance-graph';
+import { financeFunctions, financeEngineeringWorkflows } from './finance-project';
+import { financeFunctionRoutes, type FinanceFunctionId, type FinanceRouteKind } from './finance-workflows';
+
+const t = (en: string, zh: string): Copy => ({ en, zh });
+export type DiagramNode = { id: string; label: string; detail: Copy };
+export type DiagramEdge = { from: string; to: string; label: Copy; detail: Copy; kind: FinanceRouteKind };
+export type FinanceDiagram = { id: string; title: Copy; nodes: DiagramNode[]; edges: DiagramEdge[] };
+
+const edge = (from: keyof typeof financeGraphNodes, to: keyof typeof financeGraphNodes, en: string, zh: string, kind: FinanceRouteKind = 'flow'): DiagramEdge => ({ from, to, label: t(en, zh), detail: financeGraphNodes[to].how, kind });
+
+export const financeOverallDiagram: FinanceDiagram = {
+  id: 'overall', title: t('One question → one evidence-backed report', '一條問題 → 一份有證據報告'),
+  nodes: Object.entries(financeGraphNodes).map(([id, node]) => ({ id, label: node.label.replace(' → END', ''), detail: node.how })),
+  edges: [
+    edge('scope', 'refresh', 'Supported', '範圍符合'),
+    edge('scope', 'clarify', 'Ambiguous', '不明確', 'stop'),
+    edge('scope', 'irrelevant', 'Unrelated', '不相關', 'stop'),
+    edge('refresh', 'retrieve', 'Snapshot ready', '快照就緒'),
+    edge('refresh', 'insufficient', 'Only stale news', '只有過期新聞', 'stop'),
+    edge('refresh', 'unavailable', 'Refresh failed', '刷新失敗', 'stop'),
+    edge('retrieve', 'rerank', 'Candidates found', '已取得候選'),
+    edge('retrieve', 'fallback', 'Vector path fails', '向量路徑失敗', 'fallback'),
+    edge('rerank', 'gate', 'Ranked passages', '已排序原文'),
+    edge('rerank', 'fallback', 'Reranker fails', '重排失敗', 'fallback'),
+    edge('fallback', 'gate', 'Sparse works', 'Sparse 可用', 'fallback'),
+    edge('fallback', 'unavailable', 'Sparse also fails', 'Sparse 亦失敗', 'stop'),
+    edge('gate', 'refine', 'Gap + budget left', '有缺口＋餘額', 'retry'),
+    edge('refine', 'retrieve', 'Search 2 of 2', '第 2／2 次搜尋', 'retry'),
+    edge('gate', 'insufficient', 'Still insufficient', '仍不足', 'stop'),
+    edge('gate', 'context', 'Enough support', '支持足夠'),
+    edge('context', 'insufficient', 'Trimming loses support', '裁剪後支持不足', 'stop'),
+    edge('context', 'generate', 'Context ready', '上下文就緒'),
+    edge('context', 'unavailable', 'Deadline reached', '到達時限', 'stop'),
+    edge('generate', 'validate', 'Draft ready', '草稿就緒'),
+    edge('generate', 'unavailable', 'Model / schema error', '模型／格式錯誤', 'stop'),
+    edge('validate', 'blocked', 'Invalid support', '支持無效', 'stop'),
+    edge('validate', 'save', 'All checks pass', '檢查通過'),
+    edge('save', 'answer', 'Persisted result', '已保存結果'),
+    edge('save', 'unavailable', 'Save failed', '保存失敗', 'stop'),
+  ],
+};
+
+export function financeFunctionDiagram(id: FinanceFunctionId): FinanceDiagram {
+  const guide = [...financeFunctions, ...financeEngineeringWorkflows].find(item => item.id === id);
+  if (!guide) throw new Error(`Missing function guide: ${id}`);
+  const routes = financeFunctionRoutes[id];
+  const names = [...new Set(routes.flatMap(route => [route.from, route.to]))];
+  return {
+    id, title: guide.title,
+    nodes: names.map(name => ({ id: name, label: name, detail: guide.purpose })),
+    edges: routes.map(route => ({ from: route.from, to: route.to, label: route.label, kind: route.kind, detail: t(`${route.when.en} Handoff: ${route.payload.en}`, `${route.when.zh} 交接資料：${route.payload.zh}`) })),
+  };
+}
+
+export const financeDiagramIds: Array<'overall' | FinanceFunctionId> = ['overall', ...financeFunctions.map(item => item.id), ...financeEngineeringWorkflows.map(item => item.id)];
+export const financeDiagrams = financeDiagramIds.map(id => id === 'overall' ? financeOverallDiagram : financeFunctionDiagram(id));
+
+export const financeRetryRules = [
+  { title: t('Refine a weak search', '補查不足證據'), body: t('At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and deadline. If evidence is still weak, return insufficient evidence.', '最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及時限；仍不足就回傳證據不足。') },
+  { title: t('Fall back after a component failure', '元件失敗時回退'), body: t('Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If sparse also fails, report unavailable; an outage is not “no news”.', '向量／重排路徑失敗時用仍可用的 sparse，維持原預算。Sparse 亦失敗就回服務不可用；故障不等於「沒有新聞」。') },
+  { title: t('Resume an interrupted run', '恢復中斷任務'), body: t('Authenticate the owner, reload the checkpoint and continue at the next unfinished node. Reuse completed results and idempotency keys. Keep counters and the original deadline; expiry needs a new request.', '驗證擁有者、載入 checkpoint，從下一個未完成節點繼續。重用已完成結果及冪等鍵；保留計數及原時限，過期後須新請求。') },
+  { title: t('Stop when a retry would be misleading', '不能靠重試解決就停止'), body: t('Irrelevant prompts, failed authorization and invalid citations do not trigger automatic retries. There is one news refresh per new accepted prompt, and no automatic draft-repair loop in this design.', '不相關問題、授權失敗及無效引用不會自動重試。每個新接納問題只刷新新聞一次；此設計沒有自動修補草稿迴圈。') },
+];
+
+export const diagramPalette = {
+  flow: '#087f78', retry: '#7251a1', fallback: '#9b641b', stop: '#b64a4a',
+};
+
+export type PlacedNode = DiagramNode & { x: number; y: number; rank: number; kind: 'start' | 'decision' | 'work' | 'end' };
+export const diagramNodeSize = { width: 280, height: 112 };
+
+export function layoutFinanceDiagram(diagram: FinanceDiagram) {
+  const ids = new Set(diagram.nodes.map(node => node.id));
+  if (ids.size !== diagram.nodes.length || !diagram.nodes.length) throw new Error(`Invalid nodes in ${diagram.id}`);
+  for (const edge of diagram.edges) if (!ids.has(edge.from) || !ids.has(edge.to)) throw new Error(`Dangling edge in ${diagram.id}`);
+  const backEdges = new Set<number>();
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const visit = (id: string) => {
+    if (visited.has(id)) return;
+    visiting.add(id);
+    diagram.edges.forEach((edge, index) => {
+      if (edge.from !== id) return;
+      if (visiting.has(edge.to)) {
+        if (edge.kind !== 'retry') throw new Error(`Unbounded cycle in ${diagram.id}`);
+        backEdges.add(index);
+      } else visit(edge.to);
+    });
+    visiting.delete(id);
+    visited.add(id);
+  };
+  diagram.nodes.forEach(node => visit(node.id));
+  const ranks = new Map(diagram.nodes.map(node => [node.id, 0]));
+  for (let pass = 0; pass < diagram.nodes.length; pass++) {
+    diagram.edges.forEach((edge, i) => {
+      if (!backEdges.has(i)) ranks.set(edge.to, Math.max(ranks.get(edge.to) ?? 0, (ranks.get(edge.from) ?? 0) + 1));
+    });
+  }
+  const layers = new Map<number, DiagramNode[]>();
+  for (const node of diagram.nodes) {
+    const rank = ranks.get(node.id) ?? 0;
+    layers.set(rank, [...(layers.get(rank) ?? []), node]);
+  }
+  const columns = Math.max(...[...layers.values()].map(layer => layer.length));
+  const longEdges = diagram.edges.map((edge, i) => !backEdges.has(i) && (ranks.get(edge.to) ?? 0) - (ranks.get(edge.from) ?? 0) > 1 ? i : -1).filter(i => i >= 0);
+  const extraGutter = Math.max(0, longEdges.length * 24 - 100);
+  const width = Math.max(900, columns * 360 + 360) + extraGutter;
+  const nodes: PlacedNode[] = [];
+  for (const [rank, layer] of layers) layer.forEach((node, column) => {
+    const outgoing = diagram.edges.filter(edge => edge.from === node.id).length;
+    nodes.push({ ...node, rank, x: (width - extraGutter - layer.length * 360) / 2 + column * 360 + 40, y: 130 + rank * 210,
+      kind: outgoing > 1 ? 'decision' : rank === 0 ? 'start' : outgoing === 0 ? 'end' : 'work' });
+  });
+  const edges = diagram.edges.map((edge, i) => {
+    const from = nodes.find(node => node.id === edge.from);
+    const to = nodes.find(node => node.id === edge.to);
+    if (!from || !to) throw new Error('Diagram endpoint not placed');
+    const sx = from.x + 140, sy = from.y + 112, tx = to.x + 140, ty = to.y;
+    if (backEdges.has(i)) {
+      const lane = 65 + (i % 2) * 35;
+      return { ...edge, index: i, path: `M ${from.x} ${from.y + 56} H ${lane} V ${to.y + 56} H ${to.x}`, labelX: 100, labelY: (from.y + to.y) / 2 + 56, loop: true };
+    }
+    if (to.rank - from.rank > 1) {
+      const lane = width - 40 - longEdges.indexOf(i) * 24;
+      const offset = 24 + (i % 3) * 14;
+      return { ...edge, index: i, path: `M ${sx} ${sy} V ${sy + offset} H ${lane} V ${ty - offset} H ${tx} V ${ty}`, labelX: lane - 58, labelY: (sy + ty) / 2, loop: false };
+    }
+    const middle = (sy + ty) / 2;
+    return { ...edge, index: i, path: `M ${sx} ${sy} C ${sx} ${middle}, ${tx} ${middle}, ${tx} ${ty}`, labelX: (sx + tx) / 2, labelY: middle, loop: false };
+  });
+  return { nodes, edges, width, height: 130 + Math.max(...ranks.values()) * 210 + 180 };
+}
+
+export function diagramLines(text: string, limit = 26): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    if (line && [...line, ...word].length + 1 > limit) { lines.push(line); line = ''; }
+    if ([...word].length > limit) {
+      if (line) { lines.push(line); line = ''; }
+      const chars = [...word];
+      while (chars.length > limit) lines.push(chars.splice(0, limit).join(''));
+      line = chars.join('');
+    } else line += (line ? ' ' : '') + word;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+export function financeDiagramMermaid(diagram: FinanceDiagram, lang: 'en' | 'zh'): string {
+  const names = new Map(diagram.nodes.map((node, i) => [node.id, `n${i}`]));
+  const quote = (text: string) => text.replaceAll('"', '&quot;');
+  return ['flowchart TD', ...diagram.nodes.map(node => `  ${names.get(node.id)}["${quote(node.label)}"]`), ...diagram.edges.map(edge => `  ${names.get(edge.from)} ${edge.kind === 'retry' ? '-.' : '--'} "${quote(edge.label[lang])}" ${edge.kind === 'retry' ? '.->' : '-->'} ${names.get(edge.to)}`)].join('\n');
+}

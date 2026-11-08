@@ -1,0 +1,10 @@
+flowchart TD
+  n0["Run start → root span"]
+  n1["Span events"]
+  n2["Redact → Collector → Langfuse / LangSmith"]
+  n3["Mark demo evidence incomplete"]
+  n4["Report card"]
+  n0 -- "Record actual work" --> n1
+  n1 -- "Redact + export" --> n2
+  n2 -- "Trace unavailable" --> n3
+  n2 -- "Trace verified" --> n4

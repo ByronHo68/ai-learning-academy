@@ -33,7 +33,7 @@ class FinanceEvaluationTests(unittest.TestCase):
         result = score(golden, ranks)
         self.assertEqual(result['unanswerable_count'], 3)
         self.assertEqual(result['empty_results_on_unanswerable'], 3)
-        self.assertEqual(ranks['MSFT-paraphrase'], [])
+        self.assertIn('MSFT-costs', ranks['MSFT-paraphrase'])
 
     def test_candidate_cannot_hide_cases_or_use_disallowed_sources(self):
         golden, _, _, _ = load_frozen()
@@ -47,8 +47,9 @@ class FinanceEvaluationTests(unittest.TestCase):
             score(golden, ranks)
 
     def test_written_margin_and_company_regression_block_candidate(self):
-        golden, _, policy, _ = load_frozen()
-        baseline = score(golden, sparse_rankings(golden))
+        _, _, policy, _ = load_frozen()
+        baseline = {'macro': {'recall@10': 0.80, 'ndcg@10': 0.80},
+                    'by_company': {'MSFT': {'recall@10': 0.80, 'ndcg@10': 0.80}}}
         self.assertFalse(retrieval_margin_passes(baseline, baseline, policy))
         better = copy.deepcopy(baseline)
         better['macro']['recall@10'] += 0.03

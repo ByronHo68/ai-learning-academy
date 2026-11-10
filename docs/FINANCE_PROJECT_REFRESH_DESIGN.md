@@ -31,7 +31,7 @@ The final design takes generated documentation and explicit evaluation/deploymen
 
 - A curated, dated snapshot makes the first interview demo reproducible. It does not demonstrate live global news coverage.
 - One Python service keeps the first application small. Spring Boot, MCP, multi-user access and advanced retrieval remain explicit later scope.
-- The browser demonstrates checkpoint behavior within one session. Persistent SQLite recovery belongs to the proposed Python application.
+- The browser demonstrates checkpoint behavior within one session. Persistent PostgreSQL recovery belongs to the proposed Python application.
 - Workflow diagrams use accessible HTML and responsive connectors. They explain control flow without requiring canvas or generated images.
 
 ## Verification

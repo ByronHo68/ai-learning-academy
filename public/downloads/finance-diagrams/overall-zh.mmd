@@ -1,7 +1,7 @@
 flowchart TD
   n0["SCOPE"]
   n1["NEWS REFRESH"]
-  n2["VECTOR + SPARSE"]
+  n2["POSTGRESQL SEARCH"]
   n3["RERANK"]
   n4["SPARSE FALLBACK"]
   n5["EVIDENCE GATE"]
@@ -22,7 +22,9 @@ flowchart TD
   n1 -- "快照就緒" --> n2
   n1 -- "只有過期新聞" --> n12
   n1 -- "刷新失敗" --> n15
-  n2 -- "已取得候選" --> n3
+  n2 -- "已准入混合" --> n3
+  n2 -- "預設全文搜尋" --> n5
+  n2 -- "PostgreSQL 中斷" --> n15
   n2 -- "向量路徑失敗" --> n4
   n3 -- "已排序原文" --> n5
   n3 -- "重排失敗" --> n4

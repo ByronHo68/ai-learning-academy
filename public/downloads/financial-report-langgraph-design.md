@@ -13,9 +13,198 @@ Supported company identities: Microsoft (MSFT), Apple (AAPL), NVIDIA (NVDA). Rea
 Generated from `lib/finance-project.ts` and `lib/finance-proposal.ts`. Run `npm run proposal:sync`; do not edit the generated files.
 
 
+## PostgreSQL database design / PostgreSQL 資料庫設計
+
+One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
+
+一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
+
+n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → LLM → validate → PostgreSQL report
+
+### snapshots + evidence_chunks
+
+Store dated, versioned excerpts and their source URLs. Query one pinned snapshot with company, permission, publication and first-seen filters. Freeze content after publication; permission revocations still exclude sources.
+
+保存有日期及版本的節錄和來源網址；查詢固定快照並檢查公司、權限、發布及首次取得時間。發布後凍結內容，撤銷權限仍須排除來源。
+
+### tsvector + GIN + ts_rank_cd
+
+The default sparse path is native PostgreSQL full-text search. GIN indexes lexemes and ts_rank_cd ranks matching passages by term coverage and proximity. The English configuration fits the initial English news corpus; other languages need separate evaluation.
+
+預設 sparse 路徑用 PostgreSQL 原生全文搜尋；GIN 索引字詞，ts_rank_cd 按詞語覆蓋及距離排序匹配段落。English 設定適用首版英文新聞；其他語言須另行評估。
+
+### pgvector → RRF → cross-encoder
+
+pgvector adds vector columns and distance search inside PostgreSQL. Start with exact filtered search; measure before adding HNSW. Approximate filtering can return too few rows, so evaluate recall under the same filters. Fuse 20 candidates per path to 20, rerank to 10, and pass at most 6 excerpts to the LLM.
+
+pgvector 在 PostgreSQL 內加入向量欄位及距離搜尋。先用過濾後精確搜尋，量度後再加 HNSW。近似搜尋過濾後可能不足筆數，須在相同條件下評估召回。每路徑取 20、融合成 20、重排成 10，最多 6 段送 LLM。
+
+### runs + reports + report_sources + feedback
+
+Persist the run owner, question, original deadline, counters, validated report and citation links. Save a report and its source links in one transaction. Unique run IDs make retries idempotent. Feedback is a separate record and never changes frozen evidence.
+
+保存任務擁有者、問題、原時限、計數、已驗證報告及引用關聯。報告與來源關聯用同一 transaction 保存，唯一任務 ID 讓重試具冪等性；回饋另存，不改凍結證據。
+
+### research_checkpoints · AsyncPostgresSaver
+
+Use langgraph-checkpoint-postgres and a server-owned thread_id mapped to the authenticated run. Run setup once as a migration, keep the async saver open for the application lifespan, and resume with the original counters and deadline. Checkpoints do not authorize a user or make external tool effects exactly-once.
+
+使用 langgraph-checkpoint-postgres，thread_id 由伺服器建立並連結已認證任務。setup 作一次性 migration；async saver 在 app 生命週期保持開啟，恢復保留原計數及時限。Checkpoint 不負責授權，也不能保證外部工具只執行一次。
+
+### Connections, retries and backups / 連線、重試及備份
+
+Keep DATABASE_URL and CHECKPOINT_DATABASE_URL server-side. Use Psycopg 3 with bounded pools, parameterized SQL and short transactions. Set statement and pool timeouts within the remaining run deadline; never hold a transaction open while waiting for an LLM or news API.
+
+DATABASE_URL 及 CHECKPOINT_DATABASE_URL 只留伺服器。用 Psycopg 3、有上限連線池、參數化 SQL 及短 transaction；SQL 和連線池 timeout 不超出任務剩餘時限，等 LLM 或新聞 API 時不保持 transaction。
+
+Give n8n an ingestion-only role; keep report and checkpoint access in the research service. Use separate databases and roles for research, checkpoints, n8n internal state and Langfuse. Langfuse still needs its own ClickHouse, Redis/Valkey and object-storage services.
+
+n8n 使用只供匯入的角色；報告及 checkpoint 權限留在研究服務。Research、checkpoints、n8n 內部狀態及 Langfuse 分別使用獨立資料庫與角色；Langfuse 仍需要 ClickHouse、Redis／Valkey 及物件儲存。
+
+A vector or reranker failure may fall back to working PostgreSQL full-text search. If PostgreSQL is unavailable, both paths fail: return unavailable. Retry only a complete idempotent transaction for a transient error, with bounded backoff inside the original deadline. Never retry authorization or validation failures.
+
+向量或重排失敗可回退可用的 PostgreSQL 全文搜尋。PostgreSQL 中斷會令兩路徑都失敗，回傳 unavailable。暫時錯誤只可在原時限內有限退避重試完整冪等 transaction；授權或驗證失敗不重試。
+
+Use versioned SQL migrations. Pin the PostgreSQL major and pgvector extension version; keep database storage on a persistent volume or managed PostgreSQL. Back up each application/checkpoint database with pg_dump, test pg_restore into a separate database, and retain roles/configuration separately. A container restart is not a restore test.
+
+使用版本化 SQL migration，固定 PostgreSQL 主版本及 pgvector 版本；資料放持久 volume 或託管 PostgreSQL。各 app／checkpoint 資料庫用 pg_dump 備份，pg_restore 還原至獨立資料庫實測，角色及設定另存。重啟容器不等於還原測試。
+
+### Schema example / 資料表範例
+
+```sql
+-- Proposed finance schema; run once in an empty dedicated research database.
+-- A migration role installs the extension; runtime roles do not need DDL rights.
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE SCHEMA research;
+
+CREATE TABLE research.snapshots (
+  snapshot_id uuid PRIMARY KEY,
+  company text NOT NULL CHECK (company IN ('MSFT', 'AAPL', 'NVDA')),
+  as_of timestamptz NOT NULL,
+  refreshed_at timestamptz NOT NULL,
+  UNIQUE (snapshot_id, company)
+);
+CREATE TABLE research.evidence_chunks (
+  snapshot_id uuid NOT NULL,
+  chunk_id text NOT NULL,
+  company text NOT NULL,
+  canonical_url text NOT NULL,
+  published_at timestamptz NOT NULL,
+  first_seen_at timestamptz NOT NULL,
+  content_hash text NOT NULL,
+  excerpt text NOT NULL,
+  permitted boolean NOT NULL DEFAULT false,
+  search_text tsvector GENERATED ALWAYS AS
+    (to_tsvector('english'::regconfig, excerpt)) STORED,
+  embedding vector(384), -- illustrative dimension; pin model + dimension before ingestion
+  embedding_model text,
+  PRIMARY KEY (snapshot_id, chunk_id),
+  FOREIGN KEY (snapshot_id, company) REFERENCES research.snapshots (snapshot_id, company),
+  CHECK ((embedding IS NULL) = (embedding_model IS NULL))
+);
+CREATE INDEX evidence_text_gin ON research.evidence_chunks USING gin(search_text);
+-- No HNSW index yet: exact filtered vector search is the first candidate.
+
+CREATE TABLE research.runs (
+  run_id uuid PRIMARY KEY,
+  owner_id text NOT NULL,
+  question text NOT NULL,
+  horizon text NOT NULL,
+  snapshot_id uuid REFERENCES research.snapshots,
+  deadline timestamptz NOT NULL,
+  search_attempts integer NOT NULL DEFAULT 0 CHECK (search_attempts BETWEEN 0 AND 2),
+  UNIQUE (run_id, snapshot_id)
+);
+CREATE TABLE research.reports (
+  run_id uuid PRIMARY KEY,
+  snapshot_id uuid NOT NULL,
+  body jsonb NOT NULL,
+  trace_url text,
+  UNIQUE (run_id, snapshot_id),
+  FOREIGN KEY (run_id, snapshot_id) REFERENCES research.runs (run_id, snapshot_id)
+);
+CREATE TABLE research.report_sources (
+  run_id uuid NOT NULL,
+  snapshot_id uuid NOT NULL,
+  chunk_id text NOT NULL,
+  PRIMARY KEY (run_id, chunk_id),
+  FOREIGN KEY (run_id, snapshot_id) REFERENCES research.reports (run_id, snapshot_id),
+  FOREIGN KEY (snapshot_id, chunk_id) REFERENCES research.evidence_chunks (snapshot_id, chunk_id)
+);
+CREATE TABLE research.feedback (
+  feedback_id uuid PRIMARY KEY,
+  run_id uuid NOT NULL REFERENCES research.reports,
+  correction text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+-- The saver owns checkpoint tables in a separate research_checkpoints database.
+-- Ingestion must validate source company/time/permissions before publishing a snapshot.
+-- This DDL does not implement app authorization, immutability or semantic citation validation.
+
+```
+
+### Retrieval query / 檢索查詢
+
+```sql
+-- Psycopg named parameters; never interpolate the question into SQL.
+-- Use the same eligibility conditions for sparse and dense candidates.
+WITH eligible AS (
+  SELECT c.* FROM research.evidence_chunks c
+  JOIN research.snapshots s USING (snapshot_id, company)
+  WHERE c.snapshot_id = %(snapshot_id)s AND c.company = %(company)s
+    AND c.permitted
+    AND c.published_at >= %(published_after)s
+    AND c.published_at <= s.as_of AND c.first_seen_at <= s.as_of
+), query AS (
+  SELECT websearch_to_tsquery('english', %(query)s) AS terms
+)
+SELECT chunk_id, excerpt, ts_rank_cd(search_text, terms) AS score
+FROM eligible, query WHERE search_text @@ terms
+ORDER BY score DESC, chunk_id COLLATE "C" LIMIT 20;
+
+-- Dense candidate: reuse the exact eligible CTE above, with the same parameters.
+-- The query vector must match the pinned model and dimension.
+-- For the dense query, mark eligible AS MATERIALIZED to scan the filtered set exactly.
+-- SELECT chunk_id, excerpt FROM eligible
+-- WHERE embedding IS NOT NULL AND embedding_model = %(embedding_model)s
+-- ORDER BY embedding <=> %(query_embedding)s::vector, chunk_id LIMIT 20;
+-- RRF merges ranks, not incomparable text/vector score values.
+-- Check the query plan with EXPLAIN before claiming a GIN or HNSW speedup.
+
+```
+
+### Checkpoint wiring / Checkpoint 接線
+
+```python
+# Proposed FastAPI lifespan wiring; build_graph supplies tested finance nodes.
+import os
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from app.graph import build_graph
+from app.nodes import nodes  # Proposed, tested implementations of each finance node.
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with AsyncPostgresSaver.from_conn_string(
+        os.environ["CHECKPOINT_DATABASE_URL"]
+    ) as saver:
+        # Run await saver.setup() once in the deployment migration step.
+        app.state.research_graph = build_graph(nodes=nodes, checkpointer=saver)
+        yield
+
+app = FastAPI(lifespan=lifespan)
+# After authenticating the owner and validating the request:
+# config = {"configurable": {"thread_id": str(server_owned_run_id)}}
+# result = await app.state.research_graph.ainvoke(initial_state, config)
+# Resume the SAME authorized run with ainvoke(None, config).
+# Preserve the original deadline/counters; deduplicate external writes by run_id.
+
+```
+
 ## Vector retrieval → reranking → LLM / 向量檢索 → 重排 → LLM
 
-Assumption: news is already chunked and indexed; the live app still refreshes every accepted prompt through n8n and pins the new snapshot. The website only plays deterministic fictional scenarios. No live graph, vector, reranker or model call is made.
+Assumption: news is already chunked and indexed in PostgreSQL; the live app still refreshes every accepted prompt through n8n and pins the new snapshot. The website only plays deterministic fictional scenarios. No live graph, vector, reranker or model call is made.
 
 假設新聞已切段及索引；真實版仍須經 n8n 刷新每個已接納提示並固定新快照。網站只播放固定虛構情境，沒有真實 graph、向量、重排或模型呼叫。
 
@@ -45,15 +234,15 @@ n8n refreshes approved feeds. For this walkthrough, assume the returned news is 
 
 n8n 刷新核准新聞；此流程假設回傳新聞已切段及索引。固定快照及發布／首次取得截止條件。
 
-### VECTOR + SPARSE (`retrieve`)
+### POSTGRESQL SEARCH (`retrieve`)
 
 Reads: query + snapshot + metadata filters
 
-Writes / handoff: top 20 per branch → RRF top 20
+Writes / handoff: sparse candidates | hybrid RRF top 20
 
-Embed the query with the indexed embedding model. Search the admitted vector index and sparse branch using identical filters, fuse and deduplicate. Sparse remains default until admission passes.
+Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
 
-使用索引相同 embedding 模型轉換查詢，以相同條件搜尋已准入向量及 sparse，融合去重；准入前預設 sparse。
+預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
 ### RERANK (`rerank`)
 
@@ -71,9 +260,9 @@ Reads: failed candidate component + same snapshot
 
 Writes / handoff: sparse-ranked passages + fallback_reason
 
-Use the working sparse path within the original deadline. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
+Use working PostgreSQL full-text search within the original deadline. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
 
-在原時限內使用可用 sparse；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
+原時限內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
 ### EVIDENCE GATE (`gate`)
 
@@ -131,9 +320,9 @@ Reads: validated report + run_id
 
 Writes / handoff: report_id + verified trace URL or explicit trace failure
 
-Persist the exact answer and source references. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.
+Commit the exact answer and source links in a PostgreSQL transaction. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.
 
-保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。
+以 PostgreSQL transaction 保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。
 
 ### ANSWER → END (`answer`)
 
@@ -204,12 +393,12 @@ How could MSFT costs affect the next 1–3 months?
 MSFT 成本可能如何影響未來 1–3 個月？
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
-Cited facts and conditional scenarios, after validation.
+Default PostgreSQL full-text search supplies the evidence for a validated report.
 
-驗證後回傳引用事實及條件式情境。
+預設 PostgreSQL 全文搜尋為已驗證報告提供證據。
 
 ### Insufficient evidence / 證據不足
 
@@ -218,7 +407,7 @@ What is the latest MSFT earnings outlook?
 MSFT 最新盈利展望如何？
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → EVIDENCE GATE → REFINE ONCE → VECTOR + SPARSE → RERANK → EVIDENCE GATE → INSUFFICIENT → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → REFINE ONCE → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 No outlook passage after two searches: explain the gap and abstain from forecasting.
@@ -274,7 +463,7 @@ Why do MSFT reports disagree about demand?
 為何 MSFT 報道對需求有不同說法？
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Preserve both sources and explain competing scenarios; do not invent a consensus.
@@ -288,7 +477,7 @@ Summarize MSFT news; one retrieved article contains an instruction attack.
 摘要 MSFT 新聞，其中一篇含指令攻擊。
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Treat article instructions as data; keep code-enforced permissions and legitimate evidence.
@@ -302,21 +491,21 @@ Research MSFT costs while the reranker is offline.
 重排服務離線時研究 MSFT 成本。
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → SPARSE FALLBACK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → SPARSE FALLBACK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Use sparse fallback and identify the actual mode in the report.
 
 回退 sparse，報告明示實際模式。
 
-### All retrieval unavailable / 檢索全不可用
+### PostgreSQL unavailable / PostgreSQL 不可用
 
-Research MSFT when both indexes fail.
+Research MSFT when PostgreSQL goes offline after news refresh.
 
-兩個索引失敗時研究 MSFT。
+新聞刷新後 PostgreSQL 中斷時研究 MSFT。
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → SPARSE FALLBACK → UNAVAILABLE → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → UNAVAILABLE → END
 ```
 
 Return an operational error, not an insufficient-news claim.
@@ -330,7 +519,7 @@ A draft cites a source that does not support its claim.
 草稿引用不能支持主張的來源。
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
 ```
 
 Withhold the draft and surface validation_failed.
@@ -344,7 +533,7 @@ The live run exceeds its deadline before generation.
 真實任務在生成前已超時。
 
 ```text
-SCOPE → NEWS REFRESH → VECTOR + SPARSE → RERANK → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
+SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
 ```
 
 Stop without calling the model; keep the checkpoint and original limits.
@@ -421,7 +610,8 @@ Fictional supported-case example. Source excerpts are untrusted data, separate f
 Proposed wiring only. Supply real typed nodes, enforced budgets, provider adapters and a durable checkpointer before execution. The API owns thread authorization; a resumed run retains its original deadline.
 
 ```python
-# Wiring sketch only: inject tested node implementations and a durable checkpointer.
+# Wiring sketch only: inject tested nodes and a PostgreSQL AsyncPostgresSaver.
+# See the PostgreSQL guide for lifespan wiring and one-time setup.
 # The academy does not run this graph or connect external services.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
@@ -477,7 +667,7 @@ def build_graph(nodes, checkpointer):
     # These nodes set route only to one of their declared successors.
     branches = {
         "refresh": ["retrieve", "insufficient", "unavailable"],
-        "retrieve": ["rerank", "fallback", "unavailable"],
+        "retrieve": ["rerank", "gate", "fallback", "unavailable"],
         "rerank": ["gate", "fallback", "unavailable"],
         "fallback": ["gate", "unavailable"],
         "context": ["generate", "insufficient", "unavailable"],
@@ -539,9 +729,9 @@ Freeze corpus, prompts, graded relevance labels (0/1/2), expected abstentions an
 
 調參前凍結語料、問題、0／1／2 相關性標籤、預期拒答及 SHA-256 清單。v1 有三個 ticker 共 18 個虛構案例，只驗證評估工具；正式准入另須人工核對、獲授權的新聞保留集，不能用測試集調參。
 
-Compare SQLite FTS5/BM25 sparse, Qdrant dense + sparse with reciprocal rank fusion, and hybrid + a pinned cross-encoder reranker. Use identical chunks, company/permission/time filters and candidate budgets: 20 per branch, fuse to 20, rerank to 10, pass at most 6 excerpts to the model. Filter both published_at and first_seen_at at the as-of cutoff.
+Compare PostgreSQL full-text search (tsvector + GIN + ts_rank_cd) sparse, pgvector dense + PostgreSQL full-text with reciprocal rank fusion, and hybrid + a pinned cross-encoder reranker. Use identical chunks, company/permission/time filters and candidate budgets: 20 per branch, fuse to 20, rerank to 10, pass at most 6 excerpts to the model. Filter both published_at and first_seen_at at the as-of cutoff.
 
-比較 SQLite FTS5／BM25、Qdrant dense＋sparse 的 RRF 混合檢索，以及加固定版本 cross-encoder 的混合檢索。共用切段、公司／權限／時間條件及預算：每分支 20、融合至 20、重排至 10、最多 6 段送模型。發布及首次取得時間都須早於截止點。
+比較 PostgreSQL 全文搜尋（tsvector＋GIN＋ts_rank_cd）、pgvector dense＋PostgreSQL 全文 的 RRF 混合檢索，以及加固定版本 cross-encoder 的混合檢索。共用切段、公司／權限／時間條件及預算：每分支 20、融合至 20、重排至 10、最多 6 段送模型。發布及首次取得時間都須早於截止點。
 
 Report macro recall@5/10 and nDCG@5/10 on answerable cases; report empty-evidence cases separately. Before enabling hybrid + reranking, require absolute gains of at least +0.03 recall@10 and +0.05 nDCG@10 over sparse, no per-company regression, citation-precision ≥0.95 and no decline from sparse. These are proposed acceptance thresholds, not measured improvements.
 
@@ -775,7 +965,7 @@ Refine once, or continue to reporting and validation.
 
 最多修正查詢一次，再進入報告及驗證。
 
-Tools: Bounded loop · timeout · SQLite checkpoint
+Tools: Bounded loop · timeout · PostgreSQL checkpoint
 
 **How / 如何應用**
 
@@ -869,7 +1059,7 @@ Resume only the selected saved run, within its existing budget.
 ```mermaid
 flowchart TD
   n0["run_id → authenticate"]
-  n1["Checkpoint"]
+  n1["PostgreSQL checkpoint"]
   n2["404 / 409 → END"]
   n3["Next unfinished node"]
   n4["Stopped → END"]
@@ -879,7 +1069,7 @@ flowchart TD
   n1 -->|"A later fresh prompt requires a new run."| n4
 ```
 
-**run_id → authenticate → Checkpoint**
+**run_id → authenticate → PostgreSQL checkpoint**
 
 Resolve the same thread and original request.
 
@@ -891,7 +1081,7 @@ Saved snapshot, completed node results, attempts and remaining budget
 
 快照、已完成結果、次數及剩餘預算
 
-**Checkpoint → 404 / 409 → END**
+**PostgreSQL checkpoint → 404 / 409 → END**
 
 Cannot safely resume the saved state.
 
@@ -903,7 +1093,7 @@ Keep saved state; explain recovery failure
 
 保留狀態並交代恢復失敗
 
-**Checkpoint → Next unfinished node**
+**PostgreSQL checkpoint → Next unfinished node**
 
 Deadline remains; replayed effects use idempotency keys.
 
@@ -915,7 +1105,7 @@ Same refresh receipt and search count; no budget reset
 
 相同刷新紀錄及搜尋次數；不重設預算
 
-**Checkpoint → Stopped → END**
+**PostgreSQL checkpoint → Stopped → END**
 
 A later fresh prompt requires a new run.
 
@@ -933,13 +1123,13 @@ Persist graph progress under the run ID.
 
 按任務 ID 保存 graph 進度。
 
-Tools: LangGraph checkpointer · SQLite
+Tools: LangGraph AsyncPostgresSaver · PostgreSQL
 
 **How / 如何應用**
 
-Save query, evidence references, tool results and remaining budget in the graph state. The Python app uses durable storage.
+Use AsyncPostgresSaver in the application lifespan; run setup once during migration. Save query, evidence references, tool receipts and remaining budget under the authorized run thread_id in the checkpoint database.
 
-在 graph 狀態保存查詢、來源、工具結果及剩餘預算；Python app 使用持久儲存。
+App 生命週期使用 AsyncPostgresSaver，migration 執行一次 setup；查詢、來源、工具紀錄及剩餘預算按已授權任務 thread_id 保存至 checkpoint 資料庫。
 
 **Why / 為何使用**
 
@@ -1063,7 +1253,7 @@ Start with the frozen 18-case synthetic set and eight injection fixtures. Add a 
 ## References / 官方參考
 
 - [n8n: MCP Server Trigger and workflow tools](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger/)
-- [Qdrant: hybrid and multi-stage queries](https://qdrant.tech/documentation/search/hybrid-queries/)
+- [pgvector: vector and hybrid search](https://github.com/pgvector/pgvector#hybrid-search)
 - [Langfuse: self-hosting architecture](https://langfuse.com/self-hosting)
 - [Langfuse: OpenTelemetry ingestion](https://langfuse.com/integrations/native/opentelemetry)
 - [LangSmith: OpenTelemetry and Collector fan-out](https://docs.langchain.com/langsmith/trace-with-opentelemetry)
@@ -1072,5 +1262,7 @@ Start with the frozen 18-case synthetic set and eight injection fixtures. Add a 
 - [LangGraph: workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 - [LangGraph: persistence and checkpoints](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [FastAPI: typed request bodies](https://fastapi.tiangolo.com/tutorial/body/)
-- [SQLite: FTS5 text search](https://www.sqlite.org/fts5.html)
+- [PostgreSQL: full-text search and ranking](https://www.postgresql.org/docs/current/textsearch-controls.html)
+- [PostgreSQL: backup and restore](https://www.postgresql.org/docs/current/backup-dump.html)
+- [LangGraph: PostgreSQL checkpoint setup](https://docs.langchain.com/oss/python/langgraph/add-memory)
 - [Docker Compose: production deployment](https://docs.docker.com/compose/how-tos/production/)

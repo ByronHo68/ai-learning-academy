@@ -1,16 +1,27 @@
 # Finance evaluation evidence
 
-This folder implements a dependency-free SQLite sparse baseline and retrieval metric calculator. It contains frozen fictional data and eight injection fixtures. It does **not** implement the proposed finance agent, vector index or telemetry services.
+This folder runs native PostgreSQL full-text search and measures retrieval on 18 frozen fictional cases. It also includes eight injection fixtures for the future finance agent. The sparse baseline uses `english` text normalization, a generated `tsvector` with a GIN index, `ts_rank_cd` and a fixed ID tie-breaker. Results are recomputed for the PostgreSQL baseline. The frozen corpus and admission policy retain their original hashes.
 
-From the repository root:
+Use Python 3.10+ and a dedicated PostgreSQL 18 test database. The runner creates temporary tables and needs permission to create them. To start a disposable database with Docker, run this from the repository root and wait for `pg_isready` to report that the database accepts connections:
 
 ```sh
-npm run finance:eval
-npm run finance:eval:test
-python3 evals/finance/evaluate.py --check
+docker run --rm -d --name finance-eval-pg \
+  -e POSTGRES_USER=finance_eval -e POSTGRES_PASSWORD=local-fixtures-only \
+  -e POSTGRES_DB=finance_eval -p 127.0.0.1:55432:5432 postgres:18.6
+docker exec finance-eval-pg pg_isready -U finance_eval -d finance_eval
 ```
 
-Requires Python 3.10+ with SQLite FTS5. `--check` verifies SHA-256 fixture hashes, reruns BM25 and compares the published report and fixture download. The tests check hand-calculated metrics, filtering, malformed candidate rankings, admission margins and freeze drift. They are not a live prompt-injection test.
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r evals/finance/requirements.txt
+export FINANCE_EVAL_DATABASE_URL=postgresql://finance_eval:local-fixtures-only@127.0.0.1:55432/finance_eval
+npm run finance:eval
+npm run finance:eval:test
+python evals/finance/evaluate.py --check
+```
+
+Run `docker stop finance-eval-pg` when finished. `--check` verifies SHA-256 fixture hashes, reruns PostgreSQL search and compares the published report and fixture download. The tests check hand-calculated metrics, filtering, malformed candidate rankings, admission margins and fixture hashes.
 
 `golden.json` has 24 fictional excerpts and 18 cases (15 answerable, three unanswerable). The same templates repeat over three tickers to test isolation, not independent market coverage. Labels were authored with the fixture. The paraphrase cases expose a lexical limitation. Use separate development data for tuning; obtain an independently reviewed licensed news holdout before claiming real-news quality. Version any corpus, label or policy change; retain the old version and explain why it changed. A hash detects drift, not label correctness or tamper resistance.
 
@@ -21,8 +32,8 @@ To score actual saved hybrid results, supply both ablations, the golden file has
   "golden_sha256": "COPY THE ACTUAL HASH FROM manifest.json",
   "configuration": {
     "embedding_model": "actual pinned model revision",
-    "sparse_model": "actual sparse model revision",
-    "index": "actual Qdrant collection snapshot/version",
+    "sparse_search": "actual PostgreSQL version, text configuration and ranking parameters",
+    "index": "actual pgvector extension version, corpus snapshot and exact or HNSW settings",
     "fusion": "RRF with actual parameters",
     "reranker": "actual pinned cross-encoder revision"
   },

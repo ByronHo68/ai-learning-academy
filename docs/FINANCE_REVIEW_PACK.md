@@ -1,6 +1,14 @@
 # Stock research reviewer pack / 股票研究審閱材料
 
-Design artifacts plus a local synthetic evaluation harness. Live n8n, Qdrant, model and telemetry integrations are not implemented in this academy. The browser demo remains fictional.
+Design artifacts plus a local synthetic evaluation harness. Live finance n8n, pgvector retrieval, model and telemetry integrations are not implemented in this academy. The synthetic evaluation harness executes PostgreSQL full-text search. The browser demo remains fictional.
+
+## PostgreSQL database design / PostgreSQL 資料庫設計
+
+One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
+
+一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
+
+n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → LLM → validate → PostgreSQL report
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
@@ -26,9 +34,9 @@ Freeze corpus, prompts, graded relevance labels (0/1/2), expected abstentions an
 
 調參前凍結語料、問題、0／1／2 相關性標籤、預期拒答及 SHA-256 清單。v1 有三個 ticker 共 18 個虛構案例，只驗證評估工具；正式准入另須人工核對、獲授權的新聞保留集，不能用測試集調參。
 
-Compare SQLite FTS5/BM25 sparse, Qdrant dense + sparse with reciprocal rank fusion, and hybrid + a pinned cross-encoder reranker. Use identical chunks, company/permission/time filters and candidate budgets: 20 per branch, fuse to 20, rerank to 10, pass at most 6 excerpts to the model. Filter both published_at and first_seen_at at the as-of cutoff.
+Compare PostgreSQL full-text search (tsvector + GIN + ts_rank_cd) sparse, pgvector dense + PostgreSQL full-text with reciprocal rank fusion, and hybrid + a pinned cross-encoder reranker. Use identical chunks, company/permission/time filters and candidate budgets: 20 per branch, fuse to 20, rerank to 10, pass at most 6 excerpts to the model. Filter both published_at and first_seen_at at the as-of cutoff.
 
-比較 SQLite FTS5／BM25、Qdrant dense＋sparse 的 RRF 混合檢索，以及加固定版本 cross-encoder 的混合檢索。共用切段、公司／權限／時間條件及預算：每分支 20、融合至 20、重排至 10、最多 6 段送模型。發布及首次取得時間都須早於截止點。
+比較 PostgreSQL 全文搜尋（tsvector＋GIN＋ts_rank_cd）、pgvector dense＋PostgreSQL 全文 的 RRF 混合檢索，以及加固定版本 cross-encoder 的混合檢索。共用切段、公司／權限／時間條件及預算：每分支 20、融合至 20、重排至 10、最多 6 段送模型。發布及首次取得時間都須早於截止點。
 
 Report macro recall@5/10 and nDCG@5/10 on answerable cases; report empty-evidence cases separately. Before enabling hybrid + reranking, require absolute gains of at least +0.03 recall@10 and +0.05 nDCG@10 over sparse, no per-company regression, citation-precision ≥0.95 and no decline from sparse. These are proposed acceptance thresholds, not measured improvements.
 
@@ -72,7 +80,7 @@ Store user helpfulness/correction feedback as a separate record tied to run_id a
 
 # ADR-001: n8n owns news acquisition; LangGraph owns research / n8n 管新聞擷取；LangGraph 管研究
 
-Status: accepted design, implementation pending. Date: 2026-11-06.
+Status: accepted design, implementation pending. Date: 2026-11-06. PostgreSQL revision: 2026-11-11.
 
 ## Decision / 決定
 
@@ -95,13 +103,13 @@ Trace two different prompts and show two refresh receipts. Resume one run and sh
 
 # ADR-002: Sparse is the baseline; hybrid must earn admission / Sparse 為基線；混合檢索須通過准入
 
-Status: accepted design, implementation pending. Date: 2026-11-06.
+Status: accepted design, implementation pending. Date: 2026-11-06. PostgreSQL revision: 2026-11-11.
 
 ## Decision / 決定
 
-Retain FTS5/BM25 as the default and rollback path. Trial Qdrant dense + sparse, RRF and a version-pinned cross-encoder on the same frozen corpus.
+Retain PostgreSQL full-text search as the default and rollback path. Trial pgvector dense + PostgreSQL full-text, RRF and a version-pinned cross-encoder on the same frozen corpus.
 
-保留 FTS5／BM25 為預設及回退路徑；同一凍結語料試行 Qdrant dense＋sparse、RRF 及固定版本 cross-encoder。
+保留 PostgreSQL 全文搜尋 為預設及回退路徑；同一凍結語料試行 pgvector dense＋PostgreSQL 全文、RRF 及固定版本 cross-encoder。
 
 ## Tradeoff / 取捨
 
@@ -118,7 +126,7 @@ Require +0.03 recall@10, +0.05 nDCG@10, no company regression, citation and abst
 
 # ADR-003: Freeze evidence and separate facts from forecasts / 凍結證據，分清事實與預測
 
-Status: accepted design, implementation pending. Date: 2026-11-06.
+Status: accepted design, implementation pending. Date: 2026-11-06. PostgreSQL revision: 2026-11-11.
 
 ## Decision / 決定
 
@@ -141,7 +149,7 @@ Hash-check fixtures; reject future/late-ingested sources; manually judge claim s
 
 # ADR-004: One OTel trace tree, two observability destinations / 一組 OTel traces，兩個觀察平台
 
-Status: accepted design, implementation pending. Date: 2026-11-06.
+Status: accepted design, implementation pending. Date: 2026-11-06. PostgreSQL revision: 2026-11-11.
 
 ## Decision / 決定
 
@@ -164,7 +172,7 @@ Check span parentage across n8n, token totals, redaction and one accessible demo
 
 # ADR-005: Retrieved content has no tool authority / 檢索內容沒有工具權限
 
-Status: accepted design, implementation pending. Date: 2026-11-06.
+Status: accepted design, implementation pending. Date: 2026-11-06. PostgreSQL revision: 2026-11-11.
 
 ## Decision / 決定
 
@@ -187,7 +195,7 @@ Replay direct/indirect override, exfiltration, forged citations, metadata attack
 
 # ADR-006: Publish evidence before adding infrastructure / 先公布證據，再增加基建
 
-Status: accepted design, implementation pending. Date: 2026-11-06.
+Status: accepted design, implementation pending. Date: 2026-11-06. PostgreSQL revision: 2026-11-11.
 
 ## Decision / 決定
 
@@ -210,12 +218,12 @@ A reviewer can reproduce local metrics and see missing live results without read
 
 ## Reproduce and inspect
 
-Run `npm run proposal:check`, `npm run finance:eval:test` and `python3 evals/finance/evaluate.py --check`. See `evals/finance/README.md` for the live-run protocol. [Evaluation report card](../public/downloads/stock-research-eval-report.md) · [Frozen golden set and injection fixtures](../public/downloads/stock-research-eval-fixtures.json).
+Set up the PostgreSQL 18 evaluation database and Python dependencies using `evals/finance/README.md`. Then run `npm run proposal:check`, `npm run finance:eval:test` and `python3 evals/finance/evaluate.py --check`. [Evaluation report card](../public/downloads/stock-research-eval-report.md) · [Frozen golden set and injection fixtures](../public/downloads/stock-research-eval-fixtures.json).
 
 ## Official references
 
 - [n8n: MCP Server Trigger and workflow tools](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger/)
-- [Qdrant: hybrid and multi-stage queries](https://qdrant.tech/documentation/search/hybrid-queries/)
+- [pgvector: vector and hybrid search](https://github.com/pgvector/pgvector#hybrid-search)
 - [Langfuse: self-hosting architecture](https://langfuse.com/self-hosting)
 - [Langfuse: OpenTelemetry ingestion](https://langfuse.com/integrations/native/opentelemetry)
 - [LangSmith: OpenTelemetry and Collector fan-out](https://docs.langchain.com/langsmith/trace-with-opentelemetry)
@@ -224,5 +232,7 @@ Run `npm run proposal:check`, `npm run finance:eval:test` and `python3 evals/fin
 - [LangGraph: workflows and agents](https://docs.langchain.com/oss/python/langgraph/workflows-agents)
 - [LangGraph: persistence and checkpoints](https://docs.langchain.com/oss/python/langgraph/persistence)
 - [FastAPI: typed request bodies](https://fastapi.tiangolo.com/tutorial/body/)
-- [SQLite: FTS5 text search](https://www.sqlite.org/fts5.html)
+- [PostgreSQL: full-text search and ranking](https://www.postgresql.org/docs/current/textsearch-controls.html)
+- [PostgreSQL: backup and restore](https://www.postgresql.org/docs/current/backup-dump.html)
+- [LangGraph: PostgreSQL checkpoint setup](https://docs.langchain.com/oss/python/langgraph/add-memory)
 - [Docker Compose: production deployment](https://docs.docker.com/compose/how-tos/production/)

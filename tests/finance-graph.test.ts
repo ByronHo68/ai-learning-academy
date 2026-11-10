@@ -23,20 +23,21 @@ test('missing evidence refines once and never fabricates a model answer', () => 
   assert.equal(financeScenarioPath('stale').at(-1), 'insufficient');
 });
 
-test('a report requires reranked or fallback evidence, a context envelope and validation', () => {
+test('a report requires retrieved evidence, a context envelope and validation', () => {
   for (const scenario of financeGraphScenarios) {
     const path = financeScenarioPath(scenario.id);
     assert.ok(path.filter(node => node === 'retrieve').length <= 2);
     if (path.includes('generate')) {
       assert.ok(path.indexOf('gate') < path.indexOf('context'));
       assert.ok(path.indexOf('context') < path.indexOf('generate'));
-      assert.ok(path.includes('rerank') || path.includes('fallback'));
+      assert.ok(path.indexOf('retrieve') < path.indexOf('gate'));
     }
     if (path.includes('answer')) {
       assert.ok(path.indexOf('validate') < path.indexOf('save'));
       assert.ok(path.indexOf('save') < path.indexOf('answer'));
     }
   }
+  assert.ok(!financeScenarioPath('supported').includes('rerank'));
   const rejected = financeScenarioPath('invalid_citation');
   assert.equal(rejected.at(-1), 'blocked');
   assert.ok(!rejected.includes('save'));
@@ -46,6 +47,7 @@ test('a report requires reranked or fallback evidence, a context envelope and va
 test('service outages and budget expiry differ from missing evidence', () => {
   assert.ok(financeScenarioPath('rerank_failure').includes('fallback'));
   assert.equal(financeScenarioPath('rerank_failure').at(-1), 'answer');
+  assert.ok(!financeScenarioPath('retrieval_failure').includes('fallback'));
   for (const scenario of ['retrieval_failure', 'timeout'] satisfies Array<'retrieval_failure' | 'timeout'>) {
     const path = financeScenarioPath(scenario);
     assert.equal(path.at(-1), 'unavailable');

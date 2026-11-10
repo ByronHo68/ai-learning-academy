@@ -71,6 +71,22 @@ jobs:
   verify:
     needs: agent-quality
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: finance_eval
+          POSTGRES_PASSWORD: synthetic-ci-only
+          POSTGRES_DB: finance_eval
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U finance_eval -d finance_eval"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      FINANCE_EVAL_DATABASE_URL: postgresql://finance_eval:synthetic-ci-only@127.0.0.1:5432/finance_eval
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -82,6 +98,7 @@ jobs:
         with:
           python-version: '3.13'
       - run: npm run proposal:check
+      - run: python3 -m pip install -r evals/finance/requirements.txt
       - run: npm run finance:eval:test
       - run: python3 evals/finance/evaluate.py --check
       - run: npm run check

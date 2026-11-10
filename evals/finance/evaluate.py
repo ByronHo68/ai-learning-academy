@@ -3,9 +3,11 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import re
-import sqlite3
 from pathlib import Path
+
+import psycopg
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
@@ -48,20 +50,34 @@ def allowed(doc, case):
 
 
 def sparse_rankings(golden):
-    with sqlite3.connect(':memory:') as db:
-        db.execute('CREATE VIRTUAL TABLE evidence USING fts5(id UNINDEXED, company UNINDEXED, '
-                   'published_at UNINDEXED, first_seen_at UNINDEXED, text)')
-        db.executemany('INSERT INTO evidence VALUES (?, ?, ?, ?, ?)',
-                       [(d['id'], d['company'], d['published_at'], d['first_seen_at'], d['text'])
-                        for d in golden['documents']])
+    url = os.environ.get('FINANCE_EVAL_DATABASE_URL')
+    if not url:
+        raise ValueError('Set FINANCE_EVAL_DATABASE_URL to a dedicated PostgreSQL 18 test database; '
+                         'see evals/finance/README.md. No embedded database fallback is used.')
+    with psycopg.connect(url, connect_timeout=5) as db:
+        if db.info.server_version // 10000 != 18:
+            raise ValueError('The reproducible baseline requires PostgreSQL major version 18.')
+        db.execute("SET LOCAL statement_timeout = '5s'")
+        db.execute("CREATE TEMP TABLE evidence (id text PRIMARY KEY, company text NOT NULL, "
+                   "published_at timestamptz NOT NULL, first_seen_at timestamptz NOT NULL, "
+                   "excerpt text NOT NULL, search_text tsvector GENERATED ALWAYS AS "
+                   "(to_tsvector('english'::regconfig, excerpt)) STORED) ON COMMIT DROP")
+        with db.cursor() as cursor:
+            cursor.executemany('INSERT INTO evidence (id, company, published_at, first_seen_at, excerpt) '
+                               'VALUES (%s, %s, %s, %s, %s)',
+                               [(d['id'], d['company'], d['published_at'], d['first_seen_at'], d['text'])
+                                for d in golden['documents']])
+        db.execute('CREATE INDEX ON evidence USING gin(search_text)')
         result = {}
         for case in golden['cases']:
+            # Preserve the v1 any-term query policy; PostgreSQL normalizes English lexemes.
             terms = re.findall(r'\w+', case['query'], flags=re.UNICODE)
             query = ' OR '.join('"' + word + '"' for word in terms)
             result[case['id']] = [row[0] for row in db.execute(
-                'SELECT id FROM evidence WHERE evidence MATCH ? AND company = ? '
-                'AND published_at >= ? AND published_at <= ? AND first_seen_at <= ? '
-                'ORDER BY bm25(evidence), id LIMIT 10',
+                "WITH q AS (SELECT websearch_to_tsquery('english', %s) AS terms) "
+                'SELECT id FROM evidence, q WHERE search_text @@ terms AND company = %s '
+                'AND published_at >= %s AND published_at <= %s AND first_seen_at <= %s '
+                'ORDER BY ts_rank_cd(search_text, terms) DESC, id COLLATE "C" LIMIT 20',
                 (query, case['company'], case['published_after'], case['as_of'], case['as_of']))]
         return result
 
@@ -119,16 +135,25 @@ def report(golden, injections, policy, manifest, baseline, candidates):
         f'Dataset: `{golden["version"]}`. {len(golden["documents"])} fictional excerpts, '
         f'{len(golden["cases"])} prompts (15 answerable, 3 unanswerable); three tickers. '
         'Labels are authored fixtures, not independent expert judgments. No real market claims.', '',
-        'Executed: Python standard-library SQLite FTS5/BM25 over the frozen corpus, company and '
+        'Baseline configuration: `postgres-fts-v2` · PostgreSQL 18 · Psycopg 3 · '
+        '`english` tsvector + GIN · any-term websearch_to_tsquery · ts_rank_cd normalization 0 · '
+        '20 candidates · ID tie-break in C collation. The planner may scan this tiny corpus; '
+        'these are ranking scores, not index-performance measurements.', '',
+        'Changed on 2026-11-11: this PostgreSQL baseline supersedes the earlier SQLite/BM25 '
+        'implementation. The frozen corpus, labels and admission thresholds are unchanged. '
+        'Recompute both candidate ablations against this baseline; historical scores remain in Git.', '',
+        'Executed: PostgreSQL full-text search over temporary tables containing the frozen corpus, company and '
         'publication/first-seen filters, and the metric calculator. No embedding, reranker, LLM, '
         'n8n, Langfuse or LangSmith service is executed by this command. Imported candidate rankings '
         'are scored as supplied, not independently reproduced vector searches.', '',
+        'Install `evals/finance/requirements.txt` and set `FINANCE_EVAL_DATABASE_URL` to a dedicated '
+        'PostgreSQL 18 test database as described in `evals/finance/README.md`. '
         'Reproduce from the repository root: `python3 evals/finance/evaluate.py --check`. '
         'Generate: `npm run finance:eval`. Tests: `npm run finance:eval:test`.', '',
         '| Configuration | recall@5 | nDCG@5 | recall@10 | nDCG@10 |',
         '| --- | ---: | ---: | ---: | ---: |',
     ]
-    for name, result in [('Sparse BM25 (executed)', baseline),
+    for name, result in [('PostgreSQL full-text (executed)', baseline),
                          ('Hybrid (imported)', candidates.get('hybrid')),
                          ('Hybrid + rerank (imported)', candidates.get('hybrid_rerank'))]:
         values = ' | '.join(fmt(result['macro'][key]) for key in
@@ -155,8 +180,7 @@ def report(golden, injections, policy, manifest, baseline, candidates):
               '100% material factual-claim citation coverage, correct abstention and the live safety/trace gates. '
               'Citation-precision is supported claim–source pairs / all emitted pairs; zero pairs is N/A. '
               'Support must be judged against the excerpt, not URL membership.', '',
-              'Production admission: **BLOCKED**. This synthetic starter cannot authorize production even if a '
-              'candidate passes the numerical margins. Add the independently reviewed, licensed real-news '
+              'Production admission: **BLOCKED**. Add the independently reviewed, licensed real-news '
               'holdout and actual live safety/trace evidence. Keep sparse active. The application runtime '
               'enforcement remains part of the proposed backend; this harness cannot configure a live index.', '',
               '## Per-case sparse results', '',
@@ -171,6 +195,9 @@ def report(golden, injections, policy, manifest, baseline, candidates):
     lines += ['', '## Frozen SHA-256 manifest', '']
     lines += [f'- `{name}`: `{digest}`' for name, digest in manifest['sha256'].items()]
     lines += ['', '## Limits and next evidence', '',
+              f'The baseline leaves at most {1 - baseline["macro"]["ndcg@10"]:.4f} nDCG@10 headroom '
+              f'on these fixtures. The written +{policy["ndcg10_absolute_gain"]:.2f} gate is evaluated '
+              'for production on the independently reviewed real-news holdout with its own PostgreSQL baseline.', '',
               'The paraphrase cases intentionally exercise lexical misses. The tiny repetitive corpus and '
               'authored labels make these scores unsuitable for claims about real-news quality or prediction '
               'accuracy. Use separate development data for tuning. Version and review any new labels, '

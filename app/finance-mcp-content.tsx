@@ -108,8 +108,9 @@ export default function FinanceMcpContent({ lang }: { lang: Lang }) {
 
     <section className="finance-section" id="mcp-responsibilities"><p className="eyebrow">03 · WHO DOES WHICH JOB?</p><h2>{lang === 'zh' ? 'MCP、RAG 同 LangGraph 點分？' : 'Where do MCP, RAG and LangGraph fit?'}</h2>
       <div className="mcp-ownership">{mcpOwnership.map(item => <div key={item.name}><strong>{item.name}</strong><p>{pick(item.job, lang)}</p></div>)}</div>
-      <p>{lang === 'zh' ? 'RAG 是「先檢索證據，再把證據交給模型生成答案」的做法。MCP 可以接駁檢索工具，但此設計先用 MCP 叫 n8n 刷新新聞，之後的檢索及重排由 Python app 用資料庫／模型 API 處理。' : 'RAG means retrieving evidence and supplying it to the model before generation. MCP can expose a retrieval tool, but this design first uses MCP to refresh news through n8n. The Python app then uses database/model APIs for retrieval and reranking.'}</p>
-      <p>{lang === 'zh' ? '向量搜尋不是文字 grep：它比較語意相似度；稀疏搜尋比較字詞。向量／混合索引仍須在凍結測試集超越稀疏基線的指定差距才可採用。' : 'Vector search compares meaning; text grep matches text patterns and sparse search ranks word matches. The hybrid index still must beat the sparse baseline by the written margin on the frozen evaluation set.'}</p>
+      <p>{lang === 'zh' ? 'RAG 是「先檢索證據，再把證據交給模型生成答案」的做法。MCP 可以接駁檢索工具，但此設計先用 MCP 叫 n8n 刷新新聞，Python app 直接查 PostgreSQL，混合方案准入後才使用 pgvector 及重排。' : 'RAG means retrieving evidence and supplying it to the model before generation. MCP can expose a retrieval tool, but this design first uses MCP to refresh news through n8n. The Python app queries PostgreSQL directly. An admitted hybrid path adds pgvector search and reranking.'}</p>
+      <p>{lang === 'zh' ? '向量搜尋不是文字 grep：它比較語意相似度；稀疏搜尋比較字詞。向量／混合索引仍須在凍結真實新聞保留集超越 PostgreSQL 全文基線的指定差距才可採用。' : 'Vector search compares meaning; text grep matches text patterns and sparse search ranks word matches. The hybrid index still must beat the sparse baseline by the written margin on the frozen real-news holdout.'}</p>
+      <p><Link className="fr-inline-link" href="/finance-project#finance-database">{lang === 'zh' ? '查看 PostgreSQL 資料表及檢索例子' : 'See the PostgreSQL schema and retrieval examples'} <ArrowRight size={16}/></Link></p>
       <Link className="fr-inline-link" href="/finance-project#finance-langgraph-map">{lang === 'zh' ? '再深入：11 種 LangGraph 情境及 Python 接線' : 'Go deeper: 11 LangGraph scenarios and Python wiring'} <ArrowRight size={16}/></Link>
     </section>
 

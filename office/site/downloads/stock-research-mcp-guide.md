@@ -67,13 +67,15 @@ flowchart TD
   S -->|Irrelevant| O[Explain supported scope]
   S -->|Supported| C[Host MCP client]
   C -->|MCP tools/call| N[n8n MCP Server Trigger + Workflow Tool]
-  N -->|Provider API| A[Fetch, normalize and index news]
+  N -->|Provider API| A[Fetch news and commit PostgreSQL snapshot]
   A --> N
   N -->|MCP tool result| P[Validate and pin snapshot]
   C -->|Failure| U[Service unavailable]
-  P --> R[Sparse baseline or admitted hybrid retrieval]
-  R --> K[Rerank eligible excerpts]
-  K --> E{Enough evidence?}
+  P --> R[PostgreSQL full-text or admitted pgvector hybrid]
+  R -->|Admitted hybrid| K[Rerank eligible excerpts]
+  R -->|Full-text default| E{Enough evidence?}
+  R -->|PostgreSQL unavailable| U
+  K --> E
   E -->|No, first search| F[Refine once]
   F --> R
   E -->|No, second search| I[Insufficient evidence]
@@ -84,9 +86,9 @@ flowchart TD
   V -->|Fail| W[Withhold draft]
 ```
 
-RAG retrieves evidence before generation. MCP connects the host to the news tool. In this design, database/reranking and LLM APIs are separate from MCP. The candidate hybrid index is allowed only after passing the existing written evaluation gates.
+RAG retrieves evidence before generation. MCP connects the host to the news tool. In this design, the research app queries PostgreSQL directly, then calls the reranker and LLM separately from MCP. The candidate hybrid index is allowed only after passing the existing written evaluation gates.
 
-RAG 先檢索證據再生成；MCP 連接 host 與新聞工具。此設計的資料庫／重排及 LLM API 與 MCP 分開；候選混合索引須通過現有書面評估門檻。
+RAG 先檢索證據再生成；MCP 連接 host 與新聞工具。研究 app 直接查詢 PostgreSQL；重排及 LLM 呼叫與 MCP 分開。候選混合索引須通過現有書面評估門檻。
 
 - **LangGraph**: Chooses the next step and enforces budgets. / 決定下一步，執行用量及次數上限。
 
@@ -94,7 +96,7 @@ RAG 先檢索證據再生成；MCP 連接 host 與新聞工具。此設計的資
 
 - **n8n**: Runs the news-fetching workflow. / 執行抓取新聞的工作流程。
 
-- **Vector DB / sparse index**: Finds candidate evidence by meaning / words. / 按語意／字詞搜尋候選證據。
+- **PostgreSQL + pgvector**: Finds candidate evidence by meaning / words. / 按語意／字詞搜尋候選證據。
 
 - **Reranker**: Reorders candidates for this question. / 按這條問題重排候選證據。
 
@@ -197,11 +199,11 @@ tools/call → refresh_company_news({ company: "MSFT", query: "cloud margins", a
 
 ### Fetch and store news / 抓新聞及儲存
 
-n8n · MCP server → News API → evidence store
+n8n · MCP server → News API → PostgreSQL
 
-n8n calls the provider API, records publication/first-seen times and stores evidence. That provider request uses its API; it is not automatically MCP.
+n8n calls the provider API, records publication/first-seen times and commits evidence to PostgreSQL before returning the snapshot. That provider request uses its API; it is not automatically MCP.
 
-n8n 用供應商 API，記錄發布／首次取得時間並儲存證據。這段使用供應商 API，不會自動變成 MCP。
+n8n 用供應商 API，記錄發布／首次取得時間並提交證據至 PostgreSQL 後才回傳快照。這段使用供應商 API，不會自動變成 MCP。
 
 ```text
 approved API → normalize → deduplicate → chunks + metadata
@@ -221,11 +223,11 @@ The result travels back over MCP. The host validates it and freezes the eligible
 
 ### Find candidate excerpts / 搵候選段落
 
-Research app · LangGraph → Evidence index
+Research app · LangGraph → PostgreSQL evidence index
 
-Assume articles are indexed. Sparse search matches words; a vector search matches meaning. The vector/hybrid candidate stays experimental until it passes the written evaluation margin.
+Assume articles are indexed. PostgreSQL full-text search matches words; pgvector searches embeddings in the same database. The vector/hybrid candidate stays experimental until it passes the written evaluation margin.
 
-假設文章已有索引：稀疏搜尋比對字詞，向量搜尋比對語意。向量／混合候選方案須通過指定評估差距才可採用。
+假設文章已有索引：PostgreSQL 全文搜尋比對字詞，pgvector 在同一資料庫搜尋向量。向量／混合候選方案須通過指定評估差距才可採用。
 
 ```text
 question + company + snapshot + date filters → candidate excerpts
@@ -233,7 +235,7 @@ question + company + snapshot + date filters → candidate excerpts
 
 ### Put useful evidence first / 把有用證據排前
 
-Evidence index → Reranker → evidence check
+PostgreSQL evidence index → Reranker → evidence check
 
 Reranking changes the order; it does not create missing facts. Check freshness, company and question coverage. Scores are relevance signals, not forecast confidence.
 
@@ -331,9 +333,9 @@ service_unavailable · news refresh timed out
 
 ### Tool: refresh the news / Tool：刷新新聞
 
-Run work with validated arguments. This tool may fetch approved provider APIs and update the evidence store. Its name is our proposed contract, not a built-in MCP command.
+Run work with validated arguments. This tool may fetch approved provider APIs and commit an evidence snapshot in PostgreSQL. Its name is our proposed contract, not a built-in MCP command.
 
-用已驗證參數執行工作。此工具可讀取核准供應商 API 及更新證據庫。這是我們建議的工具名稱，並非 MCP 內建指令。
+用已驗證參數執行工作。此工具可讀取核准供應商 API 並在 PostgreSQL 提交證據快照。這是我們建議的工具名稱，並非 MCP 內建指令。
 
 Request fragment / 要求片段:
 
@@ -479,9 +481,9 @@ Research app MCP client → n8n MCP Server Trigger → Custom n8n Workflow Tool 
 
 研究 app 作 client，n8n 作 server；相反方向由 n8n MCP Client Tool 使用外部 server。Server Trigger 支援 Streamable HTTP 及舊 SSE，未支援 stdio。
 
-1. Build the news sub-workflow: validate company/query/cutoff → call approved news APIs → normalize dates and deduplicate → store articles/chunks → return snapshot metadata. Keep provider keys in n8n credentials.
+1. Build the news sub-workflow: validate company/query/cutoff → call approved news APIs → normalize dates and deduplicate → commit articles/chunks and a snapshot in PostgreSQL → return snapshot metadata. Use a restricted ingestion role; keep provider and database credentials in n8n credentials.
 
-   建立新聞子流程：驗證公司／問題／截止時間 → 呼叫核准新聞 API → 整理日期及去重 → 儲存文章／切段 → 回傳快照資料。供應商金鑰放 n8n credentials。
+   建立新聞子流程：驗證公司／問題／截止時間 → 呼叫核准新聞 API → 整理日期及去重 → PostgreSQL 提交文章／切段及快照 → 回傳快照資料。用受限匯入角色，供應商及資料庫憑證放 n8n credentials。
 
 2. Add an MCP Server Trigger. Attach a Custom n8n Workflow Tool that exposes this sub-workflow as refresh_company_news. Ordinary workflow nodes belong inside the sub-workflow; the trigger connects to tool nodes.
 

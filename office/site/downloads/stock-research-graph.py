@@ -1,4 +1,5 @@
-# Wiring sketch only: inject tested node implementations and a durable checkpointer.
+# Wiring sketch only: inject tested nodes and a PostgreSQL AsyncPostgresSaver.
+# See the PostgreSQL guide for lifespan wiring and one-time setup.
 # The academy does not run this graph or connect external services.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
@@ -54,7 +55,7 @@ def build_graph(nodes, checkpointer):
     # These nodes set route only to one of their declared successors.
     branches = {
         "refresh": ["retrieve", "insufficient", "unavailable"],
-        "retrieve": ["rerank", "fallback", "unavailable"],
+        "retrieve": ["rerank", "gate", "fallback", "unavailable"],
         "rerank": ["gate", "fallback", "unavailable"],
         "fallback": ["gate", "unavailable"],
         "context": ["generate", "insufficient", "unavailable"],

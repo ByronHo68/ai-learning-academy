@@ -1,19 +1,22 @@
 flowchart TD
-  n0["Question + snapshot → filtered sparse/dense search"]
-  n1["Candidates"]
-  n2["RRF fusion + reranker"]
+  n0["PostgreSQL → full-text / pgvector"]
+  n1["Unavailable → END"]
+  n2["Candidates"]
   n3["Evidence gate"]
-  n4["Sparse fallback"]
-  n5["Unavailable → END"]
+  n4["RRF fusion + reranker"]
+  n5["Sparse fallback"]
   n6["Refine query once"]
   n7["Insufficient → END"]
   n8["Build context"]
-  n0 -- "Apply filters" --> n1
-  n1 -- "Admitted mode" --> n2
-  n2 -- "Ranking succeeds" --> n3
-  n2 -- "Reranker fails" --> n4
-  n4 -- "Sparse works" --> n3
-  n4 -- "No working path" --> n5
+  n0 -- "Database unavailable" --> n1
+  n0 -- "Apply filters" --> n2
+  n2 -- "Full-text default" --> n3
+  n2 -- "Admitted mode" --> n4
+  n4 -- "Ranking succeeds" --> n3
+  n0 -- "Vector path fails" --> n5
+  n4 -- "Reranker fails" --> n5
+  n5 -- "Sparse works" --> n3
+  n5 -- "No working path" --> n1
   n3 -. "Gap after search 1" .-> n6
   n6 -. "Search 2 of 2" .-> n0
   n3 -- "Still insufficient" --> n7

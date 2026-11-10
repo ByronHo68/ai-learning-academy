@@ -20,7 +20,7 @@ export const mcpMindmap = [
 
 export const mcpExamples = [
   { id: 'tool', title: copy('Tool: refresh the news', 'Tool：刷新新聞'), method: 'tools/call',
-    purpose: copy('Run work with validated arguments. This tool may fetch approved provider APIs and update the evidence store. Its name is our proposed contract, not a built-in MCP command.', '用已驗證參數執行工作。此工具可讀取核准供應商 API 及更新證據庫。這是我們建議的工具名稱，並非 MCP 內建指令。'),
+    purpose: copy('Run work with validated arguments. This tool may fetch approved provider APIs and commit an evidence snapshot in PostgreSQL. Its name is our proposed contract, not a built-in MCP command.', '用已驗證參數執行工作。此工具可讀取核准供應商 API 並在 PostgreSQL 提交證據快照。這是我們建議的工具名稱，並非 MCP 內建指令。'),
     request: { method: 'tools/call', params: { name: 'refresh_company_news', arguments: { company: 'MSFT', query: 'cloud margins', as_of: '2026-10-30T16:00:00Z' } } },
     result: { snapshot_id: 'fictional-msft-001', provider_status: 'ok', articles_added: 3, refreshed_at: '2026-10-30T16:00:00Z' },
     note: copy('Fictional tool-result data. The client validates it before the graph retrieves evidence; the refresh result is not yet a financial answer.', '虛構工具回傳資料。Client 先驗證，graph 再檢索證據；刷新結果仍未是金融答案。') },
@@ -47,7 +47,7 @@ export const mcpToolDefinition = {
 };
 
 export const mcpSetup = [
-  copy('Build the news sub-workflow: validate company/query/cutoff → call approved news APIs → normalize dates and deduplicate → store articles/chunks → return snapshot metadata. Keep provider keys in n8n credentials.', '建立新聞子流程：驗證公司／問題／截止時間 → 呼叫核准新聞 API → 整理日期及去重 → 儲存文章／切段 → 回傳快照資料。供應商金鑰放 n8n credentials。'),
+  copy('Build the news sub-workflow: validate company/query/cutoff → call approved news APIs → normalize dates and deduplicate → commit articles/chunks and a snapshot in PostgreSQL → return snapshot metadata. Use a restricted ingestion role; keep provider and database credentials in n8n credentials.', '建立新聞子流程：驗證公司／問題／截止時間 → 呼叫核准新聞 API → 整理日期及去重 → PostgreSQL 提交文章／切段及快照 → 回傳快照資料。用受限匯入角色，供應商及資料庫憑證放 n8n credentials。'),
   copy('Add an MCP Server Trigger. Attach a Custom n8n Workflow Tool that exposes this sub-workflow as refresh_company_news. Ordinary workflow nodes belong inside the sub-workflow; the trigger connects to tool nodes.', '加入 MCP Server Trigger，接 Custom n8n Workflow Tool，把子流程公開為 refresh_company_news。一般工作流程節點放在子流程內；trigger 連接的是 tool 節點。'),
   copy('Configure authentication and copy the displayed test endpoint. Test while n8n is listening; publish the workflow before using its production endpoint. Use a compatible Streamable HTTP client.', '設定認證及複製畫面上的測試端點；n8n 監聽時測試。發布流程後才使用正式端點，並選相容的 Streamable HTTP client。'),
   copy('In the Python host, configure the endpoint and credentials server-side. Check the SDK/server protocol versions, discover capabilities, list tools and verify the tool schema. The browser never receives these credentials.', '在 Python host 伺服器端設定端點及憑證，確認 SDK／server 協定版本相容，發現功能、列出工具及核對 schema。憑證不傳到瀏覽器。'),
@@ -59,7 +59,7 @@ export const mcpOwnership = [
   { name: 'LangGraph', job: copy('Chooses the next step and enforces budgets.', '決定下一步，執行用量及次數上限。') },
   { name: 'MCP', job: copy('Carries tool discovery, calls and results.', '傳送功能發現、工具呼叫及結果。') },
   { name: 'n8n', job: copy('Runs the news-fetching workflow.', '執行抓取新聞的工作流程。') },
-  { name: 'Vector DB / sparse index', job: copy('Finds candidate evidence by meaning / words.', '按語意／字詞搜尋候選證據。') },
+  { name: 'PostgreSQL + pgvector', job: copy('Finds candidate evidence by meaning / words.', '按語意／字詞搜尋候選證據。') },
   { name: 'Reranker', job: copy('Reorders candidates for this question.', '按這條問題重排候選證據。') },
   { name: 'LLM + validator', job: copy('Writes from selected evidence; checks support.', '按選定證據撰寫，再核對支持度。') },
 ];
@@ -71,16 +71,16 @@ const graph = copy('Research app · LangGraph', '研究 app · LangGraph');
 const client = copy('MCP client inside the app', 'App 內的 MCP client');
 const n8n = copy('n8n · MCP server', 'n8n · MCP server');
 const user = copy('You', '你');
-const index = copy('Evidence index', '證據索引');
+const index = copy('PostgreSQL evidence index', 'PostgreSQL 證據索引');
 const gate = copy('Evidence check', '證據檢查');
 
 export const mcpStorySteps = {
   scope: step(copy('Check the question', '先睇問題'), user, graph, 'app', 'MSFT · cloud margins · next quarter', copy('Code checks company, topic and horizon before any external call. A valid question can continue.', '程式先檢查公司、題目及期間，合適才可進行外部呼叫。')),
   discover: step(copy('Read the tool menu', '睇工具餐牌'), client, n8n, 'mcp', 'tools/list → refresh_company_news + inputSchema', copy('After compatible setup, the client learns the tool name and accepted arguments. Discovery can be cached; it need not repeat for each prompt.', '完成相容設定後，client 讀取工具名稱及參數格式。工具發現可快取，毋須每題重做。')),
   call: step(copy('Ask n8n to refresh', '叫 n8n 刷新'), client, n8n, 'mcp', 'tools/call → refresh_company_news({ company: "MSFT", query: "cloud margins", as_of: "…" })', copy('The graph’s refresh node sends the named tool call. MCP carries the request; n8n owns the work. This is one proposed news-tool call.', 'Graph 的 refresh 節點傳送具名工具要求；MCP 負責傳訊，n8n 負責工作。這是一次建議的新聞工具呼叫。')),
-  fetch: step(copy('Fetch and store news', '抓新聞及儲存'), n8n, copy('News API → evidence store', '新聞 API → 證據庫'), 'provider', 'approved API → normalize → deduplicate → chunks + metadata', copy('n8n calls the provider API, records publication/first-seen times and stores evidence. That provider request uses its API; it is not automatically MCP.', 'n8n 用供應商 API，記錄發布／首次取得時間並儲存證據。這段使用供應商 API，不會自動變成 MCP。')),
+  fetch: step(copy('Fetch and store news', '抓新聞及儲存'), n8n, copy('News API → PostgreSQL', '新聞 API → PostgreSQL'), 'provider', 'approved API → normalize → deduplicate → chunks + metadata', copy('n8n calls the provider API, records publication/first-seen times and commits evidence to PostgreSQL before returning the snapshot. That provider request uses its API; it is not automatically MCP.', 'n8n 用供應商 API，記錄發布／首次取得時間並提交證據至 PostgreSQL 後才回傳快照。這段使用供應商 API，不會自動變成 MCP。')),
   result: step(copy('Return a snapshot', '交回快照'), n8n, client, 'mcp', '{ snapshot_id: "fictional-msft-001", provider_status: "ok", articles_added: 3 }', copy('The result travels back over MCP. The host validates it and freezes the eligible evidence snapshot for this run.', '結果經 MCP 回傳；host 驗證後固定本次可用的證據快照。')),
-  retrieve: step(copy('Find candidate excerpts', '搵候選段落'), graph, index, 'retrieval', 'question + company + snapshot + date filters → candidate excerpts', copy('Assume articles are indexed. Sparse search matches words; a vector search matches meaning. The vector/hybrid candidate stays experimental until it passes the written evaluation margin.', '假設文章已有索引：稀疏搜尋比對字詞，向量搜尋比對語意。向量／混合候選方案須通過指定評估差距才可採用。')),
+  retrieve: step(copy('Find candidate excerpts', '搵候選段落'), graph, index, 'retrieval', 'question + company + snapshot + date filters → candidate excerpts', copy('Assume articles are indexed. PostgreSQL full-text search matches words; pgvector searches embeddings in the same database. The vector/hybrid candidate stays experimental until it passes the written evaluation margin.', '假設文章已有索引：PostgreSQL 全文搜尋比對字詞，pgvector 在同一資料庫搜尋向量。向量／混合候選方案須通過指定評估差距才可採用。')),
   rerank: step(copy('Put useful evidence first', '把有用證據排前'), index, copy('Reranker → evidence check', '重排器 → 證據檢查'), 'retrieval', 'candidate list → question-specific order → selected source IDs', copy('Reranking changes the order; it does not create missing facts. Check freshness, company and question coverage. Scores are relevance signals, not forecast confidence.', '重排改變次序，不會創造缺失事實。核對新鮮度、公司及問題覆蓋；分數代表相關性，並非預測信心。')),
   context: step(copy('Pack the LLM input', '準備 LLM 輸入'), gate, copy('Context builder', '上下文組裝'), 'app', 'policy + original question + dated excerpts + source IDs', copy('Keep retrieved text separate from instructions. Include only eligible excerpts within the token budget; reject embedded commands. A database is not passed wholesale to the model.', '檢索文字與指令分開。只加入 token 上限內合資格段落，排除內嵌指令；不會把整個資料庫塞入模型。')),
   generate: step(copy('Write a grounded draft', '按證據寫草稿'), copy('Context builder', '上下文組裝'), copy('LLM', 'LLM'), 'model', 'selected evidence → cited facts + conditional scenarios', copy('The LLM API produces a draft addressing the question. This call is separate from MCP. A price guarantee or unsupported probability cannot be inferred from retrieval scores.', 'LLM API 按問題產生草稿，這次呼叫與 MCP 分開。檢索分數不能推出價格保證或無支持的機率。')),
@@ -131,13 +131,15 @@ export const mcpWorkflowMermaid = `flowchart TD
   S -->|Irrelevant| O[Explain supported scope]
   S -->|Supported| C[Host MCP client]
   C -->|MCP tools/call| N[n8n MCP Server Trigger + Workflow Tool]
-  N -->|Provider API| A[Fetch, normalize and index news]
+  N -->|Provider API| A[Fetch news and commit PostgreSQL snapshot]
   A --> N
   N -->|MCP tool result| P[Validate and pin snapshot]
   C -->|Failure| U[Service unavailable]
-  P --> R[Sparse baseline or admitted hybrid retrieval]
-  R --> K[Rerank eligible excerpts]
-  K --> E{Enough evidence?}
+  P --> R[PostgreSQL full-text or admitted pgvector hybrid]
+  R -->|Admitted hybrid| K[Rerank eligible excerpts]
+  R -->|Full-text default| E{Enough evidence?}
+  R -->|PostgreSQL unavailable| U
+  K --> E
   E -->|No, first search| F[Refine once]
   F --> R
   E -->|No, second search| I[Insufficient evidence]

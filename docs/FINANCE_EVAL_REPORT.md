@@ -6,13 +6,17 @@ Status: synthetic harness executed; live integrations NOT RUN; hybrid admission 
 
 Dataset: `finance-synthetic-v1`. 24 fictional excerpts, 18 prompts (15 answerable, 3 unanswerable); three tickers. Labels are authored fixtures, not independent expert judgments. No real market claims.
 
-Executed: Python standard-library SQLite FTS5/BM25 over the frozen corpus, company and publication/first-seen filters, and the metric calculator. No embedding, reranker, LLM, n8n, Langfuse or LangSmith service is executed by this command. Imported candidate rankings are scored as supplied, not independently reproduced vector searches.
+Baseline configuration: `postgres-fts-v2` · PostgreSQL 18 · Psycopg 3 · `english` tsvector + GIN · any-term websearch_to_tsquery · ts_rank_cd normalization 0 · 20 candidates · ID tie-break in C collation. The planner may scan this tiny corpus; these are ranking scores, not index-performance measurements.
 
-Reproduce from the repository root: `python3 evals/finance/evaluate.py --check`. Generate: `npm run finance:eval`. Tests: `npm run finance:eval:test`.
+Changed on 2026-11-11: this PostgreSQL baseline supersedes the earlier SQLite/BM25 implementation. The frozen corpus, labels and admission thresholds are unchanged. Recompute both candidate ablations against this baseline; historical scores remain in Git.
+
+Executed: PostgreSQL full-text search over temporary tables containing the frozen corpus, company and publication/first-seen filters, and the metric calculator. No embedding, reranker, LLM, n8n, Langfuse or LangSmith service is executed by this command. Imported candidate rankings are scored as supplied, not independently reproduced vector searches.
+
+Install `evals/finance/requirements.txt` and set `FINANCE_EVAL_DATABASE_URL` to a dedicated PostgreSQL 18 test database as described in `evals/finance/README.md`. Reproduce from the repository root: `python3 evals/finance/evaluate.py --check`. Generate: `npm run finance:eval`. Tests: `npm run finance:eval:test`.
 
 | Configuration | recall@5 | nDCG@5 | recall@10 | nDCG@10 |
 | --- | ---: | ---: | ---: | ---: |
-| Sparse BM25 (executed) | 0.8000 | 0.8000 | 0.8000 | 0.8000 |
+| PostgreSQL full-text (executed) | 0.9000 | 0.9652 | 0.9000 | 0.9652 |
 | Hybrid (imported) | NOT RUN | NOT RUN | NOT RUN | NOT RUN |
 | Hybrid + rerank (imported) | NOT RUN | NOT RUN | NOT RUN | NOT RUN |
 
@@ -35,7 +39,7 @@ Sparse returned empty evidence on 3/3 unanswerable cases. This measures retrieva
 
 Require absolute gains ≥0.03 recall@10 and ≥0.05 nDCG@10 over sparse, no regression by company, citation-precision ≥0.95 and no drop from sparse, 100% material factual-claim citation coverage, correct abstention and the live safety/trace gates. Citation-precision is supported claim–source pairs / all emitted pairs; zero pairs is N/A. Support must be judged against the excerpt, not URL membership.
 
-Production admission: **BLOCKED**. This synthetic starter cannot authorize production even if a candidate passes the numerical margins. Add the independently reviewed, licensed real-news holdout and actual live safety/trace evidence. Keep sparse active. The application runtime enforcement remains part of the proposed backend; this harness cannot configure a live index.
+Production admission: **BLOCKED**. Add the independently reviewed, licensed real-news holdout and actual live safety/trace evidence. Keep sparse active. The application runtime enforcement remains part of the proposed backend; this harness cannot configure a live index.
 
 ## Per-case sparse results
 
@@ -43,19 +47,19 @@ Production admission: **BLOCKED**. This synthetic starter cannot authorize produ
 | --- | ---: | ---: | --- |
 | MSFT-demand | 1.0000 | 1.0000 | MSFT-orders, MSFT-risk |
 | MSFT-margin | 1.0000 | 1.0000 | MSFT-costs, MSFT-pricing, MSFT-outlook |
-| MSFT-paraphrase | 0.0000 | 0.0000 | empty |
+| MSFT-paraphrase | 0.5000 | 0.8262 | MSFT-costs |
 | MSFT-outlook | 1.0000 | 1.0000 | MSFT-outlook |
 | MSFT-conflict | 1.0000 | 1.0000 | MSFT-risk, MSFT-orders |
 | MSFT-absent | N/A | N/A | empty |
 | AAPL-demand | 1.0000 | 1.0000 | AAPL-orders, AAPL-risk |
 | AAPL-margin | 1.0000 | 1.0000 | AAPL-costs, AAPL-pricing, AAPL-outlook |
-| AAPL-paraphrase | 0.0000 | 0.0000 | empty |
+| AAPL-paraphrase | 0.5000 | 0.8262 | AAPL-costs |
 | AAPL-outlook | 1.0000 | 1.0000 | AAPL-outlook |
 | AAPL-conflict | 1.0000 | 1.0000 | AAPL-risk, AAPL-orders |
 | AAPL-absent | N/A | N/A | empty |
 | NVDA-demand | 1.0000 | 1.0000 | NVDA-orders, NVDA-risk |
 | NVDA-margin | 1.0000 | 1.0000 | NVDA-costs, NVDA-pricing, NVDA-outlook |
-| NVDA-paraphrase | 0.0000 | 0.0000 | empty |
+| NVDA-paraphrase | 0.5000 | 0.8262 | NVDA-costs |
 | NVDA-outlook | 1.0000 | 1.0000 | NVDA-outlook |
 | NVDA-conflict | 1.0000 | 1.0000 | NVDA-risk, NVDA-orders |
 | NVDA-absent | N/A | N/A | empty |
@@ -67,6 +71,8 @@ Production admission: **BLOCKED**. This synthetic starter cannot authorize produ
 - `policy.json`: `7c505bcd9307828d6a9fa1705c75b4d5617724fe392c498b984e0df0bc277c61`
 
 ## Limits and next evidence
+
+The baseline leaves at most 0.0348 nDCG@10 headroom on these fixtures. The written +0.05 gate is evaluated for production on the independently reviewed real-news holdout with its own PostgreSQL baseline.
 
 The paraphrase cases intentionally exercise lexical misses. The tiny repetitive corpus and authored labels make these scores unsuitable for claims about real-news quality or prediction accuracy. Use separate development data for tuning. Version and review any new labels, thresholds or corpus; never silently overwrite the frozen test set.
 

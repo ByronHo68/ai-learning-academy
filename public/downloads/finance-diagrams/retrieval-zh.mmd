@@ -1,19 +1,22 @@
 flowchart TD
-  n0["Question + snapshot → filtered sparse/dense search"]
-  n1["Candidates"]
-  n2["RRF fusion + reranker"]
+  n0["PostgreSQL → full-text / pgvector"]
+  n1["Unavailable → END"]
+  n2["Candidates"]
   n3["Evidence gate"]
-  n4["Sparse fallback"]
-  n5["Unavailable → END"]
+  n4["RRF fusion + reranker"]
+  n5["Sparse fallback"]
   n6["Refine query once"]
   n7["Insufficient → END"]
   n8["Build context"]
-  n0 -- "套用篩選" --> n1
-  n1 -- "已准入模式" --> n2
-  n2 -- "排序成功" --> n3
-  n2 -- "重排失敗" --> n4
-  n4 -- "Sparse 可用" --> n3
-  n4 -- "沒有可用路徑" --> n5
+  n0 -- "資料庫不可用" --> n1
+  n0 -- "套用篩選" --> n2
+  n2 -- "預設全文搜尋" --> n3
+  n2 -- "已准入模式" --> n4
+  n4 -- "排序成功" --> n3
+  n0 -- "向量路徑失敗" --> n5
+  n4 -- "重排失敗" --> n5
+  n5 -- "Sparse 可用" --> n3
+  n5 -- "沒有可用路徑" --> n1
   n3 -. "首次搜尋有缺口" .-> n6
   n6 -. "第 2／2 次搜尋" .-> n0
   n3 -- "仍不足" --> n7

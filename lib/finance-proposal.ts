@@ -13,7 +13,7 @@ export const financeRuntimeLimits = { newsRefreshes: 1, searchRounds: 2, sourceR
 export const financeLocalCommands = `# Proposed application repository, after its scaffold exists.
 # These commands do not start finance services in this academy repository.
 # Configure private n8n MCP and approved news-provider credentials first.
-# Start pinned Qdrant (candidate), OTel Collector and the official Langfuse stack
+# Start PostgreSQL 18 with pgvector (candidate retrieval), OTel Collector and the official Langfuse stack
 # separately; configure LangSmith server credentials. Dependencies may use Docker.
 # Keep retrieval_mode=sparse until real-news evaluation and safety gates pass.
 
@@ -23,7 +23,9 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
 # Copy .env.example to .env.local; set the chosen provider key locally.
+# Set DATABASE_URL and CHECKPOINT_DATABASE_URL for separate research/checkpoint DBs.
 # Keep .env.local out of Git. The scaffold must load it server-side.
+# Apply versioned SQL migrations and AsyncPostgresSaver.setup() before ingestion.
 python -m app.ingest --manifest ../../data/manifest.json
 python -m uvicorn app.main:app --env-file .env.local --host 127.0.0.1 --port 8000
 
@@ -39,9 +41,11 @@ python -m pytest
 python -m app.evaluate --golden ../../evals/golden.json --injections ../../evals/injections.json --policy ../../evals/retrieval-policy.json`;
 
 export const financeComposeDesign = `# Proposed app-only deploy/compose.yaml; NOT the full infrastructure stack.
-# Provision n8n, Qdrant, OTel Collector and the official Langfuse stack separately.
+# Provision n8n, PostgreSQL + pgvector, OTel Collector and the official Langfuse stack separately.
 # Langfuse needs web/worker, PostgreSQL, ClickHouse, Redis/Valkey and object storage.
-# Set private service URLs and LangSmith credentials in research.env.
+# Set private PostgreSQL URLs and LangSmith credentials in research.env.
+# Use distinct research/checkpoint databases and least-privilege roles.
+# The PostgreSQL service owns its persistent volume; this app-only file does not.
 # Copy deploy/research.env.example to deploy/research.env and set server secrets.
 # Both container processes bind to 0.0.0.0 inside their private network.
 # docker compose -f deploy/compose.yaml up -d --build
@@ -58,20 +62,16 @@ services:
   research:
     build: ../services/research
     env_file: research.env
-    environment:
-      DATA_DIR: /data
-    volumes:
-      - research-data:/data
-    restart: unless-stopped
-volumes:
-  research-data:`;
+    # research.env supplies DATABASE_URL and CHECKPOINT_DATABASE_URL.
+    # Both point to private PostgreSQL; the app container stores no DB files.
+    restart: unless-stopped`;
 
 export const financeDeploymentNotes: Copy[] = [
-  { en: 'Run Next.js and FastAPI natively first. Local n8n, Qdrant and self-hosted Langfuse dependencies may use their pinned official containers immediately; package the app after its checks pass.', zh: 'Next.js 與 FastAPI 先用本機程序；n8n、Qdrant 及自架 Langfuse 依賴可即時用固定版本官方容器。App 通過檢查後才包裝。' },
+  { en: 'Run Next.js and FastAPI natively first. Local n8n, PostgreSQL + pgvector and self-hosted Langfuse dependencies may use their pinned official containers immediately; package the app after its checks pass.', zh: 'Next.js 與 FastAPI 先用本機程序；n8n、PostgreSQL + pgvector 及自架 Langfuse 依賴可即時用固定版本官方容器。App 通過檢查後才包裝。' },
   { en: 'In containers, the Next.js server forwards requests to http://research:8000. A browser cannot resolve the Compose service name. Provider keys stay in Python.', zh: '容器內由 Next.js 伺服器轉送至 http://research:8000。瀏覽器不能解析 Compose 服務名稱；供應商金鑰只留在 Python。' },
   { en: 'On EC2, start the same images privately and verify health, the four scenarios and a restart. Use an access-controlled TLS tunnel for an interview, or add an HTTPS reverse proxy, access control and usage limits before public access.', zh: 'EC2 先以私人方式啟動相同映像，檢查健康狀態、四個情境及重啟。面試可用有訪問控制的 TLS 隧道；公開前須加入 HTTPS 反向代理、訪問控制及用量限制。' },
   { en: 'The example binds the web port to loopback and does not expose port 8000. Restrict SSH to the operator. DNS is needed only for an optional public hostname; it resolves names and does not process report data.', zh: '範例只將網站連接埠綁定 loopback，不公開 8000。SSH 限制指定操作者；只有使用公開網域時才需要 DNS，DNS 解析名稱而不處理報告資料。' },
-  { en: 'Keep SQLite checkpoints and reports on the persistent volume. Back up with the SQLite backup mechanism and prove a restore. Keep the previous image tag for rollback without deleting the volume.', zh: 'SQLite checkpoint 及報告放在持久磁碟。用 SQLite 備份機制備份並實測還原；保留舊映像標籤供回退，勿刪持久磁碟。' },
+  { en: 'Persist PostgreSQL data in its own volume or managed service. Use pg_dump for the research and checkpoint databases; verify pg_restore into separate databases, with compatible pgvector installed. Keep the previous image tag for rollback without deleting the volume.', zh: 'PostgreSQL 資料用獨立 volume 或託管服務；research 及 checkpoint 資料庫用 pg_dump 備份，備妥相容 pgvector 後以 pg_restore 還原至獨立資料庫實測；保留舊映像標籤供回退，勿刪持久磁碟。' },
   { en: 'A restart policy is not a backup, access-control system or availability guarantee. Keep the first deployment small; Kubernetes is deferred.', zh: '重啟策略不等於備份、權限系統或可用性保證。首個部署保持簡單；Kubernetes 延後。' },
 ];
 export const financeInterviewCases: Copy[] = [

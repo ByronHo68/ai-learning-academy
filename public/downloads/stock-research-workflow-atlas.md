@@ -14,9 +14,9 @@ At most one refined query: two searches total, including failures. Keep the comp
 
 ## Fall back after a component failure / 元件失敗時回退
 
-Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If sparse also fails, report unavailable; an outage is not “no news”.
+Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.
 
-向量／重排路徑失敗時用仍可用的 sparse，維持原預算。Sparse 亦失敗就回服務不可用；故障不等於「沒有新聞」。
+向量／重排路徑失敗時用仍可用的 sparse，維持原預算。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。
 
 ## Resume an interrupted run / 恢復中斷任務
 
@@ -38,7 +38,7 @@ Irrelevant prompts, failed authorization and invalid citations do not trigger au
 flowchart TD
   n0["SCOPE"]
   n1["NEWS REFRESH"]
-  n2["VECTOR + SPARSE"]
+  n2["POSTGRESQL SEARCH"]
   n3["RERANK"]
   n4["SPARSE FALLBACK"]
   n5["EVIDENCE GATE"]
@@ -59,7 +59,9 @@ flowchart TD
   n1 -- "Snapshot ready" --> n2
   n1 -- "Only stale news" --> n12
   n1 -- "Refresh failed" --> n15
-  n2 -- "Candidates found" --> n3
+  n2 -- "Admitted hybrid" --> n3
+  n2 -- "Full-text default" --> n5
+  n2 -- "PostgreSQL unavailable" --> n15
   n2 -- "Vector path fails" --> n4
   n3 -- "Ranked passages" --> n5
   n3 -- "Reranker fails" --> n4
@@ -93,8 +95,8 @@ flowchart TD
   交代 app 研究支援公司並給問題例子；不呼叫新聞、檢索或報告生成。
 
 - **refresh → retrieve** — Snapshot ready / 快照就緒
-  Embed the query with the indexed embedding model. Search the admitted vector index and sparse branch using identical filters, fuse and deduplicate. Sparse remains default until admission passes.
-  使用索引相同 embedding 模型轉換查詢，以相同條件搜尋已准入向量及 sparse，融合去重；准入前預設 sparse。
+  Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
+  預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
 - **refresh → insufficient** — Only stale news / 只有過期新聞
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
@@ -104,21 +106,29 @@ flowchart TD
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
-- **retrieve → rerank** — Candidates found / 已取得候選
+- **retrieve → rerank** — Admitted hybrid / 已准入混合
   A cross-encoder scores each query–passage pair. The new order improves context selection; its score is not a probability or a sufficiency verdict.
   Cross-encoder 評分每對問題與原文，重排以改善上下文選擇；分數不是機率或證據充分判斷。
 
+- **retrieve → gate** — Full-text default / 預設全文搜尋
+  Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
+  檢查原文相關性、新鮮度、來源及當前問題覆蓋，保留反方證據；分數門檻用開發集校準，數量或相似度本身不足證明支持。
+
+- **retrieve → unavailable** — PostgreSQL unavailable / PostgreSQL 中斷
+  Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
+  展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
+
 - **retrieve → fallback** — Vector path fails / 向量路徑失敗
-  Use the working sparse path within the original deadline. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
-  在原時限內使用可用 sparse；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
+  Use working PostgreSQL full-text search within the original deadline. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
+  原時限內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
 - **rerank → gate** — Ranked passages / 已排序原文
   Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
   檢查原文相關性、新鮮度、來源及當前問題覆蓋，保留反方證據；分數門檻用開發集校準，數量或相似度本身不足證明支持。
 
 - **rerank → fallback** — Reranker fails / 重排失敗
-  Use the working sparse path within the original deadline. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
-  在原時限內使用可用 sparse；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
+  Use working PostgreSQL full-text search within the original deadline. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
+  原時限內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
 - **fallback → gate** — Sparse works / Sparse 可用
   Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
@@ -133,8 +143,8 @@ flowchart TD
   針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
 
 - **refine → retrieve** — Search 2 of 2 / 第 2／2 次搜尋
-  Embed the query with the indexed embedding model. Search the admitted vector index and sparse branch using identical filters, fuse and deduplicate. Sparse remains default until admission passes.
-  使用索引相同 embedding 模型轉換查詢，以相同條件搜尋已准入向量及 sparse，融合去重；准入前預設 sparse。
+  Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
+  預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
 - **gate → insufficient** — Still insufficient / 仍不足
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
@@ -169,8 +179,8 @@ flowchart TD
   記錄阻擋發布原因；此有上限設計不新增無預算修正迴圈。
 
 - **validate → save** — All checks pass / 檢查通過
-  Persist the exact answer and source references. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.
-  保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。
+  Commit the exact answer and source links in a PostgreSQL transaction. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.
+  以 PostgreSQL transaction 保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。
 
 - **save → answer** — Persisted result / 已保存結果
   Return the question-specific answer, uncertainty, sources, dates and trace status. Download reuses this saved result.
@@ -221,7 +231,7 @@ flowchart TD
 flowchart TD
   n0["Validated request → n8n MCP refresh"]
   n1["Provider response"]
-  n2["Pinned snapshot"]
+  n2["PostgreSQL snapshot"]
   n3["Unavailable → END"]
   n4["Insufficient → END"]
   n5["Retrieve"]
@@ -236,9 +246,9 @@ flowchart TD
   Every new accepted prompt; resume reuses its receipt. Handoff: company + query + run_id + cutoff
   每個新接納提示；恢復時重用紀錄。 交接資料：公司＋查詢＋任務 ID＋截止點
 
-- **Provider response → Pinned snapshot** — Valid records / 有效記錄
-  Normalize and index records with dates, permitted text and valid identity. Handoff: source_id/chunk_id, URL, published_at, first_seen_at, content hash
-  驗證日期、允許節錄及身份，再正規化及索引。 交接資料：來源／切段 ID、URL、發布／首次取得時間及內容 hash
+- **Provider response → PostgreSQL snapshot** — Valid records / 有效記錄
+  Normalize dated, permitted evidence and commit it in a PostgreSQL transaction. Handoff: source_id/chunk_id, URL, published_at, first_seen_at, content hash
+  核對日期及使用許可，正規化後在 PostgreSQL transaction 提交。 交接資料：來源／切段 ID、URL、發布／首次取得時間及內容 hash
 
 - **Provider response → Unavailable → END** — Provider failed / 供應商失敗
   Refresh failed; do not treat an outage as zero relevant news. Handoff: Provider status and typed error; no current prediction
@@ -248,9 +258,9 @@ flowchart TD
   The refresh completed but only stale evidence remains. Handoff: Freshness gap and dated supported facts; no current prediction
   刷新完成，但只有過期證據。 交接資料：新鮮度缺口及有日期支持事實；不作當前預測
 
-- **Pinned snapshot → Retrieve** — Snapshot ready / 快照就緒
-  Store and index acknowledgements agree on snapshot_id. Handoff: Immutable snapshot_id + allowed source IDs
-  儲存及索引確認相同 snapshot_id。 交接資料：不可變 snapshot_id＋允許來源 ID
+- **PostgreSQL snapshot → Retrieve** — Snapshot ready / 快照就緒
+  PostgreSQL commits the evidence and snapshot; vector indexing status is explicit. Handoff: Immutable snapshot_id + allowed source IDs
+  PostgreSQL 提交證據及快照；明示向量索引狀態。 交接資料：不可變 snapshot_id＋允許來源 ID
 
 ## Retrieve, fuse and rerank evidence / 檢索、融合及重排證據
 
@@ -258,38 +268,53 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  n0["Question + snapshot → filtered sparse/dense search"]
-  n1["Candidates"]
-  n2["RRF fusion + reranker"]
+  n0["PostgreSQL → full-text / pgvector"]
+  n1["Unavailable → END"]
+  n2["Candidates"]
   n3["Evidence gate"]
-  n4["Sparse fallback"]
-  n5["Unavailable → END"]
+  n4["RRF fusion + reranker"]
+  n5["Sparse fallback"]
   n6["Refine query once"]
   n7["Insufficient → END"]
   n8["Build context"]
-  n0 -- "Apply filters" --> n1
-  n1 -- "Admitted mode" --> n2
-  n2 -- "Ranking succeeds" --> n3
-  n2 -- "Reranker fails" --> n4
-  n4 -- "Sparse works" --> n3
-  n4 -- "No working path" --> n5
+  n0 -- "Database unavailable" --> n1
+  n0 -- "Apply filters" --> n2
+  n2 -- "Full-text default" --> n3
+  n2 -- "Admitted mode" --> n4
+  n4 -- "Ranking succeeds" --> n3
+  n0 -- "Vector path fails" --> n5
+  n4 -- "Reranker fails" --> n5
+  n5 -- "Sparse works" --> n3
+  n5 -- "No working path" --> n1
   n3 -. "Gap after search 1" .-> n6
   n6 -. "Search 2 of 2" .-> n0
   n3 -- "Still insufficient" --> n7
   n3 -- "Enough support" --> n8
 ```
 
-- **Question + snapshot → filtered sparse/dense search → Candidates** — Apply filters / 套用篩選
+- **PostgreSQL → full-text / pgvector → Unavailable → END** — Database unavailable / 資料庫不可用
+  The shared PostgreSQL service is unavailable; neither retrieval path can run. Handoff: Database failure; preserve the original deadline and counters
+  共用 PostgreSQL 服務中斷，兩條檢索路徑均不可用。 交接資料：資料庫故障；保留原時限及計數
+
+- **PostgreSQL → full-text / pgvector → Candidates** — Apply filters / 套用篩選
   Company, permissions and both timestamps pass. Handoff: 20 candidates per branch: chunk IDs + passages + original ranks
   公司、權限及兩個時間戳符合。 交接資料：每分支 20 候選：切段 ID＋原文＋初始排序
 
+- **Candidates → Evidence gate** — Full-text default / 預設全文搜尋
+  Use the default full-text ranking while hybrid is blocked. Handoff: Ranked passages + sparse mode
+  混合檢索未獲准入時採用預設全文排序。 交接資料：已排序原文＋sparse 模式
+
 - **Candidates → RRF fusion + reranker** — Admitted mode / 已准入模式
-  Hybrid admission passed; otherwise use sparse. Handoff: Deduplicated top 20 → cross-encoder top 10
-  混合准入已通過；否則用 sparse。 交接資料：去重前 20 → cross-encoder 前 10
+  Use hybrid after it passes admission. Handoff: Deduplicated top 20 → cross-encoder top 10
+  混合檢索通過准入後採用。 交接資料：去重前 20 → cross-encoder 前 10
 
 - **RRF fusion + reranker → Evidence gate** — Ranking succeeds / 排序成功
   Ranking succeeds using the admitted mode. Handoff: Ranked passages and actual mode
   使用已准入模式成功排序。 交接資料：已排序原文及實際模式
+
+- **PostgreSQL → full-text / pgvector → Sparse fallback** — Vector path fails / 向量路徑失敗
+  Vector retrieval fails but PostgreSQL full-text search remains available. Handoff: Same snapshot and deadline
+  向量檢索失敗，但 PostgreSQL 全文搜尋仍可用。 交接資料：相同快照及時限
 
 - **RRF fusion + reranker → Sparse fallback** — Reranker fails / 重排失敗
   Reranker fails while a working sparse path remains within the deadline. Handoff: Original question and snapshot; no fabricated scores
@@ -307,7 +332,7 @@ flowchart TD
   First search lacks coverage and the original budget remains. Handoff: Missing facets; preserve company, cutoff and snapshot
   首次搜尋覆蓋不足，原預算仍有餘額。 交接資料：缺失面向；保留公司、截止及快照
 
-- **Refine query once → Question + snapshot → filtered sparse/dense search** — Search 2 of 2 / 第 2／2 次搜尋
+- **Refine query once → PostgreSQL → full-text / pgvector** — Search 2 of 2 / 第 2／2 次搜尋
   Search again with a narrower query; at most two searches total, including failed attempts. Handoff: Same snapshot, new query, retained search counter
   收窄查詢再搜尋；包含失敗嘗試總共最多兩次。 交接資料：相同快照、新查詢、保留搜尋計數
 
@@ -475,7 +500,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   n0["run_id → authenticate"]
-  n1["Checkpoint"]
+  n1["PostgreSQL checkpoint"]
   n2["404 / 409 → END"]
   n3["Next unfinished node"]
   n4["Stopped → END"]
@@ -485,19 +510,19 @@ flowchart TD
   n1 -- "Expired" --> n4
 ```
 
-- **run_id → authenticate → Checkpoint** — Same owner / run / 相同擁有者／任務
+- **run_id → authenticate → PostgreSQL checkpoint** — Same owner / run / 相同擁有者／任務
   Resolve the same thread and original request. Handoff: Saved snapshot, completed node results, attempts and remaining budget
   解析相同 thread 及原請求。 交接資料：快照、已完成結果、次數及剩餘預算
 
-- **Checkpoint → 404 / 409 → END** — Unsafe state / 狀態不安全
+- **PostgreSQL checkpoint → 404 / 409 → END** — Unsafe state / 狀態不安全
   Cannot safely resume the saved state. Handoff: Keep saved state; explain recovery failure
   無法安全恢復儲存狀態。 交接資料：保留狀態並交代恢復失敗
 
-- **Checkpoint → Next unfinished node** — Resume, same budget / 原預算恢復
+- **PostgreSQL checkpoint → Next unfinished node** — Resume, same budget / 原預算恢復
   Deadline remains; replayed effects use idempotency keys. Handoff: Same refresh receipt and search count; no budget reset
   未超時；重播副作用使用冪等鍵。 交接資料：相同刷新紀錄及搜尋次數；不重設預算
 
-- **Checkpoint → Stopped → END** — Expired / 已過期
+- **PostgreSQL checkpoint → Stopped → END** — Expired / 已過期
   A later fresh prompt requires a new run. Handoff: Supported partial findings and explicit expiry
   稍後新研究須建立新任務。 交接資料：有支持的部分發現及明確過期狀態
 
@@ -574,7 +599,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   n0["Verified source + evals → build images"]
-  n1["Local containers"]
+  n1["Local containers + PostgreSQL"]
   n2["Smoke tests → backup restore"]
   n3["Stop / rollback"]
   n4["Private deployment"]
@@ -584,11 +609,11 @@ flowchart TD
   n2 -- "Checks pass" --> n4
 ```
 
-- **Verified source + evals → build images → Local containers** — Build + configure / 建置＋設定
-  Configure private n8n, Qdrant and telemetry endpoints. Handoff: Versioned images and server-only configuration
-  設定私人 n8n、Qdrant 及追蹤端點。 交接資料：版本化映像及只供伺服器設定
+- **Verified source + evals → build images → Local containers + PostgreSQL** — Build + configure / 建置＋設定
+  Configure private n8n, PostgreSQL and telemetry. Apply database and checkpoint migrations. Handoff: Versioned images and server-only configuration
+  設定私人 n8n、PostgreSQL 及追蹤端點。執行資料庫及 checkpoint migrations。 交接資料：版本化映像及只供伺服器設定
 
-- **Local containers → Smoke tests → backup restore** — Verify recovery / 驗證恢復
+- **Local containers + PostgreSQL → Smoke tests → backup restore** — Verify recovery / 驗證恢復
   Exercise normal, insufficient, irrelevant and outage paths. Handoff: Health, routing, persistence and recovery evidence
   測試正常、資料不足、無關及中斷路徑。 交接資料：健康、路由、持久性及恢復證據
 

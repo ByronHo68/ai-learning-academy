@@ -26,6 +26,25 @@ test('every teaching scenario follows actual edges in the overall diagram, inclu
   }
 });
 
+test('accepted request paths pin evidence without triggering the independent daily schedule', () => {
+  for (const scenario of financeGraphScenarios) {
+    const path = financeScenarioPath(scenario.id);
+    if (path.includes('retrieve')) {
+      assert.ok(path.indexOf('refresh') < path.indexOf('snapshot'));
+      assert.ok(path.indexOf('snapshot') < path.indexOf('retrieve'));
+    }
+    assert.ok(!new Set<string>(path).has('daily'));
+  }
+  for (const from of ['evidence_pool', 'refresh']) assert.ok(financeOverallDiagram.edges.some(edge => edge.from === from && edge.to === 'snapshot'));
+});
+
+test('the acquisition retry loop returns to the provider inside n8n', () => {
+  const retries = financeFunctionRoutes.sources.filter(route => route.kind === 'retry');
+  assert.equal(retries.length, 2);
+  assert.ok(retries.every(route => route.from.startsWith('n8n') && route.to.startsWith('n8n')));
+  assert.ok(retries.some(route => route.to === 'n8n provider attempt'));
+});
+
 test('layout keeps every node on canvas and rejects dangling edges and unbounded cycles', () => {
   for (const diagram of financeDiagrams) {
     const layout = layoutFinanceDiagram(diagram);

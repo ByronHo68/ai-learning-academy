@@ -5,9 +5,10 @@ const t = (en: string, zh: string): Copy => ({ en, zh });
 const node = (label: string, input: string, output: string, en: string, zh: string) => ({ label, input, output, how: t(en, zh) });
 export const financeGraphNodes = {
   scope: node('SCOPE', 'question + company + horizon', 'scope: accepted | irrelevant | ambiguous', 'Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.', '新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。'),
-  refresh: node('NEWS REFRESH', 'accepted request + run_id', 'receipt + snapshot_id + freshness', 'n8n refreshes approved feeds. For this walkthrough, assume the returned news is already chunked and indexed. Pin the snapshot and both publication/first-seen cutoff filters.', 'n8n 刷新核准新聞；此流程假設回傳新聞已切段及索引。固定快照及發布／首次取得截止條件。'),
+  refresh: node('n8n COMPANY NEWS REFRESH', 'accepted request + stable run_id', 'validated receipt + company-news versions + status', 'Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then commits the evidence before returning a structured receipt. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.', '每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重並提交證據後回傳結構化紀錄。Host 超時先核對原執行；每日全球新聞獨立抓取。'),
+  snapshot: node('PIN EVIDENCE SNAPSHOT', 'company refresh receipt + completed daily batches + company profile', 'snapshot_id + exact version IDs + cutoff + coverage', 'Pin company news together with eligible completed macro/geopolitical batches and the sourced company-profile version. Preserve publication and first-seen cutoffs. For current research, freeze the evidence cutoff after refresh; an explicit historical cutoff remains fixed. Background ingestion continues independently. Refinement and resume reuse this manifest.', '將公司新聞、合資格完整宏觀／地緣批次及附來源公司背景版本固定成清單。檢查發布與首次取得截止；當前研究刷新後固定截止，指定歷史截止則保持原值。背景匯入獨立繼續；補查及恢復沿用此清單。'),
   retrieve: node('POSTGRESQL SEARCH', 'query + snapshot + metadata filters', 'sparse candidates | hybrid RRF top 20', 'Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.', '預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。'),
-  rerank: node('RERANK', 'query + candidate passages', 'top 10 passages + model version', 'A cross-encoder scores each query–passage pair. The new order improves context selection; its score is not a probability or a sufficiency verdict.', 'Cross-encoder 評分每對問題與原文，重排以改善上下文選擇；分數不是機率或證據充分判斷。'),
+  rerank: node('RERANK RELEVANCE', 'question + company/global/profile passages', 'top 10 passages by relevance + model version', 'Score how well each passage addresses the question. Company news, macro, geopolitics and dated profile excerpts compete on relevance. Use question expansion from sourced company exposure where needed. Business-impact reasoning comes later in the LLM step; the relevance score does not estimate a stock return.', '評分每段原文與問題相關性；公司、宏觀、地緣及有日期背景按相關性排序。需要時按附來源公司曝險擴展查詢。業務影響推論由後面的 LLM 處理；相關分數不估計股票回報。'),
   fallback: node('SPARSE FALLBACK', 'failed candidate component + same snapshot', 'sparse-ranked passages + fallback_reason', 'Use working PostgreSQL full-text search within the original deadline. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.', '原時限內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。'),
   gate: node('EVIDENCE GATE', 'ranked passages + required facets', 'enough | gap + missing facets + conflicts', 'Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.', '檢查原文相關性、新鮮度、來源及當前問題覆蓋，保留反方證據；分數門檻用開發集校準，數量或相似度本身不足證明支持。'),
   refine: node('REFINE ONCE', 'missing facets + original question', 'refined query; same snapshot and cutoff', 'Target the missing facet without changing the company or question. Retrieval increments attempts, including failed attempts; allow only two search rounds total.', '針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。'),
@@ -45,7 +46,7 @@ export function financeScenarioPath(scenario: FinanceGraphScenarioId): FinanceGr
   if (scenario === 'ambiguous') return [...path, 'clarify'];
   path.push('refresh');
   if (scenario === 'stale') return [...path, 'insufficient'];
-  path.push('retrieve');
+  path.push('snapshot', 'retrieve');
   if (scenario === 'retrieval_failure') return [...path, 'unavailable'];
   if (scenario !== 'supported') path.push('rerank');
   if (scenario === 'rerank_failure') path.push('fallback');
@@ -94,6 +95,7 @@ class ResearchState(TypedDict, total=False):
     deadline: str
     scope: Literal["accepted", "irrelevant", "ambiguous"]
     snapshot_id: str
+    snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
     search_attempts: int
     evidence_status: Literal["enough", "gap"]
@@ -120,16 +122,17 @@ def build_graph(nodes, checkpointer):
     # Wrappers enforce deadlines, tool/model budgets, exception mapping and spans.
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
-    for name in ("scope", "refresh", "retrieve", "rerank", "fallback", "gate",
+    for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "gate",
                  "refine", "context", "generate", "validate", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
-        builder.add_node(name, nodes[name])
+    builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
         "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
     # These nodes set route only to one of their declared successors.
     branches = {
-        "refresh": ["retrieve", "insufficient", "unavailable"],
+        "refresh": ["snapshot", "insufficient", "unavailable"],
+        "snapshot": ["retrieve", "insufficient", "unavailable"],
         "retrieve": ["rerank", "gate", "fallback", "unavailable"],
         "rerank": ["gate", "fallback", "unavailable"],
         "fallback": ["gate", "unavailable"],

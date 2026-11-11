@@ -1,12 +1,33 @@
 flowchart TD
-  n0["Validated request → n8n MCP refresh"]
-  n1["Provider response"]
-  n2["PostgreSQL snapshot"]
-  n3["Unavailable → END"]
-  n4["Insufficient → END"]
-  n5["Retrieve"]
-  n0 -- "Once per new prompt" --> n1
-  n1 -- "Valid records" --> n2
-  n1 -- "Provider failed" --> n3
-  n1 -- "Only stale evidence" --> n4
-  n2 -- "Snapshot ready" --> n5
+  n0["Startup: MCP discovery"]
+  n1["Ready for accepted request"]
+  n2["Unavailable → END"]
+  n3["n8n validate + deduplicate run"]
+  n4["Return structured receipt"]
+  n5["n8n provider attempt"]
+  n6["Rejected → END"]
+  n7["Normalize + validate records"]
+  n8["n8n retry decision"]
+  n9["n8n backoff + jitter"]
+  n10["Commit PostgreSQL evidence"]
+  n11["Pin combined snapshot"]
+  n12["Retrieve"]
+  n13["Insufficient → END"]
+  n0 -- "Capability ready" --> n1
+  n0 -- "Startup failed" --> n2
+  n1 -- "New accepted prompt" --> n3
+  n3 -- "Receipt exists" --> n4
+  n3 -- "Fetch required" --> n5
+  n3 -- "Reject" --> n6
+  n5 -- "Provider responded" --> n7
+  n5 -- "Fetch failed" --> n8
+  n8 -. "Transient + budget" .-> n9
+  n9 -. "Next attempt" .-> n5
+  n8 -- "Stop fetching" --> n2
+  n7 -- "Valid records" --> n10
+  n7 -- "Invalid response" --> n6
+  n10 -- "Commit confirmed" --> n4
+  n10 -- "Storage failed" --> n2
+  n4 -- "Combine evidence versions" --> n11
+  n11 -- "Snapshot ready" --> n12
+  n11 -- "Coverage gap" --> n13

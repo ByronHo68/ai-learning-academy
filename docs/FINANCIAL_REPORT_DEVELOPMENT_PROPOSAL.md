@@ -899,7 +899,7 @@ flowchart TD
   n3 -->|"This run already committed its evidence."| n4
   n3 -->|"Valid new acquisition with time remaining."| n5
   n3 -->|"Invalid arguments, unsupported company or failed authorization."| n6
-  n5 -->|"Successful response, including a valid empty response."| n7
+  n5 -->|"Successful response, including a valid empty response. Cap each call at 10s and clip it to the remaining 25s acquisition phase and run deadline."| n7
   n5 -->|"Provider request failed."| n8
   n8 -->|"Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After."| n9
   n9 -->|"The bounded wait completes before the original deadline."| n5
@@ -987,9 +987,9 @@ Typed non-retryable error
 
 **n8n provider attempt → Normalize + validate records**
 
-Successful response, including a valid empty response.
+Successful response, including a valid empty response. Cap each call at 10s and clip it to the remaining 25s acquisition phase and run deadline.
 
-成功回應，包括有效空結果。
+成功回應，包括有效空結果；每次最多 10 秒，受餘下 25 秒抓取階段及任務時限限制。
 
 Handoff / 交接資料:
 

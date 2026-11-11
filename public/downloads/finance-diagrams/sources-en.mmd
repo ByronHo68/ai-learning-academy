@@ -19,10 +19,10 @@ flowchart TD
   n3 -- "Receipt exists" --> n4
   n3 -- "Fetch required" --> n5
   n3 -- "Reject" --> n6
-  n5 -- "Provider responded" --> n7
+  n5 -- "Call ≤10s, within 25s" --> n7
   n5 -- "Fetch failed" --> n8
-  n8 -. "Transient + budget" .-> n9
-  n9 -. "Next attempt" .-> n5
+  n8 -. "Transient, attempts <3" .-> n9
+  n9 -. "Wait 1s / 2s + jitter" .-> n5
   n8 -- "Stop fetching" --> n2
   n7 -- "Valid records" --> n10
   n7 -- "Invalid response" --> n6

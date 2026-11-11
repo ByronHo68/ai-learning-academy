@@ -31,7 +31,7 @@ export function FinanceDiagramSvg({ diagram, lang, prefix, active, route = [], o
       const stroke = selected || visited ? '#087f78' : '#8b9ea2';
       const lines = diagramLines(node.label, node.kind === 'decision' ? 22 : 29);
       return <g key={node.id} data-node-id={node.id} role={onSelect ? 'button' : undefined} tabIndex={onSelect ? 0 : undefined} aria-label={node.label} aria-pressed={onSelect ? selected : undefined} onClick={onSelect ? () => onSelect(node.id) : undefined} onKeyDown={onSelect ? event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelect(node.id); } } : undefined} style={onSelect ? { cursor: 'pointer', outlineOffset: '6px' } : undefined}>
-        <title>{node.label}</title>
+        <title>{`${node.label} · ${pick(node.detail, lang)}`}</title>
         {node.kind === 'decision' ? <polygon points={`${node.x + 140},${node.y} ${node.x + 280},${node.y + 56} ${node.x + 140},${node.y + 112} ${node.x},${node.y + 56}`} fill={fill} stroke={stroke} strokeWidth={selected ? 3 : 1.6}/> : <rect x={node.x} y={node.y} width="280" height="112" rx={terminal || node.kind === 'start' ? 38 : 12} fill={fill} stroke={stroke} strokeWidth={selected ? 3 : 1.6}/>}
         <text x={node.x + 140} textAnchor="middle" fill="#082c38" fontSize="14" fontWeight="600" pointerEvents="none">{lines.map((line, i) => <tspan key={i} x={node.x + 140} y={node.y + 56 - (lines.length - 1) * 10 + i * 20 + 4}>{line}</tspan>)}</text>
       </g>;

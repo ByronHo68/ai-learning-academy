@@ -19,6 +19,7 @@ class ResearchState(TypedDict, total=False):
     deadline: str
     scope: Literal["accepted", "irrelevant", "ambiguous"]
     snapshot_id: str
+    snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
     search_attempts: int
     evidence_status: Literal["enough", "gap"]
@@ -45,16 +46,17 @@ def build_graph(nodes, checkpointer):
     # Wrappers enforce deadlines, tool/model budgets, exception mapping and spans.
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
-    for name in ("scope", "refresh", "retrieve", "rerank", "fallback", "gate",
+    for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "gate",
                  "refine", "context", "generate", "validate", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
-        builder.add_node(name, nodes[name])
+    builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
         "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
     # These nodes set route only to one of their declared successors.
     branches = {
-        "refresh": ["retrieve", "insufficient", "unavailable"],
+        "refresh": ["snapshot", "insufficient", "unavailable"],
+        "snapshot": ["retrieve", "insufficient", "unavailable"],
         "retrieve": ["rerank", "gate", "fallback", "unavailable"],
         "rerank": ["gate", "fallback", "unavailable"],
         "fallback": ["gate", "unavailable"],

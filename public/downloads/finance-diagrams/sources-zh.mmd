@@ -1,12 +1,33 @@
 flowchart TD
-  n0["Validated request → n8n MCP refresh"]
-  n1["Provider response"]
-  n2["PostgreSQL snapshot"]
-  n3["Unavailable → END"]
-  n4["Insufficient → END"]
-  n5["Retrieve"]
-  n0 -- "每新問題一次" --> n1
-  n1 -- "有效記錄" --> n2
-  n1 -- "供應商失敗" --> n3
-  n1 -- "只有過期證據" --> n4
-  n2 -- "快照就緒" --> n5
+  n0["Startup: MCP discovery"]
+  n1["Ready for accepted request"]
+  n2["Unavailable → END"]
+  n3["n8n validate + deduplicate run"]
+  n4["Return structured receipt"]
+  n5["n8n provider attempt"]
+  n6["Rejected → END"]
+  n7["Normalize + validate records"]
+  n8["n8n retry decision"]
+  n9["n8n backoff + jitter"]
+  n10["Commit PostgreSQL evidence"]
+  n11["Pin combined snapshot"]
+  n12["Retrieve"]
+  n13["Insufficient → END"]
+  n0 -- "功能就緒" --> n1
+  n0 -- "啟動失敗" --> n2
+  n1 -- "新有效提示" --> n3
+  n3 -- "已有紀錄" --> n4
+  n3 -- "需要抓取" --> n5
+  n3 -- "拒絕" --> n6
+  n5 -- "供應商已回應" --> n7
+  n5 -- "抓取失敗" --> n8
+  n8 -. "暫時錯誤＋有預算" .-> n9
+  n9 -. "下一次嘗試" .-> n5
+  n8 -- "停止抓取" --> n2
+  n7 -- "有效記錄" --> n10
+  n7 -- "回應無效" --> n6
+  n10 -- "提交確認" --> n4
+  n10 -- "儲存失敗" --> n2
+  n4 -- "組合證據版本" --> n11
+  n11 -- "快照就緒" --> n12
+  n11 -- "覆蓋不足" --> n13

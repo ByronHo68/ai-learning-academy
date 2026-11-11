@@ -6,6 +6,12 @@ Open `/finance-project/workflows` for the interactive mind map and twelve connec
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and the original 60s deadline. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
+## n8n retries news providers / n8n 重試新聞供應商
+
+One logical company refresh per run. n8n owns up to 3 transient provider attempts, with 1s then 2s backoff plus jitter. Clip each 10s attempt to the proposed 25s acquisition budget and the original run deadline. A host timeout triggers receipt reconciliation, not blind resubmission. Daily acquisition uses the same policy with its own job deadline.
+
+每次任務一次邏輯公司刷新。n8n 最多嘗試供應商 3 次，等待 1 秒、2 秒加 jitter；每次 10 秒受建議 25 秒抓取預算及原任務時限限制。Host 超時先核對紀錄，不盲目再發送；每日抓取同樣有限重試，但使用獨立工作時限。
+
 ## Refine a weak search / 補查不足證據
 
 At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and deadline. If evidence is still weak, return insufficient evidence.
@@ -37,54 +43,69 @@ Irrelevant prompts, failed authorization and invalid citations do not trigger au
 ```mermaid
 flowchart TD
   n0["SCOPE"]
-  n1["NEWS REFRESH"]
-  n2["POSTGRESQL SEARCH"]
-  n3["RERANK"]
-  n4["SPARSE FALLBACK"]
-  n5["EVIDENCE GATE"]
-  n6["REFINE ONCE"]
-  n7["BUILD CONTEXT"]
-  n8["LLM GENERATE"]
-  n9["VALIDATE"]
-  n10["SAVE + TRACE"]
-  n11["ANSWER"]
-  n12["INSUFFICIENT"]
-  n13["OUT OF SCOPE"]
-  n14["CLARIFY"]
-  n15["UNAVAILABLE"]
-  n16["VALIDATION FAILED"]
+  n1["n8n COMPANY NEWS REFRESH"]
+  n2["PIN EVIDENCE SNAPSHOT"]
+  n3["POSTGRESQL SEARCH"]
+  n4["RERANK RELEVANCE"]
+  n5["SPARSE FALLBACK"]
+  n6["EVIDENCE GATE"]
+  n7["REFINE ONCE"]
+  n8["BUILD CONTEXT"]
+  n9["LLM GENERATE"]
+  n10["VALIDATE"]
+  n11["SAVE + TRACE"]
+  n12["ANSWER"]
+  n13["INSUFFICIENT"]
+  n14["OUT OF SCOPE"]
+  n15["CLARIFY"]
+  n16["UNAVAILABLE"]
+  n17["VALIDATION FAILED"]
+  n18["DAILY n8n SCHEDULE"]
+  n19["MACRO + GEOPOLITICAL NEWS"]
+  n20["VERSIONED COMPANY PROFILES"]
+  n21["POSTGRESQL EVIDENCE POOL"]
+  n22["DAILY FETCH FAILURE"]
   n0 -- "Supported" --> n1
-  n0 -- "Ambiguous" --> n14
-  n0 -- "Unrelated" --> n13
-  n1 -- "Snapshot ready" --> n2
-  n1 -- "Only stale news" --> n12
-  n1 -- "Refresh failed" --> n15
-  n2 -- "Admitted hybrid" --> n3
-  n2 -- "Full-text default" --> n5
-  n2 -- "PostgreSQL unavailable" --> n15
-  n2 -- "Vector path fails" --> n4
-  n3 -- "Ranked passages" --> n5
-  n3 -- "Reranker fails" --> n4
-  n4 -- "Sparse works" --> n5
-  n4 -- "Sparse also fails" --> n15
-  n5 -. "Gap + budget left" .-> n6
-  n6 -. "Search 2 of 2" .-> n2
-  n5 -- "Still insufficient" --> n12
-  n5 -- "Enough support" --> n7
-  n7 -- "Trimming loses support" --> n12
-  n7 -- "Context ready" --> n8
-  n7 -- "Deadline reached" --> n15
-  n8 -- "Draft ready" --> n9
-  n8 -- "Model / schema error" --> n15
-  n9 -- "Invalid support" --> n16
-  n9 -- "All checks pass" --> n10
-  n10 -- "Persisted result" --> n11
-  n10 -- "Save failed" --> n15
+  n0 -- "Ambiguous" --> n15
+  n0 -- "Unrelated" --> n14
+  n1 -- "n8n receipt ready" --> n2
+  n2 -- "Evidence versions pinned" --> n3
+  n2 -- "Required context missing" --> n13
+  n2 -- "Snapshot storage failed" --> n16
+  n1 -- "Only stale news" --> n13
+  n1 -- "Refresh failed" --> n16
+  n3 -- "Admitted hybrid" --> n4
+  n3 -- "Full-text default" --> n6
+  n3 -- "PostgreSQL unavailable" --> n16
+  n3 -- "Vector path fails" --> n5
+  n4 -- "Ranked passages" --> n6
+  n4 -- "Reranker fails" --> n5
+  n5 -- "Sparse works" --> n6
+  n5 -- "Sparse also fails" --> n16
+  n6 -. "Gap + budget left" .-> n7
+  n7 -. "Search 2 of 2" .-> n3
+  n6 -- "Still insufficient" --> n13
+  n6 -- "Enough support" --> n8
+  n8 -- "Trimming loses support" --> n13
+  n8 -- "Context ready" --> n9
+  n8 -- "Deadline reached" --> n16
+  n9 -- "Draft ready" --> n10
+  n9 -- "Model / schema error" --> n16
+  n10 -- "Invalid support" --> n17
+  n10 -- "All checks pass" --> n11
+  n11 -- "Persisted result" --> n12
+  n11 -- "Save failed" --> n16
+  n18 -- "Daily, configured timezone" --> n19
+  n19 -- "Commit completed batches" --> n21
+  n19 -- "n8n retries exhausted" --> n22
+  n22 -- "Prior batch + failure status" --> n21
+  n20 -- "Sourced profile versions" --> n21
+  n21 -- "Read eligible versions" --> n2
 ```
 
 - **scope → refresh** — Supported / 範圍符合
-  n8n refreshes approved feeds. For this walkthrough, assume the returned news is already chunked and indexed. Pin the snapshot and both publication/first-seen cutoff filters.
-  n8n 刷新核准新聞；此流程假設回傳新聞已切段及索引。固定快照及發布／首次取得截止條件。
+  Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then commits the evidence before returning a structured receipt. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
+  每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重並提交證據後回傳結構化紀錄。Host 超時先核對原執行；每日全球新聞獨立抓取。
 
 - **scope → clarify** — Ambiguous / 不明確
   Ask which supported company or horizon the user means. A clarified submission starts a new validated request.
@@ -94,9 +115,21 @@ flowchart TD
   Explain that the app researches supported companies and provide an example. No news, retrieval or report-generation calls.
   交代 app 研究支援公司並給問題例子；不呼叫新聞、檢索或報告生成。
 
-- **refresh → retrieve** — Snapshot ready / 快照就緒
+- **refresh → snapshot** — n8n receipt ready / n8n 紀錄就緒
+  Pin company news together with eligible completed macro/geopolitical batches and the sourced company-profile version. Preserve publication and first-seen cutoffs. For current research, freeze the evidence cutoff after refresh; an explicit historical cutoff remains fixed. Background ingestion continues independently. Refinement and resume reuse this manifest.
+  將公司新聞、合資格完整宏觀／地緣批次及附來源公司背景版本固定成清單。檢查發布與首次取得截止；當前研究刷新後固定截止，指定歷史截止則保持原值。背景匯入獨立繼續；補查及恢復沿用此清單。
+
+- **snapshot → retrieve** — Evidence versions pinned / 證據版本已固定
   Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
   預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
+
+- **snapshot → insufficient** — Required context missing / 缺少所需背景
+  Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
+  說明缺少哪項證據，展示有支持事實及有用下一題；不能靠模型記憶補預測。
+
+- **snapshot → unavailable** — Snapshot storage failed / 快照儲存失敗
+  Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
+  展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
 - **refresh → insufficient** — Only stale news / 只有過期新聞
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
@@ -107,8 +140,8 @@ flowchart TD
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
 - **retrieve → rerank** — Admitted hybrid / 已准入混合
-  A cross-encoder scores each query–passage pair. The new order improves context selection; its score is not a probability or a sufficiency verdict.
-  Cross-encoder 評分每對問題與原文，重排以改善上下文選擇；分數不是機率或證據充分判斷。
+  Score how well each passage addresses the question. Company news, macro, geopolitics and dated profile excerpts compete on relevance. Use question expansion from sourced company exposure where needed. Business-impact reasoning comes later in the LLM step; the relevance score does not estimate a stock return.
+  評分每段原文與問題相關性；公司、宏觀、地緣及有日期背景按相關性排序。需要時按附來源公司曝險擴展查詢。業務影響推論由後面的 LLM 處理；相關分數不估計股票回報。
 
 - **retrieve → gate** — Full-text default / 預設全文搜尋
   Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
@@ -190,6 +223,30 @@ flowchart TD
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
+- **daily → global_news** — Daily, configured timezone / 每日，已設定時區
+  Configure daily time and timezone in n8n. Acquisition runs independently of user prompts.
+  n8n 設定每日時間及時區，抓取獨立於用戶問題。
+
+- **global_news → evidence_pool** — Commit completed batches / 提交完整批次
+  Fetch approved sources using n8n-owned bounded retries. Preserve topics, regions, dates, provenance and permissions.
+  以 n8n 有限重試抓核准來源，保留主題、地域、日期、來源及權限。
+
+- **global_news → daily_failure** — n8n retries exhausted / n8n 重試已用完
+  n8n records exhausted/permanent failure. Retain the previous completed batch and its original fetched_at. Coverage checks decide whether its age is acceptable for this question.
+  n8n 記錄重試用完／永久失敗；保留上一完整批次及原 fetched_at，再按問題檢查其時效是否足夠。
+
+- **daily_failure → evidence_pool** — Prior batch + failure status / 舊批次＋失敗狀態
+  n8n records exhausted/permanent failure. Retain the previous completed batch and its original fetched_at. Coverage checks decide whether its age is acceptable for this question.
+  n8n 記錄重試用完／永久失敗；保留上一完整批次及原 fetched_at，再按問題檢查其時效是否足夠。
+
+- **profiles → evidence_pool** — Sourced profile versions / 附來源背景版本
+  MSFT / AAPL / NVDA profiles have sourced facts, reporting periods, effective dates and review dates. Update after material changes.
+  MSFT／AAPL／NVDA 背景附來源、報告期間、生效及覆核日期；重大變化後更新。
+
+- **evidence_pool → snapshot** — Read eligible versions / 讀取合資格版本
+  Store completed daily batches and profile versions. Pin eligible completed versions without waiting for the next daily schedule.
+  保存完整每日批次及背景版本；固定合資格完整版本，不等待下一次每日排程。
+
 ## Choose a supported company / 選擇支援公司
 
 [English SVG](../public/downloads/finance-diagrams/company-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/company-zh.svg)
@@ -229,38 +286,111 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  n0["Validated request → n8n MCP refresh"]
-  n1["Provider response"]
-  n2["PostgreSQL snapshot"]
-  n3["Unavailable → END"]
-  n4["Insufficient → END"]
-  n5["Retrieve"]
-  n0 -- "Once per new prompt" --> n1
-  n1 -- "Valid records" --> n2
-  n1 -- "Provider failed" --> n3
-  n1 -- "Only stale evidence" --> n4
-  n2 -- "Snapshot ready" --> n5
+  n0["Startup: MCP discovery"]
+  n1["Ready for accepted request"]
+  n2["Unavailable → END"]
+  n3["n8n validate + deduplicate run"]
+  n4["Return structured receipt"]
+  n5["n8n provider attempt"]
+  n6["Rejected → END"]
+  n7["Normalize + validate records"]
+  n8["n8n retry decision"]
+  n9["n8n backoff + jitter"]
+  n10["Commit PostgreSQL evidence"]
+  n11["Pin combined snapshot"]
+  n12["Retrieve"]
+  n13["Insufficient → END"]
+  n0 -- "Capability ready" --> n1
+  n0 -- "Startup failed" --> n2
+  n1 -- "New accepted prompt" --> n3
+  n3 -- "Receipt exists" --> n4
+  n3 -- "Fetch required" --> n5
+  n3 -- "Reject" --> n6
+  n5 -- "Provider responded" --> n7
+  n5 -- "Fetch failed" --> n8
+  n8 -. "Transient + budget" .-> n9
+  n9 -. "Next attempt" .-> n5
+  n8 -- "Stop fetching" --> n2
+  n7 -- "Valid records" --> n10
+  n7 -- "Invalid response" --> n6
+  n10 -- "Commit confirmed" --> n4
+  n10 -- "Storage failed" --> n2
+  n4 -- "Combine evidence versions" --> n11
+  n11 -- "Snapshot ready" --> n12
+  n11 -- "Coverage gap" --> n13
 ```
 
-- **Validated request → n8n MCP refresh → Provider response** — Once per new prompt / 每新問題一次
-  Every new accepted prompt; resume reuses its receipt. Handoff: company + query + run_id + cutoff
-  每個新接納提示；恢復時重用紀錄。 交接資料：公司＋查詢＋任務 ID＋截止點
+- **Startup: MCP discovery → Ready for accepted request** — Capability ready / 功能就緒
+  Connect to n8n over Streamable HTTP, list tools and validate the refresh schema. Compile with PostgreSQL checkpoints. Handoff: Verified tool capability; startup performs no news acquisition
+  以 Streamable HTTP 連接 n8n、列出及核對工具 schema，再以 PostgreSQL checkpoint 編譯。 交接資料：已核對工具功能；啟動階段不抓新聞
 
-- **Provider response → PostgreSQL snapshot** — Valid records / 有效記錄
-  Normalize dated, permitted evidence and commit it in a PostgreSQL transaction. Handoff: source_id/chunk_id, URL, published_at, first_seen_at, content hash
-  核對日期及使用許可，正規化後在 PostgreSQL transaction 提交。 交接資料：來源／切段 ID、URL、發布／首次取得時間及內容 hash
+- **Startup: MCP discovery → Unavailable → END** — Startup failed / 啟動失敗
+  Required tool or authenticated endpoint is unavailable. Handoff: Readiness diagnostic
+  所需工具或已認證端點不可用。 交接資料：就緒診斷
 
-- **Provider response → Unavailable → END** — Provider failed / 供應商失敗
-  Refresh failed; do not treat an outage as zero relevant news. Handoff: Provider status and typed error; no current prediction
-  刷新失敗；不能把故障當成沒有相關新聞。 交接資料：供應商狀態及結構化錯誤；不作當前預測
+- **Ready for accepted request → n8n validate + deduplicate run** — New accepted prompt / 新有效提示
+  The host sends one logical refresh after scope acceptance. Handoff: company + original question + run_id + deadline
+  Host 通過範圍檢查後發出一次邏輯刷新。 交接資料：公司＋原問題＋任務 ID＋時限
 
-- **Provider response → Insufficient → END** — Only stale evidence / 只有過期證據
-  The refresh completed but only stale evidence remains. Handoff: Freshness gap and dated supported facts; no current prediction
-  刷新完成，但只有過期證據。 交接資料：新鮮度缺口及有日期支持事實；不作當前預測
+- **n8n validate + deduplicate run → Return structured receipt** — Receipt exists / 已有紀錄
+  This run already committed its evidence. Handoff: Existing receipt; resume reuses completed work
+  此任務已提交證據。 交接資料：原紀錄；恢復重用已完成工作
 
-- **PostgreSQL snapshot → Retrieve** — Snapshot ready / 快照就緒
-  PostgreSQL commits the evidence and snapshot; vector indexing status is explicit. Handoff: Immutable snapshot_id + allowed source IDs
-  PostgreSQL 提交證據及快照；明示向量索引狀態。 交接資料：不可變 snapshot_id＋允許來源 ID
+- **n8n validate + deduplicate run → n8n provider attempt** — Fetch required / 需要抓取
+  Valid new acquisition with time remaining. Handoff: Allowlisted source and bounded timeout
+  有效新抓取且仍有時間。 交接資料：核准來源及有限 timeout
+
+- **n8n validate + deduplicate run → Rejected → END** — Reject / 拒絕
+  Invalid arguments, unsupported company or failed authorization. Handoff: Typed non-retryable error
+  參數無效、公司未支援或授權失敗。 交接資料：不重試結構化錯誤
+
+- **n8n provider attempt → Normalize + validate records** — Provider responded / 供應商已回應
+  Successful response, including a valid empty response. Handoff: Raw records and provider status
+  成功回應，包括有效空結果。 交接資料：原記錄及供應商狀態
+
+- **n8n provider attempt → n8n retry decision** — Fetch failed / 抓取失敗
+  Provider request failed. Handoff: Error class + attempt count + remaining time
+  供應商請求失敗。 交接資料：錯誤分類＋次數＋剩餘時間
+
+- **n8n retry decision → n8n backoff + jitter** — Transient + budget / 暫時錯誤＋有預算
+  Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After. Handoff: Wait 1s then 2s plus jitter; clip to job deadline
+  暫時錯誤、少於 3 次且仍有時間再試；遵守 Retry-After。 交接資料：等待 1 秒、2 秒加 jitter；受工作時限限制
+
+- **n8n backoff + jitter → n8n provider attempt** — Next attempt / 下一次嘗試
+  The bounded wait completes before the original deadline. Handoff: Same run_id; incremented attempt count
+  有限等待在原時限內完成。 交接資料：相同 run_id；增加次數
+
+- **n8n retry decision → Unavailable → END** — Stop fetching / 停止抓取
+  Permanent failure, exhausted attempts or insufficient remaining time. Handoff: Provider unavailable; host does not blindly retry MCP
+  永久失敗、次數用完或餘下時間不足。 交接資料：供應商不可用；Host 不盲目重試 MCP
+
+- **Normalize + validate records → Commit PostgreSQL evidence** — Valid records / 有效記錄
+  Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text. Handoff: Versioned company-news records + coverage status
+  核對身份、日期及權限，轉載去重並切分允許原文。 交接資料：有版本公司新聞＋覆蓋狀態
+
+- **Normalize + validate records → Rejected → END** — Invalid response / 回應無效
+  Provider payload is malformed or violates the evidence contract. Handoff: Typed validation error
+  供應商內容格式或證據合約無效。 交接資料：結構化驗證錯誤
+
+- **Commit PostgreSQL evidence → Return structured receipt** — Commit confirmed / 提交確認
+  Evidence and receipt are durably committed with an idempotency key. Handoff: company_news_version_ids + fetched_at + status + execution_id
+  證據及紀錄用冪等鍵持久提交。 交接資料：公司新聞版本＋擷取時間＋狀態＋執行 ID
+
+- **Commit PostgreSQL evidence → Unavailable → END** — Storage failed / 儲存失敗
+  Storage failed or commit outcome needs reconciliation. Handoff: Storage error; no successful receipt claimed
+  儲存失敗或須核對提交結果。 交接資料：儲存錯誤；不聲稱成功
+
+- **Return structured receipt → Pin combined snapshot** — Combine evidence versions / 組合證據版本
+  Host validates the receipt and reads eligible completed daily batches and the company-profile version. Handoff: Company + macro + geopolitical + profile version manifest
+  Host 驗證紀錄，讀取合資格完整每日批次及公司背景版本。 交接資料：公司＋宏觀＋地緣＋背景版本清單
+
+- **Pin combined snapshot → Retrieve** — Snapshot ready / 快照就緒
+  Required coverage is available under the fixed cutoff and current permissions. Handoff: snapshot_id + version IDs + per-stream freshness
+  固定截止及當前權限下所需覆蓋足夠。 交接資料：snapshot_id＋版本 ID＋各來源新鮮度
+
+- **Pin combined snapshot → Insufficient → END** — Coverage gap / 覆蓋不足
+  The question requires missing or stale evidence. Handoff: Coverage gap and dated supported facts
+  問題所需證據缺少或過期。 交接資料：覆蓋缺口及有日期支持事實
 
 ## Retrieve, fuse and rerank evidence / 檢索、融合及重排證據
 

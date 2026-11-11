@@ -1,5 +1,6 @@
 import type { Copy } from './curriculum';
 import { financeGraphNodes } from './finance-graph';
+import { financePreparationNodes } from './finance-evidence';
 import { financeFunctions, financeEngineeringWorkflows } from './finance-project';
 import { financeFunctionRoutes, type FinanceFunctionId, type FinanceRouteKind } from './finance-workflows';
 
@@ -12,12 +13,15 @@ const edge = (from: keyof typeof financeGraphNodes, to: keyof typeof financeGrap
 
 export const financeOverallDiagram: FinanceDiagram = {
   id: 'overall', title: t('One question → one evidence-backed report', '一條問題 → 一份有證據報告'),
-  nodes: Object.entries(financeGraphNodes).map(([id, node]) => ({ id, label: node.label.replace(' → END', ''), detail: node.how })),
+  nodes: [...Object.entries(financeGraphNodes).map(([id, node]) => ({ id, label: node.label.replace(' → END', ''), detail: node.how })), ...financePreparationNodes],
   edges: [
     edge('scope', 'refresh', 'Supported', '範圍符合'),
     edge('scope', 'clarify', 'Ambiguous', '不明確', 'stop'),
     edge('scope', 'irrelevant', 'Unrelated', '不相關', 'stop'),
-    edge('refresh', 'retrieve', 'Snapshot ready', '快照就緒'),
+    edge('refresh', 'snapshot', 'n8n receipt ready', 'n8n 紀錄就緒'),
+    edge('snapshot', 'retrieve', 'Evidence versions pinned', '證據版本已固定'),
+    edge('snapshot', 'insufficient', 'Required context missing', '缺少所需背景', 'stop'),
+    edge('snapshot', 'unavailable', 'Snapshot storage failed', '快照儲存失敗', 'stop'),
     edge('refresh', 'insufficient', 'Only stale news', '只有過期新聞', 'stop'),
     edge('refresh', 'unavailable', 'Refresh failed', '刷新失敗', 'stop'),
     edge('retrieve', 'rerank', 'Admitted hybrid', '已准入混合'),
@@ -41,6 +45,12 @@ export const financeOverallDiagram: FinanceDiagram = {
     edge('validate', 'save', 'All checks pass', '檢查通過'),
     edge('save', 'answer', 'Persisted result', '已保存結果'),
     edge('save', 'unavailable', 'Save failed', '保存失敗', 'stop'),
+    { from: 'daily', to: 'global_news', label: t('Daily, configured timezone', '每日，已設定時區'), detail: financePreparationNodes[0].detail, kind: 'flow' },
+    { from: 'global_news', to: 'evidence_pool', label: t('Commit completed batches', '提交完整批次'), detail: financePreparationNodes[1].detail, kind: 'flow' },
+    { from: 'global_news', to: 'daily_failure', label: t('n8n retries exhausted', 'n8n 重試已用完'), detail: financePreparationNodes[4].detail, kind: 'stop' },
+    { from: 'daily_failure', to: 'evidence_pool', label: t('Prior batch + failure status', '舊批次＋失敗狀態'), detail: financePreparationNodes[4].detail, kind: 'fallback' },
+    { from: 'profiles', to: 'evidence_pool', label: t('Sourced profile versions', '附來源背景版本'), detail: financePreparationNodes[2].detail, kind: 'flow' },
+    { from: 'evidence_pool', to: 'snapshot', label: t('Read eligible versions', '讀取合資格版本'), detail: financePreparationNodes[3].detail, kind: 'flow' },
   ],
 };
 
@@ -60,6 +70,7 @@ export const financeDiagramIds: Array<'overall' | FinanceFunctionId> = ['overall
 export const financeDiagrams = financeDiagramIds.map(id => id === 'overall' ? financeOverallDiagram : financeFunctionDiagram(id));
 
 export const financeRetryRules = [
+  { title: t('n8n retries news providers', 'n8n 重試新聞供應商'), body: t('One logical company refresh per run. n8n owns up to 3 transient provider attempts, with 1s then 2s backoff plus jitter. Clip each 10s attempt to the proposed 25s acquisition budget and the original run deadline. A host timeout triggers receipt reconciliation, not blind resubmission. Daily acquisition uses the same policy with its own job deadline.', '每次任務一次邏輯公司刷新。n8n 最多嘗試供應商 3 次，等待 1 秒、2 秒加 jitter；每次 10 秒受建議 25 秒抓取預算及原任務時限限制。Host 超時先核對紀錄，不盲目再發送；每日抓取同樣有限重試，但使用獨立工作時限。') },
   { title: t('Refine a weak search', '補查不足證據'), body: t('At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and deadline. If evidence is still weak, return insufficient evidence.', '最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及時限；仍不足就回傳證據不足。') },
   { title: t('Fall back after a component failure', '元件失敗時回退'), body: t('Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.', '向量／重排路徑失敗時用仍可用的 sparse，維持原預算。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。') },
   { title: t('Resume an interrupted run', '恢復中斷任務'), body: t('Authenticate the owner, reload the checkpoint and continue at the next unfinished node. Reuse completed results and idempotency keys. Keep counters and the original deadline; expiry needs a new request.', '驗證擁有者、載入 checkpoint，從下一個未完成節點繼續。重用已完成結果及冪等鍵；保留計數及原時限，過期後須新請求。') },

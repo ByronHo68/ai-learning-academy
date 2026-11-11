@@ -7,6 +7,7 @@ import { FinanceDiagramSvg } from '../app/finance-diagram-svg';
 import { financeDiagrams, financeDiagramMermaid, financeRetryRules } from '../lib/finance-diagrams';
 import { mcpExamples, mcpIntroduction, mcpMindmap, mcpMindmapMermaid, mcpOwnership, mcpReferences, mcpScenarios, mcpSetup, mcpStorySteps, mcpToolDefinition, mcpVersionNote, mcpWorkflowMermaid } from '../lib/finance-mcp';
 import { financeFunctionRoutes } from '../lib/finance-workflows';
+import { financeEvidenceGuide, financeSnapshotExample } from '../lib/finance-evidence';
 import { financeContextExample, financeGraphNodes, financeGraphScenarios, financeGraphState, financeGraphWiring, financeScenarioPath } from '../lib/finance-graph';
 import { financeAdrs, financeAssurance, financePromptFlow } from '../lib/finance-assurance';
 import { financeCompanies, financeDeferred, financeEngineeringWorkflows, financeFunctions, financeReferences, financeRepositoryTree, financeStack, financeStages, type FinanceFunctionGuide } from '../lib/finance-project';
@@ -50,6 +51,8 @@ const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
   financeDatabase.flow.join(' → '),
+  ...financeEvidenceGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '### Fictional snapshot manifest / 虛構快照清單\n\n```json\n' + financeSnapshotExample + '\n```',
 ];
 const database = [
   ...databaseOverview,

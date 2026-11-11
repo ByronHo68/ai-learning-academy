@@ -114,7 +114,7 @@ How might cloud costs affect MSFT margins next quarter?
 2. Read the tool menu / 睇工具餐牌 [MCP]
 3. Ask n8n to refresh / 叫 n8n 刷新 [MCP]
 4. Fetch and store news / 抓新聞及儲存
-5. Return a snapshot / 交回快照 [MCP]
+5. Return receipt and pin evidence / 回傳紀錄及固定證據 [MCP]
 6. Find candidate excerpts / 搵候選段落
 7. Put useful evidence first / 把有用證據排前
 8. Pack the LLM input / 準備 LLM 輸入
@@ -131,7 +131,7 @@ What do the available sources say about MSFT margins next quarter?
 2. Read the tool menu / 睇工具餐牌 [MCP]
 3. Ask n8n to refresh / 叫 n8n 刷新 [MCP]
 4. Fetch and store news / 抓新聞及儲存
-5. Return a snapshot / 交回快照 [MCP]
+5. Return receipt and pin evidence / 回傳紀錄及固定證據 [MCP]
 6. Find candidate excerpts / 搵候選段落
 7. Put useful evidence first / 把有用證據排前
 8. Evidence is too thin: try once more / 證據太少：再試一次
@@ -189,36 +189,36 @@ tools/list → refresh_company_news + inputSchema
 
 MCP client inside the app → n8n · MCP server
 
-The graph’s refresh node sends the named tool call. MCP carries the request; n8n owns the work. This is one proposed news-tool call.
+The graph sends one logical refresh with a stable run_id. n8n owns provider retries and timeouts. If the host loses the response, reconcile the existing execution before resubmitting.
 
-Graph 的 refresh 節點傳送具名工具要求；MCP 負責傳訊，n8n 負責工作。這是一次建議的新聞工具呼叫。
+Graph 以固定 run_id 發出一次邏輯刷新；n8n 控制供應商重試及超時。Host 遺失回應時，重新發送前先核對原執行。
 
 ```text
-tools/call → refresh_company_news({ company: "MSFT", query: "cloud margins", as_of: "…" })
+tools/call → refresh_company_news({ company: "MSFT", query: "cloud margins", as_of: "…", run_id: "same-run", deadline: "…" })
 ```
 
 ### Fetch and store news / 抓新聞及儲存
 
 n8n · MCP server → News API → PostgreSQL
 
-n8n calls the provider API, records publication/first-seen times and commits evidence to PostgreSQL before returning the snapshot. That provider request uses its API; it is not automatically MCP.
+n8n owns provider timeouts and transient retries, records publication/first-seen times and commits evidence to PostgreSQL before returning the receipt.
 
-n8n 用供應商 API，記錄發布／首次取得時間並提交證據至 PostgreSQL 後才回傳快照。這段使用供應商 API，不會自動變成 MCP。
+n8n 控制供應商超時及暫時錯誤重試，記錄發布／首次取得時間並提交證據至 PostgreSQL 後回傳紀錄。
 
 ```text
-approved API → normalize → deduplicate → chunks + metadata
+approved API → bounded provider retries → normalize → commit evidence versions
 ```
 
-### Return a snapshot / 交回快照
+### Return receipt and pin evidence / 回傳紀錄及固定證據
 
 n8n · MCP server → MCP client inside the app
 
-The result travels back over MCP. The host validates it and freezes the eligible evidence snapshot for this run.
+The receipt travels back over MCP. The host validates it, then pins company-news versions together with eligible completed daily macro/geopolitical batches and a dated company-profile version. This manifest receives snapshot_id.
 
-結果經 MCP 回傳；host 驗證後固定本次可用的證據快照。
+紀錄經 MCP 回傳。Host 驗證後，將公司新聞版本與合資格完整每日宏觀／地緣批次及有日期背景版本固定成清單，編配 snapshot_id。
 
 ```text
-{ snapshot_id: "fictional-msft-001", provider_status: "ok", articles_added: 3 }
+{ run_id: "fictional-run-001", company_news_version_ids: ["news-v1"], provider_status: "ok" }
 ```
 
 ### Find candidate excerpts / 搵候選段落
@@ -347,7 +347,9 @@ Request fragment / 要求片段:
     "arguments": {
       "company": "MSFT",
       "query": "cloud margins",
-      "as_of": "2026-10-30T16:00:00Z"
+      "as_of": "2026-10-30T16:00:00Z",
+      "run_id": "fictional-run-001",
+      "deadline": "2026-10-30T16:01:00Z"
     }
   }
 }
@@ -357,10 +359,14 @@ Simplified result data / 簡化回傳資料:
 
 ```json
 {
-  "snapshot_id": "fictional-msft-001",
+  "run_id": "fictional-run-001",
+  "company_news_version_ids": [
+    "fictional-msft-news-v1"
+  ],
   "provider_status": "ok",
   "articles_added": 3,
-  "refreshed_at": "2026-10-30T16:00:00Z"
+  "fetched_at": "2026-10-30T16:00:00Z",
+  "attempt_count": 1
 }
 ```
 
@@ -464,12 +470,22 @@ Illustrative prompt-capable server. This n8n design only needs the news tool; it
       "as_of": {
         "type": "string",
         "format": "date-time"
+      },
+      "run_id": {
+        "type": "string",
+        "minLength": 1
+      },
+      "deadline": {
+        "type": "string",
+        "format": "date-time"
       }
     },
     "required": [
       "company",
       "query",
-      "as_of"
+      "as_of",
+      "run_id",
+      "deadline"
     ]
   }
 }

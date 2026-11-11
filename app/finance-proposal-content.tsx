@@ -7,6 +7,7 @@ import { financeComposeDesign, financeDeploymentNotes, financeInterviewCases, fi
 import { FinanceFunctionMindmap } from './finance-function-map';
 import { FinanceDatabaseContent } from './finance-database-content';
 import { FinanceAssuranceContent } from './finance-assurance-content';
+import { FinanceEvidenceContent } from './finance-evidence-content';
 
 export default function FinanceProposalContent({ lang }: { lang: Lang }) {
   return <main className="utility-page finance-page proposal-page">
@@ -22,6 +23,7 @@ export default function FinanceProposalContent({ lang }: { lang: Lang }) {
     <section className="finance-section" id="proposal-estimate"><p className="eyebrow">01 · ESTIMATE</p><h2>{lang === 'zh' ? '120 小時核心，加 60 小時緩衝' : '120 core hours, with 60 hours of reserve'}</h2><div className="proposal-estimate"><p><strong>{financePlan.hoursMin}–{financePlan.hoursMax}</strong> {lang === 'zh' ? '總小時' : 'total hours'}</p><p><strong>{financePlan.weeklyHours}</strong> {lang === 'zh' ? '小時／星期' : 'hours per week'}</p><p><strong>{financePlan.difficulty}</strong> {lang === 'zh' ? '主觀難度' : 'subjective difficulty'}</p></div><p>{lang === 'zh' ? '首八星期各 15 小時；第 9–12 星期預留處理資料、整合及修正。數字係規劃估算，並非已完成工時。第 3 星期有可運作版本就開始申請，標明項目進行中。' : 'Plan 15 hours in each of the first eight weeks. Weeks 9–12 reserve time for data, integration and fixes. These are planning estimates, not measured delivery times. Start applying once week three produces a working path, describing the project as in progress.'}</p></section>
     <section className="finance-section" id="proposal-stages"><p className="eyebrow">02 · DELIVERY</p><h2>{lang === 'zh' ? '每星期交付一個可展示成果' : 'Finish a demonstrable result each week'}</h2><ol className="proposal-stages">{financeStages.map(stage => <li className="proposal-stage" key={stage.week}><span className="eyebrow">WEEK {stage.week} · {stage.hours} H</span><h3>{pick(stage.title, lang)}</h3><ul>{stage.tasks.map(task => <li key={task.en}>{pick(task, lang)}</li>)}</ul><p className="proposal-acceptance"><strong>{lang === 'zh' ? '驗收：' : 'Acceptance: '}</strong>{pick(stage.done, lang)}</p></li>)}</ol></section>
     <FinanceDatabaseContent lang={lang}/>
+    <FinanceEvidenceContent lang={lang}/>
     <FinanceAssuranceContent lang={lang}/>
 
     <section className="finance-section" id="finance-build-guide"><p className="eyebrow">03 · NATIVE LOCAL DEVELOPMENT</p><h2>{lang === 'zh' ? '先本機跑通，再包裝容器' : 'Run locally before packaging containers'}</h2><p>{lang === 'zh' ? '下列係將來獨立股票研究 app 嘅建議結構及命令，唔係此學習網站已存在嘅服務。先建立 scaffold、鎖定依賴，再執行。' : 'The app-only Compose example below does not provision n8n, PostgreSQL + pgvector or the complete Langfuse stack. The following tree and commands describe the future standalone stock research app. They are not existing services in this academy. Create the scaffold and pin dependencies before running them.'}</p><div className="proposal-code-grid"><div><h3>{lang === 'zh' ? '建議檔案結構' : 'Proposed file hierarchy'}</h3><pre><code>{financeRepositoryTree}</code></pre></div><div><h3>{lang === 'zh' ? '本機啟動次序' : 'Local startup order'}</h3><pre><code>{financeLocalCommands}</code></pre></div></div></section>

@@ -21,6 +21,72 @@ One PostgreSQL service holds evidence, full-text indexes, optional pgvector embe
 
 n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → LLM → validate → PostgreSQL report
 
+### Three evidence streams / 三條證據來源
+
+Each accepted prompt refreshes company news through n8n MCP. A separate daily n8n Schedule Trigger fetches macroeconomic and geopolitical news into shared PostgreSQL records. Maintain sourced, versioned profiles for MSFT, AAPL and NVDA: business segments, products, geographic and supply-chain exposure, and financial figures with reporting periods. Review profiles after filings or material changes. Configure the daily time and workflow timezone when publishing n8n.
+
+每個有效提示經 n8n MCP 刷新公司新聞。獨立每日 n8n Schedule Trigger 抓宏觀及地緣政治新聞，存至 PostgreSQL 共用記錄。MSFT、AAPL、NVDA 各有附來源及版本背景：業務、產品、地域與供應鏈曝險，以及附報告期間財務數據。財報或重大變化後覆核背景；發布 n8n 時設定每日時間及時區。
+
+### Snapshot = the evidence version used for this report / Snapshot＝這份報告使用的證據版本
+
+Fetching acquires news. A snapshot pins a manifest of eligible source/chunk versions, completed daily batch IDs, company-profile version, cutoff and coverage status under snapshot_id. Retrieval selects passages from that fixed collection. Later news creates a version for the next run. Refinement and resume reuse the same snapshot. Permission revocations are still checked. This is a run-level evidence manifest rather than a full database backup.
+
+抓取是取得新聞；snapshot 按 snapshot_id 固定可用來源／切段版本、完整每日批次 ID、公司背景版本、截止時間及覆蓋狀態。檢索從這份固定集合挑段落。新新聞供下一次任務使用；補查及恢復沿用原快照，撤銷使用權仍須檢查。這是任務證據清單，並非完整資料庫備份。
+
+### Rerank = relevance to your question / Rerank＝與問題的相關性排序
+
+For “How could export restrictions affect NVDA?”, the reranker compares the question with each candidate passage. It can put an export-policy article ahead of an unrelated earnings article. Its score measures relevance. The LLM then combines policy evidence with the dated company profile to explain a possible business-impact chain, assumptions, counter-evidence and uncertainty. Stock-return estimates require a separately validated model.
+
+例如「出口限制可能如何影響 NVDA？」重排器比較問題與每段原文，可把出口政策文章排在無關財報文章前。分數量度相關性。LLM 再結合政策證據及有日期公司背景，解釋可能業務影響鏈、假設、反方證據及不確定性。股票回報估計須另行驗證模型。
+
+### n8n owns acquisition retries / n8n 負責抓取重試
+
+Proposed policy: at most 3 provider attempts, with 1s then 2s backoff plus jitter. Each attempt is capped at 10s and clipped to a 25s acquisition deadline and the remaining run deadline. Retry transient network failures, selected 5xx and rate limits only when Retry-After fits. Invalid arguments, authorization failures and malformed responses return typed errors. The host sends one logical refresh with a stable run_id. After an MCP timeout, reconcile the existing execution/receipt before resubmitting. Search refinement has its own two-search limit.
+
+建議最多 3 次供應商嘗試，等待 1 秒、2 秒加 jitter。每次最多 10 秒，同時受 25 秒抓取階段及任務剩餘時限限制。只在餘額足夠時重試暫時網絡錯誤、指定 5xx 或限流。無效參數、授權或格式錯誤回傳結構化錯誤。Host 以固定 run_id 發出一次邏輯刷新；MCP 超時先核對原執行／紀錄。搜尋補查另有兩次上限。
+
+### Show freshness for each stream / 各來源明示新鮮度
+
+A daily batch is current as of its last successful fetch. Failed daily ingestion preserves the previous completed batch and records the failure. Show fetched_at, publication/first-seen times and coverage separately for company, macro, geopolitics and profiles. Retrieve shared news by topic, region, sector and a supported exposure mechanism. If the question needs a missing or stale stream, explain the gap and withhold that conclusion. Shared news can be relevant without naming a ticker.
+
+每日批次只代表最後成功擷取時的資料；失敗保留上一完整批次並記錄失敗。公司、宏觀、地緣及背景各自顯示擷取、發布／首次取得時間及覆蓋。共用新聞按主題、地域、行業及有證據曝險關係檢索；所需來源缺少或過期就交代缺口。共用新聞即使沒有 ticker 仍可能相關。
+
+### Fictional snapshot manifest / 虛構快照清單
+
+```json
+{
+  "disclosure": "Fictional evidence-manifest example",
+  "snapshot_id": "snapshot-nvda-example-001",
+  "company": "NVDA",
+  "as_of": "2026-11-11T01:00:00Z",
+  "company_news_version_ids": [
+    "nvda-news-v3"
+  ],
+  "daily_batch_ids": {
+    "macro": "macro-batch-example",
+    "geopolitics": "geo-batch-example"
+  },
+  "company_profile_version": "nvda-profile-v2",
+  "eligible_chunk_ids": [
+    "nvda-news-v3-c1",
+    "geo-policy-v1-c2",
+    "nvda-profile-v2-c4"
+  ],
+  "coverage": {
+    "company": "ok",
+    "macro": "ok",
+    "geopolitics": "ok",
+    "profile": "reviewed"
+  }
+}
+```
+
+### Shared news + versioned company profiles
+
+Extend the evidence model with shared macro/geopolitical document versions and company-profile versions, plus explicit snapshot membership. Keep shared news tagged by topic, region and sector. A profile belongs to its company and keeps reporting/effective/review dates. Every run manifest records the selected versions. The SQL examples below demonstrate the company-news subset; shared-context membership and retrieval are part of the proposed backend extension.
+
+證據模型擴展共用宏觀／地緣文件版本、公司背景版本及明確快照成員關聯。共用新聞按主題、地域、行業標記；公司背景保存所屬公司及報告／生效／覆核日期。任務清單記錄選用版本。下方 SQL 範例示範公司新聞子集；共用背景成員關聯及檢索屬未來後端擴展。
+
 ### snapshots + evidence_chunks
 
 Store dated, versioned excerpts and their source URLs. Query one pinned snapshot with company, permission, publication and first-seen filters. Freeze content after publication; permission revocations still exclude sources.
@@ -224,15 +290,25 @@ Parse the request before any news call. Use a constrained intent decision; ambig
 
 新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。
 
-### NEWS REFRESH (`refresh`)
+### n8n COMPANY NEWS REFRESH (`refresh`)
 
-Reads: accepted request + run_id
+Reads: accepted request + stable run_id
 
-Writes / handoff: receipt + snapshot_id + freshness
+Writes / handoff: validated receipt + company-news versions + status
 
-n8n refreshes approved feeds. For this walkthrough, assume the returned news is already chunked and indexed. Pin the snapshot and both publication/first-seen cutoff filters.
+Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then commits the evidence before returning a structured receipt. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
 
-n8n 刷新核准新聞；此流程假設回傳新聞已切段及索引。固定快照及發布／首次取得截止條件。
+每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重並提交證據後回傳結構化紀錄。Host 超時先核對原執行；每日全球新聞獨立抓取。
+
+### PIN EVIDENCE SNAPSHOT (`snapshot`)
+
+Reads: company refresh receipt + completed daily batches + company profile
+
+Writes / handoff: snapshot_id + exact version IDs + cutoff + coverage
+
+Pin company news together with eligible completed macro/geopolitical batches and the sourced company-profile version. Preserve publication and first-seen cutoffs. For current research, freeze the evidence cutoff after refresh; an explicit historical cutoff remains fixed. Background ingestion continues independently. Refinement and resume reuse this manifest.
+
+將公司新聞、合資格完整宏觀／地緣批次及附來源公司背景版本固定成清單。檢查發布與首次取得截止；當前研究刷新後固定截止，指定歷史截止則保持原值。背景匯入獨立繼續；補查及恢復沿用此清單。
 
 ### POSTGRESQL SEARCH (`retrieve`)
 
@@ -244,15 +320,15 @@ Start with PostgreSQL full-text search. After hybrid admission, embed the query 
 
 預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
-### RERANK (`rerank`)
+### RERANK RELEVANCE (`rerank`)
 
-Reads: query + candidate passages
+Reads: question + company/global/profile passages
 
-Writes / handoff: top 10 passages + model version
+Writes / handoff: top 10 passages by relevance + model version
 
-A cross-encoder scores each query–passage pair. The new order improves context selection; its score is not a probability or a sufficiency verdict.
+Score how well each passage addresses the question. Company news, macro, geopolitics and dated profile excerpts compete on relevance. Use question expansion from sourced company exposure where needed. Business-impact reasoning comes later in the LLM step; the relevance score does not estimate a stock return.
 
-Cross-encoder 評分每對問題與原文，重排以改善上下文選擇；分數不是機率或證據充分判斷。
+評分每段原文與問題相關性；公司、宏觀、地緣及有日期背景按相關性排序。需要時按附來源公司曝險擴展查詢。業務影響推論由後面的 LLM 處理；相關分數不估計股票回報。
 
 ### SPARSE FALLBACK (`fallback`)
 
@@ -393,7 +469,7 @@ How could MSFT costs affect the next 1–3 months?
 MSFT 成本可能如何影響未來 1–3 個月？
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Default PostgreSQL full-text search supplies the evidence for a validated report.
@@ -407,7 +483,7 @@ What is the latest MSFT earnings outlook?
 MSFT 最新盈利展望如何？
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → REFINE ONCE → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → INSUFFICIENT → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → EVIDENCE GATE → REFINE ONCE → POSTGRESQL SEARCH → RERANK RELEVANCE → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 No outlook passage after two searches: explain the gap and abstain from forecasting.
@@ -449,7 +525,7 @@ Explain today’s MSFT news.
 解釋今日 MSFT 新聞。
 
 ```text
-SCOPE → NEWS REFRESH → INSUFFICIENT → END
+SCOPE → n8n COMPANY NEWS REFRESH → INSUFFICIENT → END
 ```
 
 Current coverage unavailable; label older facts and withhold a current forecast.
@@ -463,7 +539,7 @@ Why do MSFT reports disagree about demand?
 為何 MSFT 報道對需求有不同說法？
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Preserve both sources and explain competing scenarios; do not invent a consensus.
@@ -477,7 +553,7 @@ Summarize MSFT news; one retrieved article contains an instruction attack.
 摘要 MSFT 新聞，其中一篇含指令攻擊。
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Treat article instructions as data; keep code-enforced permissions and legitimate evidence.
@@ -491,7 +567,7 @@ Research MSFT costs while the reranker is offline.
 重排服務離線時研究 MSFT 成本。
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → SPARSE FALLBACK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → SPARSE FALLBACK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Use sparse fallback and identify the actual mode in the report.
@@ -505,7 +581,7 @@ Research MSFT when PostgreSQL goes offline after news refresh.
 新聞刷新後 PostgreSQL 中斷時研究 MSFT。
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → UNAVAILABLE → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → UNAVAILABLE → END
 ```
 
 Return an operational error, not an insufficient-news claim.
@@ -519,7 +595,7 @@ A draft cites a source that does not support its claim.
 草稿引用不能支持主張的來源。
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
 ```
 
 Withhold the draft and surface validation_failed.
@@ -533,7 +609,7 @@ The live run exceeds its deadline before generation.
 真實任務在生成前已超時。
 
 ```text
-SCOPE → NEWS REFRESH → POSTGRESQL SEARCH → RERANK → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
 ```
 
 Stop without calling the model; keep the checkpoint and original limits.
@@ -631,6 +707,7 @@ class ResearchState(TypedDict, total=False):
     deadline: str
     scope: Literal["accepted", "irrelevant", "ambiguous"]
     snapshot_id: str
+    snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
     search_attempts: int
     evidence_status: Literal["enough", "gap"]
@@ -657,16 +734,17 @@ def build_graph(nodes, checkpointer):
     # Wrappers enforce deadlines, tool/model budgets, exception mapping and spans.
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
-    for name in ("scope", "refresh", "retrieve", "rerank", "fallback", "gate",
+    for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "gate",
                  "refine", "context", "generate", "validate", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
-        builder.add_node(name, nodes[name])
+    builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
         "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
     # These nodes set route only to one of their declared successors.
     branches = {
-        "refresh": ["retrieve", "insufficient", "unavailable"],
+        "refresh": ["snapshot", "insufficient", "unavailable"],
+        "snapshot": ["retrieve", "insufficient", "unavailable"],
         "retrieve": ["rerank", "gate", "fallback", "unavailable"],
         "rerank": ["gate", "fallback", "unavailable"],
         "fallback": ["gate", "unavailable"],
@@ -710,6 +788,10 @@ Checkpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢
 Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
 
 ### Fresh news for every prompt / 每個提示都取得新聞
+
+n8n owns provider retries for company refresh and independent daily macroeconomic/geopolitical acquisition. Use stable execution keys and typed receipts. Each report pins company-news versions, eligible completed daily batches and a sourced company-profile version in its PostgreSQL evidence manifest.
+
+n8n 負責公司刷新及獨立每日宏觀／地緣抓取的供應商重試；使用固定執行鍵及結構化紀錄。每份報告在 PostgreSQL 證據清單固定公司新聞版本、合資格完整每日批次及附來源公司背景版本。
 
 Every new valid research prompt creates a run and must call refresh_company_news through the n8n MCP Server Trigger before retrieval. A deterministic graph node enforces this; the LLM cannot skip it. Resume reuses the same refresh receipt.
 

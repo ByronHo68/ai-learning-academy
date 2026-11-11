@@ -1,45 +1,60 @@
 flowchart TD
   n0["SCOPE"]
-  n1["NEWS REFRESH"]
-  n2["POSTGRESQL SEARCH"]
-  n3["RERANK"]
-  n4["SPARSE FALLBACK"]
-  n5["EVIDENCE GATE"]
-  n6["REFINE ONCE"]
-  n7["BUILD CONTEXT"]
-  n8["LLM GENERATE"]
-  n9["VALIDATE"]
-  n10["SAVE + TRACE"]
-  n11["ANSWER"]
-  n12["INSUFFICIENT"]
-  n13["OUT OF SCOPE"]
-  n14["CLARIFY"]
-  n15["UNAVAILABLE"]
-  n16["VALIDATION FAILED"]
+  n1["n8n COMPANY NEWS REFRESH"]
+  n2["PIN EVIDENCE SNAPSHOT"]
+  n3["POSTGRESQL SEARCH"]
+  n4["RERANK RELEVANCE"]
+  n5["SPARSE FALLBACK"]
+  n6["EVIDENCE GATE"]
+  n7["REFINE ONCE"]
+  n8["BUILD CONTEXT"]
+  n9["LLM GENERATE"]
+  n10["VALIDATE"]
+  n11["SAVE + TRACE"]
+  n12["ANSWER"]
+  n13["INSUFFICIENT"]
+  n14["OUT OF SCOPE"]
+  n15["CLARIFY"]
+  n16["UNAVAILABLE"]
+  n17["VALIDATION FAILED"]
+  n18["DAILY n8n SCHEDULE"]
+  n19["MACRO + GEOPOLITICAL NEWS"]
+  n20["VERSIONED COMPANY PROFILES"]
+  n21["POSTGRESQL EVIDENCE POOL"]
+  n22["DAILY FETCH FAILURE"]
   n0 -- "範圍符合" --> n1
-  n0 -- "不明確" --> n14
-  n0 -- "不相關" --> n13
-  n1 -- "快照就緒" --> n2
-  n1 -- "只有過期新聞" --> n12
-  n1 -- "刷新失敗" --> n15
-  n2 -- "已准入混合" --> n3
-  n2 -- "預設全文搜尋" --> n5
-  n2 -- "PostgreSQL 中斷" --> n15
-  n2 -- "向量路徑失敗" --> n4
-  n3 -- "已排序原文" --> n5
-  n3 -- "重排失敗" --> n4
-  n4 -- "Sparse 可用" --> n5
-  n4 -- "Sparse 亦失敗" --> n15
-  n5 -. "有缺口＋餘額" .-> n6
-  n6 -. "第 2／2 次搜尋" .-> n2
-  n5 -- "仍不足" --> n12
-  n5 -- "支持足夠" --> n7
-  n7 -- "裁剪後支持不足" --> n12
-  n7 -- "上下文就緒" --> n8
-  n7 -- "到達時限" --> n15
-  n8 -- "草稿就緒" --> n9
-  n8 -- "模型／格式錯誤" --> n15
-  n9 -- "支持無效" --> n16
-  n9 -- "檢查通過" --> n10
-  n10 -- "已保存結果" --> n11
-  n10 -- "保存失敗" --> n15
+  n0 -- "不明確" --> n15
+  n0 -- "不相關" --> n14
+  n1 -- "n8n 紀錄就緒" --> n2
+  n2 -- "證據版本已固定" --> n3
+  n2 -- "缺少所需背景" --> n13
+  n2 -- "快照儲存失敗" --> n16
+  n1 -- "只有過期新聞" --> n13
+  n1 -- "刷新失敗" --> n16
+  n3 -- "已准入混合" --> n4
+  n3 -- "預設全文搜尋" --> n6
+  n3 -- "PostgreSQL 中斷" --> n16
+  n3 -- "向量路徑失敗" --> n5
+  n4 -- "已排序原文" --> n6
+  n4 -- "重排失敗" --> n5
+  n5 -- "Sparse 可用" --> n6
+  n5 -- "Sparse 亦失敗" --> n16
+  n6 -. "有缺口＋餘額" .-> n7
+  n7 -. "第 2／2 次搜尋" .-> n3
+  n6 -- "仍不足" --> n13
+  n6 -- "支持足夠" --> n8
+  n8 -- "裁剪後支持不足" --> n13
+  n8 -- "上下文就緒" --> n9
+  n8 -- "到達時限" --> n16
+  n9 -- "草稿就緒" --> n10
+  n9 -- "模型／格式錯誤" --> n16
+  n10 -- "支持無效" --> n17
+  n10 -- "檢查通過" --> n11
+  n11 -- "已保存結果" --> n12
+  n11 -- "保存失敗" --> n16
+  n18 -- "每日，已設定時區" --> n19
+  n19 -- "提交完整批次" --> n21
+  n19 -- "n8n 重試已用完" --> n22
+  n22 -- "舊批次＋失敗狀態" --> n21
+  n20 -- "附來源背景版本" --> n21
+  n21 -- "讀取合資格版本" --> n2

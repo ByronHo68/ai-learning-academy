@@ -306,10 +306,10 @@ flowchart TD
   n3 -- "Receipt exists" --> n4
   n3 -- "Fetch required" --> n5
   n3 -- "Reject" --> n6
-  n5 -- "Provider responded" --> n7
+  n5 -- "Call ≤10s, within 25s" --> n7
   n5 -- "Fetch failed" --> n8
-  n8 -. "Transient + budget" .-> n9
-  n9 -. "Next attempt" .-> n5
+  n8 -. "Transient, attempts <3" .-> n9
+  n9 -. "Wait 1s / 2s + jitter" .-> n5
   n8 -- "Stop fetching" --> n2
   n7 -- "Valid records" --> n10
   n7 -- "Invalid response" --> n6
@@ -344,19 +344,19 @@ flowchart TD
   Invalid arguments, unsupported company or failed authorization. Handoff: Typed non-retryable error
   參數無效、公司未支援或授權失敗。 交接資料：不重試結構化錯誤
 
-- **n8n provider attempt → Normalize + validate records** — Provider responded / 供應商已回應
-  Successful response, including a valid empty response. Handoff: Raw records and provider status
-  成功回應，包括有效空結果。 交接資料：原記錄及供應商狀態
+- **n8n provider attempt → Normalize + validate records** — Call ≤10s, within 25s / 每次≤10秒，階段25秒
+  Successful response, including a valid empty response. Cap each call at 10s and clip it to the remaining 25s acquisition phase and run deadline. Handoff: Raw records and provider status
+  成功回應，包括有效空結果；每次最多 10 秒，受餘下 25 秒抓取階段及任務時限限制。 交接資料：原記錄及供應商狀態
 
 - **n8n provider attempt → n8n retry decision** — Fetch failed / 抓取失敗
   Provider request failed. Handoff: Error class + attempt count + remaining time
   供應商請求失敗。 交接資料：錯誤分類＋次數＋剩餘時間
 
-- **n8n retry decision → n8n backoff + jitter** — Transient + budget / 暫時錯誤＋有預算
+- **n8n retry decision → n8n backoff + jitter** — Transient, attempts <3 / 暫時錯誤，次數<3
   Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After. Handoff: Wait 1s then 2s plus jitter; clip to job deadline
   暫時錯誤、少於 3 次且仍有時間再試；遵守 Retry-After。 交接資料：等待 1 秒、2 秒加 jitter；受工作時限限制
 
-- **n8n backoff + jitter → n8n provider attempt** — Next attempt / 下一次嘗試
+- **n8n backoff + jitter → n8n provider attempt** — Wait 1s / 2s + jitter / 等待1／2秒＋jitter
   The bounded wait completes before the original deadline. Handoff: Same run_id; incremented attempt count
   有限等待在原時限內完成。 交接資料：相同 run_id；增加次數
 

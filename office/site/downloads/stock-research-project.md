@@ -33,6 +33,72 @@ One PostgreSQL service holds evidence, full-text indexes, optional pgvector embe
 
 n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → LLM → validate → PostgreSQL report
 
+### Three evidence streams / 三條證據來源
+
+Each accepted prompt refreshes company news through n8n MCP. A separate daily n8n Schedule Trigger fetches macroeconomic and geopolitical news into shared PostgreSQL records. Maintain sourced, versioned profiles for MSFT, AAPL and NVDA: business segments, products, geographic and supply-chain exposure, and financial figures with reporting periods. Review profiles after filings or material changes. Configure the daily time and workflow timezone when publishing n8n.
+
+每個有效提示經 n8n MCP 刷新公司新聞。獨立每日 n8n Schedule Trigger 抓宏觀及地緣政治新聞，存至 PostgreSQL 共用記錄。MSFT、AAPL、NVDA 各有附來源及版本背景：業務、產品、地域與供應鏈曝險，以及附報告期間財務數據。財報或重大變化後覆核背景；發布 n8n 時設定每日時間及時區。
+
+### Snapshot = the evidence version used for this report / Snapshot＝這份報告使用的證據版本
+
+Fetching acquires news. A snapshot pins a manifest of eligible source/chunk versions, completed daily batch IDs, company-profile version, cutoff and coverage status under snapshot_id. Retrieval selects passages from that fixed collection. Later news creates a version for the next run. Refinement and resume reuse the same snapshot. Permission revocations are still checked. This is a run-level evidence manifest rather than a full database backup.
+
+抓取是取得新聞；snapshot 按 snapshot_id 固定可用來源／切段版本、完整每日批次 ID、公司背景版本、截止時間及覆蓋狀態。檢索從這份固定集合挑段落。新新聞供下一次任務使用；補查及恢復沿用原快照，撤銷使用權仍須檢查。這是任務證據清單，並非完整資料庫備份。
+
+### Rerank = relevance to your question / Rerank＝與問題的相關性排序
+
+For “How could export restrictions affect NVDA?”, the reranker compares the question with each candidate passage. It can put an export-policy article ahead of an unrelated earnings article. Its score measures relevance. The LLM then combines policy evidence with the dated company profile to explain a possible business-impact chain, assumptions, counter-evidence and uncertainty. Stock-return estimates require a separately validated model.
+
+例如「出口限制可能如何影響 NVDA？」重排器比較問題與每段原文，可把出口政策文章排在無關財報文章前。分數量度相關性。LLM 再結合政策證據及有日期公司背景，解釋可能業務影響鏈、假設、反方證據及不確定性。股票回報估計須另行驗證模型。
+
+### n8n owns acquisition retries / n8n 負責抓取重試
+
+Proposed policy: at most 3 provider attempts, with 1s then 2s backoff plus jitter. Each attempt is capped at 10s and clipped to a 25s acquisition deadline and the remaining run deadline. Retry transient network failures, selected 5xx and rate limits only when Retry-After fits. Invalid arguments, authorization failures and malformed responses return typed errors. The host sends one logical refresh with a stable run_id. After an MCP timeout, reconcile the existing execution/receipt before resubmitting. Search refinement has its own two-search limit.
+
+建議最多 3 次供應商嘗試，等待 1 秒、2 秒加 jitter。每次最多 10 秒，同時受 25 秒抓取階段及任務剩餘時限限制。只在餘額足夠時重試暫時網絡錯誤、指定 5xx 或限流。無效參數、授權或格式錯誤回傳結構化錯誤。Host 以固定 run_id 發出一次邏輯刷新；MCP 超時先核對原執行／紀錄。搜尋補查另有兩次上限。
+
+### Show freshness for each stream / 各來源明示新鮮度
+
+A daily batch is current as of its last successful fetch. Failed daily ingestion preserves the previous completed batch and records the failure. Show fetched_at, publication/first-seen times and coverage separately for company, macro, geopolitics and profiles. Retrieve shared news by topic, region, sector and a supported exposure mechanism. If the question needs a missing or stale stream, explain the gap and withhold that conclusion. Shared news can be relevant without naming a ticker.
+
+每日批次只代表最後成功擷取時的資料；失敗保留上一完整批次並記錄失敗。公司、宏觀、地緣及背景各自顯示擷取、發布／首次取得時間及覆蓋。共用新聞按主題、地域、行業及有證據曝險關係檢索；所需來源缺少或過期就交代缺口。共用新聞即使沒有 ticker 仍可能相關。
+
+### Fictional snapshot manifest / 虛構快照清單
+
+```json
+{
+  "disclosure": "Fictional evidence-manifest example",
+  "snapshot_id": "snapshot-nvda-example-001",
+  "company": "NVDA",
+  "as_of": "2026-11-11T01:00:00Z",
+  "company_news_version_ids": [
+    "nvda-news-v3"
+  ],
+  "daily_batch_ids": {
+    "macro": "macro-batch-example",
+    "geopolitics": "geo-batch-example"
+  },
+  "company_profile_version": "nvda-profile-v2",
+  "eligible_chunk_ids": [
+    "nvda-news-v3-c1",
+    "geo-policy-v1-c2",
+    "nvda-profile-v2-c4"
+  ],
+  "coverage": {
+    "company": "ok",
+    "macro": "ok",
+    "geopolitics": "ok",
+    "profile": "reviewed"
+  }
+}
+```
+
+### Shared news + versioned company profiles
+
+Extend the evidence model with shared macro/geopolitical document versions and company-profile versions, plus explicit snapshot membership. Keep shared news tagged by topic, region and sector. A profile belongs to its company and keeps reporting/effective/review dates. Every run manifest records the selected versions. The SQL examples below demonstrate the company-news subset; shared-context membership and retrieval are part of the proposed backend extension.
+
+證據模型擴展共用宏觀／地緣文件版本、公司背景版本及明確快照成員關聯。共用新聞按主題、地域、行業標記；公司背景保存所屬公司及報告／生效／覆核日期。任務清單記錄選用版本。下方 SQL 範例示範公司新聞子集；共用背景成員關聯及檢索屬未來後端擴展。
+
 ### snapshots + evidence_chunks
 
 Store dated, versioned excerpts and their source URLs. Query one pinned snapshot with company, permission, publication and first-seen filters. Freeze content after publication; permission revocations still exclude sources.
@@ -219,6 +285,10 @@ app = FastAPI(lifespan=lifespan)
 Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
 
 ### Fresh news for every prompt / 每個提示都取得新聞
+
+n8n owns provider retries for company refresh and independent daily macroeconomic/geopolitical acquisition. Use stable execution keys and typed receipts. Each report pins company-news versions, eligible completed daily batches and a sourced company-profile version in its PostgreSQL evidence manifest.
+
+n8n 負責公司刷新及獨立每日宏觀／地緣抓取的供應商重試；使用固定執行鍵及結構化紀錄。每份報告在 PostgreSQL 證據清單固定公司新聞版本、合資格完整每日批次及附來源公司背景版本。
 
 Every new valid research prompt creates a run and must call refresh_company_news through the n8n MCP Server Trigger before retrieval. A deterministic graph node enforces this; the LLM cannot skip it. Resume reuses the same refresh receipt.
 
@@ -599,9 +669,9 @@ Return an explicit error. Keep the last valid state.
 
 ## Refresh news through n8n MCP for every prompt / 每題經 n8n MCP 刷新新聞
 
-Acquire prompt-relevant news before the agent searches a pinned evidence snapshot.
+Refresh company news with n8n-owned retries, then pin it with completed daily macro/geopolitical batches and a sourced company-profile version.
 
-Agent 搜尋固定證據快照前，先取得與提示相關新聞。
+n8n 負責公司新聞刷新及重試，再與完整每日宏觀／地緣批次及附來源公司背景版本固定快照。
 
 **Input / 輸入**
 
@@ -619,83 +689,261 @@ Refresh receipt, provider statuses, dated source records and immutable snapshot_
 
 ```text
 Mandatory LangGraph refresh node → n8n MCP Server Trigger
-refresh_company_news(company_id, query, as_of, run_id, limit) → snapshot_id + sources + provider_status
+refresh_company_news(company, query, as_of, run_id, deadline) → company_news_version_ids + fetched_at + provider_status
+Host pins those versions + completed daily batches + company-profile version → snapshot_id
 ```
 
 ```mermaid
 flowchart TD
-  n0["Validated request → n8n MCP refresh"]
-  n1["Provider response"]
-  n2["PostgreSQL snapshot"]
-  n3["Unavailable → END"]
-  n4["Insufficient → END"]
-  n5["Retrieve"]
-  n0 -->|"Every new accepted prompt; resume reuses its receipt."| n1
-  n1 -->|"Normalize dated, permitted evidence and commit it in a PostgreSQL transaction."| n2
-  n1 -->|"Refresh failed; do not treat an outage as zero relevant news."| n3
-  n1 -->|"The refresh completed but only stale evidence remains."| n4
-  n2 -->|"PostgreSQL commits the evidence and snapshot; vector indexing status is explicit."| n5
+  n0["Startup: MCP discovery"]
+  n1["Ready for accepted request"]
+  n2["Unavailable → END"]
+  n3["n8n validate + deduplicate run"]
+  n4["Return structured receipt"]
+  n5["n8n provider attempt"]
+  n6["Rejected → END"]
+  n7["Normalize + validate records"]
+  n8["n8n retry decision"]
+  n9["n8n backoff + jitter"]
+  n10["Commit PostgreSQL evidence"]
+  n11["Pin combined snapshot"]
+  n12["Retrieve"]
+  n13["Insufficient → END"]
+  n0 -->|"Connect to n8n over Streamable HTTP, list tools and validate the refresh schema. Compile with PostgreSQL checkpoints."| n1
+  n0 -->|"Required tool or authenticated endpoint is unavailable."| n2
+  n1 -->|"The host sends one logical refresh after scope acceptance."| n3
+  n3 -->|"This run already committed its evidence."| n4
+  n3 -->|"Valid new acquisition with time remaining."| n5
+  n3 -->|"Invalid arguments, unsupported company or failed authorization."| n6
+  n5 -->|"Successful response, including a valid empty response."| n7
+  n5 -->|"Provider request failed."| n8
+  n8 -->|"Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After."| n9
+  n9 -->|"The bounded wait completes before the original deadline."| n5
+  n8 -->|"Permanent failure, exhausted attempts or insufficient remaining time."| n2
+  n7 -->|"Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text."| n10
+  n7 -->|"Provider payload is malformed or violates the evidence contract."| n6
+  n10 -->|"Evidence and receipt are durably committed with an idempotency key."| n4
+  n10 -->|"Storage failed or commit outcome needs reconciliation."| n2
+  n4 -->|"Host validates the receipt and reads eligible completed daily batches and the company-profile version."| n11
+  n11 -->|"Required coverage is available under the fixed cutoff and current permissions."| n12
+  n11 -->|"The question requires missing or stale evidence."| n13
 ```
 
-**Validated request → n8n MCP refresh → Provider response**
+**Startup: MCP discovery → Ready for accepted request**
 
-Every new accepted prompt; resume reuses its receipt.
+Connect to n8n over Streamable HTTP, list tools and validate the refresh schema. Compile with PostgreSQL checkpoints.
 
-每個新接納提示；恢復時重用紀錄。
-
-Handoff / 交接資料:
-
-company + query + run_id + cutoff
-
-公司＋查詢＋任務 ID＋截止點
-
-**Provider response → PostgreSQL snapshot**
-
-Normalize dated, permitted evidence and commit it in a PostgreSQL transaction.
-
-核對日期及使用許可，正規化後在 PostgreSQL transaction 提交。
+以 Streamable HTTP 連接 n8n、列出及核對工具 schema，再以 PostgreSQL checkpoint 編譯。
 
 Handoff / 交接資料:
 
-source_id/chunk_id, URL, published_at, first_seen_at, content hash
+Verified tool capability; startup performs no news acquisition
 
-來源／切段 ID、URL、發布／首次取得時間及內容 hash
+已核對工具功能；啟動階段不抓新聞
 
-**Provider response → Unavailable → END**
+**Startup: MCP discovery → Unavailable → END**
 
-Refresh failed; do not treat an outage as zero relevant news.
+Required tool or authenticated endpoint is unavailable.
 
-刷新失敗；不能把故障當成沒有相關新聞。
-
-Handoff / 交接資料:
-
-Provider status and typed error; no current prediction
-
-供應商狀態及結構化錯誤；不作當前預測
-
-**Provider response → Insufficient → END**
-
-The refresh completed but only stale evidence remains.
-
-刷新完成，但只有過期證據。
+所需工具或已認證端點不可用。
 
 Handoff / 交接資料:
 
-Freshness gap and dated supported facts; no current prediction
+Readiness diagnostic
 
-新鮮度缺口及有日期支持事實；不作當前預測
+就緒診斷
 
-**PostgreSQL snapshot → Retrieve**
+**Ready for accepted request → n8n validate + deduplicate run**
 
-PostgreSQL commits the evidence and snapshot; vector indexing status is explicit.
+The host sends one logical refresh after scope acceptance.
 
-PostgreSQL 提交證據及快照；明示向量索引狀態。
+Host 通過範圍檢查後發出一次邏輯刷新。
 
 Handoff / 交接資料:
 
-Immutable snapshot_id + allowed source IDs
+company + original question + run_id + deadline
 
-不可變 snapshot_id＋允許來源 ID
+公司＋原問題＋任務 ID＋時限
+
+**n8n validate + deduplicate run → Return structured receipt**
+
+This run already committed its evidence.
+
+此任務已提交證據。
+
+Handoff / 交接資料:
+
+Existing receipt; resume reuses completed work
+
+原紀錄；恢復重用已完成工作
+
+**n8n validate + deduplicate run → n8n provider attempt**
+
+Valid new acquisition with time remaining.
+
+有效新抓取且仍有時間。
+
+Handoff / 交接資料:
+
+Allowlisted source and bounded timeout
+
+核准來源及有限 timeout
+
+**n8n validate + deduplicate run → Rejected → END**
+
+Invalid arguments, unsupported company or failed authorization.
+
+參數無效、公司未支援或授權失敗。
+
+Handoff / 交接資料:
+
+Typed non-retryable error
+
+不重試結構化錯誤
+
+**n8n provider attempt → Normalize + validate records**
+
+Successful response, including a valid empty response.
+
+成功回應，包括有效空結果。
+
+Handoff / 交接資料:
+
+Raw records and provider status
+
+原記錄及供應商狀態
+
+**n8n provider attempt → n8n retry decision**
+
+Provider request failed.
+
+供應商請求失敗。
+
+Handoff / 交接資料:
+
+Error class + attempt count + remaining time
+
+錯誤分類＋次數＋剩餘時間
+
+**n8n retry decision → n8n backoff + jitter**
+
+Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After.
+
+暫時錯誤、少於 3 次且仍有時間再試；遵守 Retry-After。
+
+Handoff / 交接資料:
+
+Wait 1s then 2s plus jitter; clip to job deadline
+
+等待 1 秒、2 秒加 jitter；受工作時限限制
+
+**n8n backoff + jitter → n8n provider attempt**
+
+The bounded wait completes before the original deadline.
+
+有限等待在原時限內完成。
+
+Handoff / 交接資料:
+
+Same run_id; incremented attempt count
+
+相同 run_id；增加次數
+
+**n8n retry decision → Unavailable → END**
+
+Permanent failure, exhausted attempts or insufficient remaining time.
+
+永久失敗、次數用完或餘下時間不足。
+
+Handoff / 交接資料:
+
+Provider unavailable; host does not blindly retry MCP
+
+供應商不可用；Host 不盲目重試 MCP
+
+**Normalize + validate records → Commit PostgreSQL evidence**
+
+Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text.
+
+核對身份、日期及權限，轉載去重並切分允許原文。
+
+Handoff / 交接資料:
+
+Versioned company-news records + coverage status
+
+有版本公司新聞＋覆蓋狀態
+
+**Normalize + validate records → Rejected → END**
+
+Provider payload is malformed or violates the evidence contract.
+
+供應商內容格式或證據合約無效。
+
+Handoff / 交接資料:
+
+Typed validation error
+
+結構化驗證錯誤
+
+**Commit PostgreSQL evidence → Return structured receipt**
+
+Evidence and receipt are durably committed with an idempotency key.
+
+證據及紀錄用冪等鍵持久提交。
+
+Handoff / 交接資料:
+
+company_news_version_ids + fetched_at + status + execution_id
+
+公司新聞版本＋擷取時間＋狀態＋執行 ID
+
+**Commit PostgreSQL evidence → Unavailable → END**
+
+Storage failed or commit outcome needs reconciliation.
+
+儲存失敗或須核對提交結果。
+
+Handoff / 交接資料:
+
+Storage error; no successful receipt claimed
+
+儲存錯誤；不聲稱成功
+
+**Return structured receipt → Pin combined snapshot**
+
+Host validates the receipt and reads eligible completed daily batches and the company-profile version.
+
+Host 驗證紀錄，讀取合資格完整每日批次及公司背景版本。
+
+Handoff / 交接資料:
+
+Company + macro + geopolitical + profile version manifest
+
+公司＋宏觀＋地緣＋背景版本清單
+
+**Pin combined snapshot → Retrieve**
+
+Required coverage is available under the fixed cutoff and current permissions.
+
+固定截止及當前權限下所需覆蓋足夠。
+
+Handoff / 交接資料:
+
+snapshot_id + version IDs + per-stream freshness
+
+snapshot_id＋版本 ID＋各來源新鮮度
+
+**Pin combined snapshot → Insufficient → END**
+
+The question requires missing or stale evidence.
+
+問題所需證據缺少或過期。
+
+Handoff / 交接資料:
+
+Coverage gap and dated supported facts
+
+覆蓋缺口及有日期支持事實
 
 ### 1. MCP REFRESH
 

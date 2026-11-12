@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { ArrowRight, BookOpen, Check, FileCheck2, GitBranch, Plug } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, FileCheck2, GitBranch, Plug, Workflow } from 'lucide-react';
 import { type Lang, pick } from '../lib/curriculum';
 import { financeCompanies, financeDeferred, financeEngineeringWorkflows, financeFunctions, financeReferences, financeRepositoryTree, financeStack, financeStages } from '../lib/finance-project';
 import { financePlan } from '../lib/finance-proposal';
@@ -28,6 +28,8 @@ export default function FinanceProjectContent({ lang }: { lang: Lang }) {
     </header>
     <div className="fr-disclosure"><BookOpen size={21} aria-hidden="true"/><p>{lang === 'zh' ? '此頁是未來 app 嘅設計指南；操作示範係真正可點擊嘅離線模擬。網站未實作 Python 金融服務，不會抓即時新聞或呼叫 LLM。Demo 所有新聞、事件及評級均為虛構。' : 'This page designs a future app. The interactive demo is a working offline simulation. This website does not implement the Python finance services, fetch live news or call an LLM. All demo news, events and ratings are fictional.'}</p></div>
     <nav className="finance-section-links" aria-label={lang === 'zh' ? '股票研究指南目錄' : 'Stock research guide contents'}><a href="#finance-map">{lang === 'zh' ? '首版範圍' : 'Scope'}</a><a href="#finance-functions">{lang === 'zh' ? '每個功能流程' : 'Function workflows'}</a><a href="#finance-langgraph-map">LangGraph</a><a href="#finance-architecture">{lang === 'zh' ? '本機及部署' : 'Local / Docker'}</a><a href="#finance-database">PostgreSQL</a><a href="#finance-assurance">MCP · RAG · LangSmith</a><a href="#finance-build-guide">{lang === 'zh' ? '檔案結構' : 'File hierarchy'}</a><a href="#finance-stack">{lang === 'zh' ? '技術原因' : 'Technique decisions'}</a><a href="#finance-stages">{lang === 'zh' ? '開發階段' : 'Build stages'}</a><a href="#finance-later">{lang === 'zh' ? '延後功能' : 'Deferred scope'}</a></nav>
+
+    <Link className="mcp-entry" href="/finance-project/n8n" id="finance-n8n"><Workflow size={28} aria-hidden="true"/><div><h2>{lang === 'zh' ? '未用過 n8n？由呢度開始。' : 'New to n8n? Start here.'}</h2><p>{lang === 'zh' ? 'n8n 是抓新聞的辦事員。播放一次成功、一次重試、故障、舊收據、超出範圍，同每日背景批次。' : 'n8n is the clerk that fetches the news. Play a success, one retry, an outage, a reused receipt, an out-of-scope ticker, and the daily batch.'}</p></div><ArrowRight size={22} aria-hidden="true"/></Link>
 
     <Link className="mcp-entry" href="/finance-project/mcp" id="finance-mcp"><Plug size={28} aria-hidden="true"/><div><h2>{lang === 'zh' ? 'MCP 仲未明？由呢度開始。' : 'Still unsure about MCP? Start here.'}</h2><p>{lang === 'zh' ? '互動心智圖、可播放動畫、三種功能例子，同你個 n8n 新聞流程逐步解說。' : 'An interactive mind map, playable animation and three concrete examples explain your n8n news workflow step by step.'}</p></div><ArrowRight size={22} aria-hidden="true"/></Link>
 

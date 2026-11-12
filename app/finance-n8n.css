@@ -1,0 +1,28 @@
+.n8n-limits { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0 8px; }
+.n8n-limits div { padding:14px 16px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+.n8n-limits strong { display:block; font-size:28px; letter-spacing:-.04em; color:var(--navy); }
+.n8n-limits span { color:var(--muted); font-size:13px; }
+.n8n-rail { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:0 24px 18px; }
+.n8n-rail button { min-height:78px; padding:10px; border:1px solid var(--line); border-radius:12px; background:var(--paper); color:var(--navy); text-align:left; font:inherit; }
+.n8n-rail small { display:block; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.04em; }
+.n8n-rail strong { display:block; margin-top:6px; font-size:13px; line-height:1.35; }
+.n8n-rail button[data-state=done] { background:var(--green-bg); border-color:#b7dfc8; }
+.n8n-rail button[data-state=current] { background:var(--mint); border-color:var(--teal); }
+.n8n-rail button[data-state=wait] { background:var(--amber-bg); border-color:#ead29a; }
+.n8n-rail button[data-state=stop] { background:var(--coral-bg); border-color:#efc2b8; }
+.n8n-rail i { display:block; height:4px; margin-top:8px; border-radius:99px; background:var(--line); }
+.n8n-rail button[data-state=done] i,.n8n-rail button[data-state=current] i { background:var(--teal); }
+.n8n-rail button[data-state=wait] i { background:var(--amber); }
+.n8n-rail button[data-state=stop] i { background:var(--coral); }
+.mcp-transfer[data-channel=n8n] .mcp-packet,.mcp-transfer[data-channel=outside] .mcp-packet { background:var(--teal); }
+.mcp-transfer[data-channel=stop] .mcp-packet { background:var(--coral); }
+.n8n-command { margin:12px 0; padding:14px; overflow:auto; border-radius:12px; color:#e7f4f1; background:var(--navy); font-size:13px; line-height:1.5; }
+.n8n-steps { display:grid; gap:12px; }
+.n8n-steps article { display:grid; grid-template-columns:52px minmax(0,1fr); gap:12px; padding:14px; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+.n8n-steps em { display:grid; place-items:center; height:40px; border-radius:10px; color:white; background:var(--teal); font-style:normal; font-weight:800; }
+@media(max-width:800px) {
+  .n8n-limits,.n8n-rail { grid-template-columns:1fr 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .n8n-rail i { transition:none; }
+}

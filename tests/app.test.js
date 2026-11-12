@@ -39,6 +39,20 @@ test('plain browser application contains every required learning surface', async
   assert.ok(!application.includes('sk-'));
 });
 
+test('n8n guide follows the stock research projection', async () => {
+  const html = await readFile(resolve(root, 'site/n8n-guide.html'), 'utf8');
+  const guide = await readFile(resolve(root, 'site/n8n-guide.js'), 'utf8');
+  const styles = await readFile(resolve(root, 'site/n8n-guide.css'), 'utf8');
+  for (const token of ['refresh_company_news', 'MCP Server Trigger', 'run_id', 'X-YFinance-Token', 'prefers-reduced-motion']) {
+    assert.ok(`${html}\n${guide}\n${styles}`.includes(token), `missing ${token}`);
+  }
+  for (const company of ['MSFT', 'AAPL', 'NVDA']) assert.ok(guide.includes(company));
+  assert.match(guide, /Schedule Trigger/);
+  assert.match(styles, /prefers-reduced-motion:\s*reduce/);
+  assert.match(html, /data-player/);
+  assert.match(html, /data-action="play"/);
+});
+
 test('dated claims map to known sources with valid URLs', () => {
   const ids = new Set(sources.map((source) => source.id));
   for (const topic of topics) {

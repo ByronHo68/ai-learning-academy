@@ -10,7 +10,7 @@ Requirement: **Node.js 18.18.x**.
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000). A different port also works:
+Open [http://localhost:3000](http://localhost:3000). The n8n beginner guide for the stock-research projection is at [http://localhost:3000/n8n-guide.html](http://localhost:3000/n8n-guide.html). A different port also works:
 
 ```bash
 npm start -- --port 4000

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Check, Pause, Play, Plug, RotateCcw, SkipBack, SkipForward } from 'lucide-react';
 import { pick, type Lang } from '../lib/curriculum';
 import { mcpExamples, mcpIntroduction, mcpMindmap, mcpOwnership, mcpReferences, mcpScenarios, mcpSetup, mcpStorySteps, mcpToolDefinition, mcpVersionNote } from '../lib/finance-mcp';
+import { FinanceYfinanceContent } from './finance-yfinance-content';
 
 function McpAnimation({ lang }: { lang: Lang }) {
   const [player, setPlayer] = useState({ scenario: 0, position: 0, playing: false });
@@ -132,5 +133,6 @@ export default function FinanceMcpContent({ lang }: { lang: Lang }) {
       {quiz !== null && <p className="mcp-quiz-result" role="status">{quiz === 1 ? lang === 'zh' ? '答啱。工具執行成功 ≠ 證據足夠。LangGraph 的證據檢查決定繼續或停止。' : 'Correct. Successful tool execution does not establish enough evidence. LangGraph’s evidence check decides whether to continue.' : lang === 'zh' ? '再諗下：MCP 只交回工具結果。成功傳訊不保證內容足夠；資料不足亦不等於連線故障。' : 'Try again: MCP returned the tool result. Delivery success does not guarantee sufficient content, and thin evidence is different from a connection failure.'}</p>}
     </section>
     <footer className="fr-references"><h2>{lang === 'zh' ? '帶走心智圖及例子' : 'Keep the mind map and examples'}</h2><a href="/downloads/stock-research-mcp-guide.md" download>{lang === 'zh' ? '下載雙語 MCP 指南 · 包含 Mermaid 心智圖及流程圖' : 'Download the bilingual MCP guide · includes Mermaid mind map and workflow'} ↓</a><p className="mcp-caption">{lang === 'zh' ? '技術參考於 2026 年 11 月 8 日核對。' : 'Technical references checked on 8 November 2026.'}</p><ul>{mcpReferences.map(ref => <li key={ref.url}><a href={ref.url} target="_blank" rel="noreferrer">{ref.title} ↗</a></li>)}</ul></footer>
+    <FinanceYfinanceContent lang={lang}/>
   </main>;
 }

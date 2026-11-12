@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "symbol": {
+      "enum": [
+        "MSFT",
+        "AAPL",
+        "NVDA"
+      ],
+      "title": "Symbol",
+      "type": "string"
+    }
+  },
+  "required": [
+    "symbol"
+  ],
+  "title": "QuoteRequest",
+  "type": "object"
+}

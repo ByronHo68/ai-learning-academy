@@ -101,5 +101,9 @@ jobs:
       - run: python3 -m pip install -r evals/finance/requirements.txt
       - run: npm run finance:eval:test
       - run: python3 evals/finance/evaluate.py --check
+      - run: python3 -m venv integrations/yfinance/.venv
+      - run: integrations/yfinance/.venv/bin/pip install -r integrations/yfinance/requirements-test.txt
+      - run: integrations/yfinance/.venv/bin/python -m integrations.yfinance.export_schemas --check
+      - run: integrations/yfinance/.venv/bin/python -m unittest discover -s integrations/yfinance/tests -p 'test_*.py'
       - run: npm run check
       - run: npm run build

@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Article": {
+      "additionalProperties": false,
+      "properties": {
+        "article_id": {
+          "title": "Article Id",
+          "type": "string"
+        },
+        "canonical_url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Canonical Url",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "publisher": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Publisher"
+        },
+        "summary": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Summary"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "excerpt_hash": {
+          "title": "Excerpt Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "article_id",
+        "canonical_url",
+        "title",
+        "publisher",
+        "summary",
+        "published_at",
+        "excerpt_hash"
+      ],
+      "title": "Article",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "provider": {
+      "const": "yfinance",
+      "default": "yfinance",
+      "title": "Provider",
+      "type": "string"
+    },
+    "symbol": {
+      "enum": [
+        "MSFT",
+        "AAPL",
+        "NVDA"
+      ],
+      "title": "Symbol",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "empty"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "fetched_at": {
+      "format": "date-time",
+      "title": "Fetched At",
+      "type": "string"
+    },
+    "articles": {
+      "items": {
+        "$ref": "#/$defs/Article"
+      },
+      "title": "Articles",
+      "type": "array"
+    }
+  },
+  "required": [
+    "symbol",
+    "status",
+    "fetched_at",
+    "articles"
+  ],
+  "title": "NewsResponse",
+  "type": "object"
+}

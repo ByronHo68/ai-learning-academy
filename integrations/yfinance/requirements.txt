@@ -1,0 +1,7 @@
+mcp==1.26.0
+fastapi==0.150.0
+uvicorn==0.54.0
+pydantic==2.14.3
+httpx==0.28.1
+yfinance==1.8.0
+yfinance-mcp-server @ git+https://github.com/rizkydwicmt/yfinance-mcp-server.git@5132e8de707435e715f4c1a89058cc0e9cac3d7b

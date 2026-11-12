@@ -251,6 +251,7 @@ export const financeRepositoryTree = `stock-research-agent/                 # pr
 │   └── Dockerfile
 ├── data/manifest.json / README.md      # approved, dated evidence
 ├── workflows/n8n/news-refresh.json     # MCP workflow export, no credentials
+├── integrations/yfinance/              # copy the academy's runnable provider adapter
 ├── evals/golden.json / injections.json / retrieval-policy.json
 ├── docs/adr/001–006.md / eval-report.md
 ├── deploy/

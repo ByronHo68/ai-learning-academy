@@ -31,6 +31,7 @@ test('office package serves every exported page and asset on Node without depend
   assert.equal(exported.filter(path => /^proposal-illustrations\//.test(path)).length, 0);
   assert(exported.includes('finance-project/proposal.html'));
   assert(exported.includes('finance-project/demo.html'));
+  assert(exported.includes('finance-project/n8n.html'));
   assert(exported.includes('downloads/stock-research-project.md'));
   assert(exported.includes('downloads/financial-report-development-proposal.md'));
   for (const path of exported) {
@@ -40,7 +41,7 @@ test('office package serves every exported page and asset on Node without depend
     if (path.endsWith('.md')) assert.equal(response.headers.get('content-type'), 'text/markdown; charset=utf-8', path);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(join(site, path)), path);
   }
-  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/finance-project/proposal', '/finance-project/proposal/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
+  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/finance-project/proposal', '/finance-project/proposal/', '/finance-project/n8n', '/finance-project/n8n/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
     const response = await fetch(base + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type'), /text\/html/);
@@ -53,6 +54,15 @@ test('office package serves every exported page and asset on Node without depend
   const financeHtml = await finance.text();
   assert.match(financeHtml, /<title>股票研究 Agent 項目/);
   assert.match(financeHtml, /\/app\/finance-project\/page-[^" ]+\.js/);
+  const n8n = await fetch(base + '/finance-project/n8n');
+  const n8nHtml = await n8n.text();
+  assert.match(n8nHtml, /<title>n8n 新聞流程/);
+  assert.match(n8nHtml, /\/app\/finance-project\/n8n\/page-[^" ]+\.js/);
+  const n8nScripts = [...n8nHtml.matchAll(/src="(\/_next\/static\/chunks\/[^"]+\.js)"/g)].map(match => match[1]);
+  let n8nBundle = '';
+  for (const src of n8nScripts) n8nBundle += await (await fetch(base + src)).text();
+  assert.match(n8nBundle, /refresh_company_news/);
+  assert.match(n8nBundle, /node office\/server\.mjs/);
   const proposalDownload = await fetch(base + '/downloads/financial-report-development-proposal.md');
   assert.equal(await proposalDownload.text(), await readFile(new URL('../../docs/FINANCIAL_REPORT_DEVELOPMENT_PROPOSAL.md', import.meta.url), 'utf8'));
   const download = await fetch(base + '/junior-path/labs/python');

@@ -98,7 +98,7 @@ function header() {
 }
 
 function shell(content) {
-  return `${header()}<div id="main-content" tabindex="-1">${content}</div><footer class="site-footer"><span>AI 學習院 · Visual AI Academy</span><span>Zero dependencies · Node 18.18 · Local-first progress</span></footer>`;
+  return `${header()}<div id="main-content" tabindex="-1">${content}</div><footer class="site-footer"><span>AI 學習院 · Visual AI Academy</span><a href="/n8n-guide.html">${state.lang === 'zh' ? 'n8n 新聞流程指南' : 'n8n news-workflow guide'}</a><span>Zero dependencies · Node 18.18 · Local-first progress</span></footer>`;
 }
 
 function dashboard() {

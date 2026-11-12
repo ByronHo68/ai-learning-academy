@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>n8n in the stock research projection</title>
+    <meta name="description" content="A beginner guide to what n8n is and how the stock research financial projection uses it to fetch news.">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/n8n-guide.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="top">
+      <a class="brand" href="/">
+        <span class="brand-mark">AI</span>
+        <span><strong>AI Academy</strong><small>n8n guide</small></span>
+      </a>
+      <div class="top-actions">
+        <button class="lang" type="button" data-action="language" aria-label="Switch language">
+          <span data-lang-label="en" class="on">EN</span>
+          <span aria-hidden="true"> / </span>
+          <span data-lang-label="zh">繁</span>
+        </button>
+        <a href="/">Academy</a>
+      </div>
+    </header>
+    <main id="main" class="wrap">
+      <section class="hero">
+        <p class="kicker" data-en>Stock research projection · week 2</p>
+        <p class="kicker" data-zh hidden>股票研究規劃 · 第 2 週</p>
+        <h1 data-en>n8n fetches the news. It does not write the report.</h1>
+        <h1 data-zh hidden>n8n 負責抓新聞，不負責寫報告。</h1>
+        <p class="lede" data-en>n8n is a visual workflow runner. In this project it is the clerk between your research app and the news source: one accepted question comes in, company news goes out, and a receipt proves what was saved.</p>
+        <p class="lede zh" data-zh hidden>n8n 是一個視覺化流程執行器。在這個專案裡，它是研究 app 與新聞來源之間的辦事員：收下一條已接納的問題，交出公司新聞，並用一張收據證明保存了什麼。</p>
+        <div class="stats">
+          <div class="stat"><b>1</b><span data-en>logical refresh per question</span><span data-zh hidden>每題一次邏輯刷新</span></div>
+          <div class="stat"><b>3</b><span data-en>provider attempts, then stop</span><span data-zh hidden>供應商最多 3 次，然後停止</span></div>
+          <div class="stat"><b>10s</b><span data-en>cap on each news call</span><span data-zh hidden>每次新聞呼叫上限</span></div>
+          <div class="stat"><b>25s</b><span data-en>whole acquisition budget</span><span data-zh hidden>整段抓取預算</span></div>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-en>What n8n is, in this project</h2>
+        <h2 data-zh hidden>在這個專案裡，n8n 是什麼</h2>
+        <p data-en>A workflow is a row of boxes. Each box does one small job, then passes its result to the next box. Something has to start the row: a button, a clock, or another program calling a URL. n8n is the program that stores those boxes and runs them.</p>
+        <p data-zh hidden>一條 workflow 是一排方塊。每塊只做一件小事，再把結果交給下一塊。必須有東西啟動這排方塊：一個按鈕、一個時鐘，或其他程式呼叫一個網址。n8n 就是保存並執行這些方塊的程式。</p>
+        <p data-en>Your financial projection is an interview research app for three US companies: MSFT, AAPL, and NVDA. The language model writes a cited note only after news has been fetched, saved, and pinned. n8n owns that fetch. The model is not allowed to skip it, and the model is not allowed to retry the news source on its own.</p>
+        <p data-zh hidden>你的財務規劃是一個面試用研究 app，只處理三家美國公司：MSFT、AAPL、NVDA。語言模型要在新聞已被抓取、保存並固定之後，才寫有引用的報告。抓取由 n8n 負責。模型不能跳過這一步，也不能自己向新聞來源重試。</p>
+        <div class="table-scroll">
+        <table class="roles">
+          <thead>
+            <tr>
+              <th data-en>Piece</th><th data-zh hidden>部分</th>
+              <th data-en>Its job</th><th data-zh hidden>它的工作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>LangGraph host</td>
+              <td data-en>Checks the question, then calls <code>refresh_company_news</code> once.</td>
+              <td data-zh hidden>檢查問題，然後只呼叫 <code>refresh_company_news</code> 一次。</td>
+            </tr>
+            <tr>
+              <td>n8n</td>
+              <td data-en>Validates the call, fetches news, retries transient failures, saves rows, returns a receipt.</td>
+              <td data-zh hidden>驗證呼叫、抓新聞、對暫時失敗重試、保存紀錄、交回收據。</td>
+            </tr>
+            <tr>
+              <td>YFinance adapter</td>
+              <td data-en>Private HTTP bridge on port 8002. n8n calls <code>POST /news</code> or <code>POST /quote</code>.</td>
+              <td data-zh hidden>私人 HTTP 橋接，埠 8002。n8n 呼叫 <code>POST /news</code> 或 <code>POST /quote</code>。</td>
+            </tr>
+            <tr>
+              <td>PostgreSQL</td>
+              <td data-en>The evidence database. n8n may insert news. It may not read or write reports.</td>
+              <td data-zh hidden>證據資料庫。n8n 可以寫入新聞，不能讀寫報告。</td>
+            </tr>
+            <tr>
+              <td>The model</td>
+              <td data-en>Writes the cited note from the pinned snapshot. It starts only after n8n is finished.</td>
+              <td data-zh hidden>根據已固定的快照寫有引用的報告。它在 n8n 完成之後才開始。</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-en>Watch one question move</h2>
+        <h2 data-zh hidden>看一條問題怎樣走</h2>
+        <p data-en>Press play. The six boxes are the whole path. The list under them is only the part that happens inside n8n. Nothing here calls a live service.</p>
+        <p data-zh hidden>按播放。六個方塊是整條路徑。下面的清單只是 n8n 內部發生的事。這一頁不會呼叫真實服務。</p>
+        <div class="player" data-player>
+          <div class="scenarios" role="group" aria-label="Workflow scenarios" data-scenarios></div>
+          <div class="controls">
+            <button class="primary" type="button" data-action="play" data-en>Play the path</button>
+            <button class="primary" type="button" data-action="play" data-zh hidden>播放路徑</button>
+            <button type="button" data-action="step" data-en>Next step</button>
+            <button type="button" data-action="step" data-zh hidden>下一步</button>
+            <button type="button" data-action="restart" data-en>Restart</button>
+            <button type="button" data-action="restart" data-zh hidden>重來</button>
+          </div>
+          <div class="pipeline" data-pipeline></div>
+          <div class="inside">
+            <div>
+              <h3 class="inside-title" data-en>Inside n8n</h3>
+              <h3 class="inside-title" data-zh hidden>n8n 內部</h3>
+              <ol class="substeps" data-substeps></ol>
+            </div>
+            <div class="narration" aria-live="polite">
+              <p class="step-count" data-count></p>
+              <p data-narration></p>
+              <dl class="packet" data-packet></dl>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-en>Two workflows, not one</h2>
+        <h2 data-zh hidden>兩條流程，不是一條</h2>
+        <div class="columns">
+          <article class="card">
+            <h3 data-en>A. Every accepted question</h3>
+            <h3 data-zh hidden>A. 每條已接納的問題</h3>
+            <p data-en>Name the tool <code>refresh_company_news</code>. The app calls it through an MCP Server Trigger. A daily clock must not replace this call. Two different questions need two receipts.</p>
+            <p data-zh hidden>工具名稱是 <code>refresh_company_news</code>。App 經 MCP Server Trigger 呼叫它。每日時鐘不能取代這次呼叫。兩條不同問題要有兩張收據。</p>
+            <ol>
+              <li data-en>Arguments: company, query, as_of, run_id, deadline.</li>
+              <li data-zh hidden>參數：company、query、as_of、run_id、deadline。</li>
+              <li data-en>If this run_id already has a receipt, return that receipt.</li>
+              <li data-zh hidden>若這個 run_id 已有收據，交回那張收據。</li>
+              <li data-en>Otherwise fetch, save, and return version ids, fetched_at, and provider status.</li>
+              <li data-zh hidden>否則抓取、保存，並交回版本 id、fetched_at 與供應商狀態。</li>
+            </ol>
+          </article>
+          <article class="card">
+            <h3 data-en>B. Once a day, even if nobody asks</h3>
+            <h3 data-zh hidden>B. 每天一次，即使沒有人發問</h3>
+            <p data-en>A Schedule Trigger fetches macroeconomic and geopolitical news into shared PostgreSQL rows. Pick the clock and the timezone when you publish the workflow. This batch is context. It is not the company news for the question.</p>
+            <p data-zh hidden>Schedule Trigger 把宏觀與地緣政治新聞抓進共用的 PostgreSQL 紀錄。發布流程時選定時間與時區。這批資料是背景，不是該題的公司新聞。</p>
+            <ol>
+              <li data-en>Same retry limits, with this job’s own deadline.</li>
+              <li data-zh hidden>同樣的重試上限，但使用這份工作自己的時限。</li>
+              <li data-en>If retries run out, keep yesterday’s completed batch and record the failure.</li>
+              <li data-zh hidden>若重試用完，保留昨天已完成的批次，並記下失敗。</li>
+              <li data-en>The next question pins that batch beside the fresh company news.</li>
+              <li data-zh hidden>下一條問題會把該批次與新的公司新聞一起固定。</li>
+            </ol>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-en>How to start n8n</h2>
+        <h2 data-zh hidden>怎樣開始用 n8n</h2>
+        <div class="note">
+          <p data-en><strong>Use Docker.</strong> From n8n 3.0, new installs are distributed with Docker. This academy’s Node.js 18.18 runs the website only. It is too old for n8n’s npm installer, which wants Node.js 20.19 through 24.</p>
+          <p data-zh hidden><strong>請用 Docker。</strong> 由 n8n 3.0 起，新安裝透過 Docker 發行。這個學院的 Node.js 18.18 只負責網站，版本低於 n8n 的 npm 安裝要求（Node.js 20.19 至 24）。</p>
+        </div>
+        <div class="steps">
+          <article class="step-card">
+            <em>1</em>
+            <div>
+              <h3 data-en>Open an empty n8n</h3>
+              <h3 data-zh hidden>先打開一個空白的 n8n</h3>
+              <p data-en>Install Docker and leave it running. In a folder that is not this git repository, run the official one-line setup. It creates a <code>n8n</code> directory, downloads the editor, and starts it.</p>
+              <p data-zh hidden>安裝 Docker 並保持執行。在這個 git 倉庫以外的資料夾，執行官方一行安裝。它會建立 <code>n8n</code> 目錄、下載編輯器並啟動。</p>
+              <pre>mkdir -p "$HOME/n8n-local" &amp;&amp; cd "$HOME/n8n-local"
+curl -fsSL https://get.n8n.io | sh</pre>
+              <p data-en>Open <a href="http://localhost:5678">http://localhost:5678</a> and create the owner account. That account stays on your machine. Official notes: <a href="https://docs.n8n.io/deploy/host-n8n/install-options/one-line-setup">n8n one-line setup</a>.</p>
+              <p data-zh hidden>打開 <a href="http://localhost:5678">http://localhost:5678</a> 並建立擁有者帳戶。帳戶留在你的電腦。官方說明：<a href="https://docs.n8n.io/deploy/host-n8n/install-options/one-line-setup">n8n 一行安裝</a>。</p>
+            </div>
+          </article>
+          <article class="step-card">
+            <em>2</em>
+            <div>
+              <h3 data-en>Learn the editor with a throwaway workflow</h3>
+              <h3 data-zh hidden>用一條可丟棄的流程熟悉編輯器</h3>
+              <p data-en>Create a workflow. Add a Manual Trigger. Add an Edit Fields node and set <code>symbol</code> to <code>MSFT</code>. Execute it, then open the Executions list and click that run. You have now seen a workflow start, pass data, and keep a history. This practice flow is not part of the finance app. Leave it or delete it.</p>
+              <p data-zh hidden>建立一條流程。加入 Manual Trigger。加入 Edit Fields，把 <code>symbol</code> 設為 <code>MSFT</code>。執行它，然後打開 Executions 並點進該次執行。你已經看過流程啟動、傳遞資料和保留歷史。這條練習流程不屬於財務 app，可留下或刪除。</p>
+            </div>
+          </article>
+          <article class="step-card">
+            <em>3</em>
+            <div>
+              <h3 data-en>Build the company-news tool</h3>
+              <h3 data-zh hidden>建立公司新聞工具</h3>
+              <p data-en>The shape from the projection, before any live Yahoo call:</p>
+              <p data-zh hidden>規劃裡的形狀，在呼叫真實 Yahoo 之前：</p>
+              <ol>
+                <li data-en>Create the sub-workflow that validates the company, checks <code>run_id</code>, calls the adapter, retries, and returns a receipt.</li>
+                <li data-zh hidden>建立子流程：驗證公司、檢查 <code>run_id</code>、呼叫 adapter、重試，並交回收據。</li>
+                <li data-en>Add an MCP Server Trigger. Connect a Custom n8n Workflow Tool named <code>refresh_company_news</code>. The trigger connects to tool nodes, not to ordinary action nodes.</li>
+                <li data-zh hidden>加入 MCP Server Trigger，接上名為 <code>refresh_company_news</code> 的 Custom n8n Workflow Tool。Trigger 連接的是 tool 節點，不是一般動作節點。</li>
+                <li data-en>Choose Header auth or Bearer auth. Copy the test URL. Publish the workflow before using the production URL. Use Streamable HTTP. This trigger does not speak stdio.</li>
+                <li data-zh hidden>選擇 Header auth 或 Bearer auth。複製測試網址。發布之後才使用正式網址。使用 Streamable HTTP。這個 trigger 不支援 stdio。</li>
+              </ol>
+              <p data-en>This MCP Server Trigger is the door for the research app. It is a different feature from Settings → Instance-level MCP, which lets a chat client browse your n8n instance. The projection uses the trigger.</p>
+              <p data-zh hidden>這個 MCP Server Trigger 是研究 app 的門口。它和 Settings → Instance-level MCP 不同；後者是讓聊天客戶端瀏覽整個 n8n。規劃使用的是 trigger。</p>
+            </div>
+          </article>
+          <article class="step-card">
+            <em>4</em>
+            <div>
+              <h3 data-en>Point the HTTP node at the private adapter</h3>
+              <h3 data-zh hidden>把 HTTP 節點指向私人 adapter</h3>
+              <p data-en>The adapter lives on the finance branch <code>codex/rich-animated-ts</code>, not on this academy’s main branch. When that adapter is running, n8n calls it like this:</p>
+              <p data-zh hidden>Adapter 在財務分支 <code>codex/rich-animated-ts</code>，不在這個學院的 main。當 adapter 在跑，n8n 這樣呼叫它：</p>
+              <ul>
+                <li data-en>Credential: Header Auth, header name <code>X-YFinance-Token</code>, same secret as <code>YFINANCE_BRIDGE_TOKEN</code>.</li>
+                <li data-zh hidden>憑證：Header Auth，標頭名稱 <code>X-YFinance-Token</code>，密鑰與 <code>YFINANCE_BRIDGE_TOKEN</code> 相同。</li>
+                <li data-en>News: <code>POST http://127.0.0.1:8002/news</code> with <code>{"symbol":"MSFT","max_items":5}</code>. Map <code>symbol</code> from the validated company.</li>
+                <li data-zh hidden>新聞：<code>POST http://127.0.0.1:8002/news</code>，內容 <code>{"symbol":"MSFT","max_items":5}</code>。symbol 取自已驗證的公司。</li>
+                <li data-en>Price, only when the report needs it: <code>POST /quote</code> with <code>{"symbol":"MSFT"}</code>, as a separate tool.</li>
+                <li data-zh hidden>只有報告需要價格時：<code>POST /quote</code>，內容 <code>{"symbol":"MSFT"}</code>，作為另一個工具。</li>
+                <li data-en>If n8n itself is in Docker, <code>127.0.0.1</code> means the n8n container. Use the adapter’s private service name instead, for example <code>http://yfinance-bridge:8002</code>.</li>
+                <li data-zh hidden>若 n8n 自己在 Docker 裡，<code>127.0.0.1</code> 指的是 n8n 容器。改用 adapter 的私人服務名稱，例如 <code>http://yfinance-bridge:8002</code>。</li>
+              </ul>
+            </div>
+          </article>
+          <article class="step-card">
+            <em>5</em>
+            <div>
+              <h3 data-en>Week 2 is done when two questions leave two receipts</h3>
+              <h3 data-zh hidden>第 2 週的完成線：兩題留下兩張收據</h3>
+              <p data-en>The projection’s acceptance line is small on purpose. Run two different supported prompts. Each one gets its own refresh receipt. If the host times out, it looks up that <code>run_id</code> before sending the call again. Replaying a finished run returns the old receipt and does not fetch a second time.</p>
+              <p data-zh hidden>規劃的驗收刻意很小。跑兩條不同、且在支援範圍內的問題。每一題有自己的刷新收據。若 host 超時，它先用該 <code>run_id</code> 查找，再決定要不要重送。重播已完成的任務會交回舊收據，不會再抓一次。</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2 data-en>The retry rules already written down</h2>
+        <h2 data-zh hidden>已經寫好的重試規則</h2>
+        <div class="columns">
+          <article class="card">
+            <h3 data-en>n8n may retry</h3>
+            <h3 data-zh hidden>n8n 可以重試</h3>
+            <ul>
+              <li data-en>A dropped connection, selected HTTP 500s, and 429, 503, or 504.</li>
+              <li data-zh hidden>連線中斷、部分 HTTP 500，以及 429、503、504。</li>
+              <li data-en>Only while attempts are under 3 and the remaining time can hold another 10-second call.</li>
+              <li data-zh hidden>只有在次數少於 3，而且剩餘時間夠再打一次 10 秒呼叫時。</li>
+              <li data-en>Wait 1 second, then 2 seconds, plus a little jitter. Honor a Retry-After header when it fits the deadline.</li>
+              <li data-zh hidden>先等 1 秒，再等 2 秒，加上少量 jitter。若 Retry-After 仍在時限內，就遵守它。</li>
+            </ul>
+          </article>
+          <article class="card">
+            <h3 data-en>n8n must stop</h3>
+            <h3 data-zh hidden>n8n 必須停止</h3>
+            <ul>
+              <li data-en>HTTP 401 or 422, an unknown company, or a body that does not match the schema.</li>
+              <li data-zh hidden>HTTP 401 或 422、不認識的公司，或不符合 schema 的內容。</li>
+              <li data-en>Turn off the HTTP node’s own automatic retry. The explicit Wait branch is the only retry.</li>
+              <li data-zh hidden>關掉 HTTP 節點自帶的自動重試。只有明確的 Wait 分支才是重試。</li>
+              <li data-en>The app does not blindly call the tool again after a timeout. It reconciles the receipt first.</li>
+              <li data-zh hidden>App 在超時後不會盲目再呼叫工具。它先核對收據。</li>
+            </ul>
+          </article>
+        </div>
+        <p data-en>n8n’s own installer database is SQLite. It remembers your workflows, credentials, and execution list. The news articles go to PostgreSQL. Those are two databases. Giving n8n a login that can write reports or LangGraph checkpoints would break the projection’s rule: n8n gets an ingestion-only database role.</p>
+        <p data-zh hidden>n8n 安裝程式自帶的資料庫是 SQLite。它記住你的流程、憑證和執行清單。新聞文章要進 PostgreSQL。這是兩個資料庫。若給 n8n 一個能寫報告或 LangGraph checkpoint 的帳戶，就違反規劃：n8n 只有匯入用的資料庫角色。</p>
+      </section>
+
+      <section>
+        <div class="note calm">
+          <p data-en>Week 1 of the same projection freezes the evidence contract and the evaluation set. Weeks 3 to 8 add the research graph, hybrid search, traces, safety, and the demo. You do not need Langfuse, pgvector, or a public URL to learn this n8n slice.</p>
+          <p data-zh hidden>同一份規劃的第 1 週凍結證據合約和評估集。第 3 至 8 週才加上研究 graph、混合搜尋、追蹤、安全和示範。學這一段 n8n 不需要 Langfuse、pgvector 或公開網址。</p>
+        </div>
+      </section>
+    </main>
+    <footer class="wrap page-foot">
+      <p data-en>Source: the Stock Research Agent projection on branch <code>codex/rich-animated-ts</code>, especially the development proposal, workflow atlas, MCP guide, and YFinance guide. Read on 12 November 2026. This page is a lesson. It does not start n8n, PostgreSQL, or Yahoo.</p>
+      <p data-zh hidden>來源：分支 <code>codex/rich-animated-ts</code> 上的股票研究代理規劃，主要是開發提案、流程圖集、MCP 指南和 YFinance 指南。閱讀日期為 2026 年 11 月 12 日。這一頁是課程，不會啟動 n8n、PostgreSQL 或 Yahoo。</p>
+    </footer>
+    <script type="module" src="/n8n-guide.js"></script>
+  </body>
+</html>

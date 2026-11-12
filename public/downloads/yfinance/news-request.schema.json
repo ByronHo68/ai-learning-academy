@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "symbol": {
+      "enum": [
+        "MSFT",
+        "AAPL",
+        "NVDA"
+      ],
+      "title": "Symbol",
+      "type": "string"
+    },
+    "max_items": {
+      "default": 5,
+      "maximum": 20,
+      "minimum": 1,
+      "title": "Max Items",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "symbol"
+  ],
+  "title": "NewsRequest",
+  "type": "object"
+}

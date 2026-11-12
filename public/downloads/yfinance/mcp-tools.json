@@ -1,0 +1,40 @@
+{
+  "discovery_method": "MCP ClientSession tools/list",
+  "upstream_commit": "5132e8de707435e715f4c1a89058cc0e9cac3d7b",
+  "mcp_sdk_version": "1.26.0",
+  "tools": [
+    {
+      "name": "tool_get_stock_price",
+      "inputSchema": {
+        "properties": {"symbol": {"title": "Symbol", "type": "string"}},
+        "required": ["symbol"],
+        "title": "tool_get_stock_priceArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {"result": {"title": "Result", "type": "string"}},
+        "required": ["result"],
+        "title": "tool_get_stock_priceOutput",
+        "type": "object"
+      }
+    },
+    {
+      "name": "tool_get_news",
+      "inputSchema": {
+        "properties": {
+          "symbol": {"title": "Symbol", "type": "string"},
+          "max_items": {"default": 10, "title": "Max Items", "type": "integer"}
+        },
+        "required": ["symbol"],
+        "title": "tool_get_newsArguments",
+        "type": "object"
+      },
+      "outputSchema": {
+        "properties": {"result": {"title": "Result", "type": "string"}},
+        "required": ["result"],
+        "title": "tool_get_newsOutput",
+        "type": "object"
+      }
+    }
+  ]
+}

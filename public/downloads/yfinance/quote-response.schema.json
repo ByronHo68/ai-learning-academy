@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "provider": {
+      "const": "yfinance",
+      "default": "yfinance",
+      "title": "Provider",
+      "type": "string"
+    },
+    "symbol": {
+      "enum": [
+        "MSFT",
+        "AAPL",
+        "NVDA"
+      ],
+      "title": "Symbol",
+      "type": "string"
+    },
+    "price": {
+      "exclusiveMinimum": 0,
+      "title": "Price",
+      "type": "number"
+    },
+    "currency": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Currency"
+    },
+    "exchange": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Exchange"
+    },
+    "price_basis": {
+      "enum": [
+        "regularMarketPrice",
+        "currentPrice"
+      ],
+      "title": "Price Basis",
+      "type": "string"
+    },
+    "market_timestamp": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Market Timestamp"
+    },
+    "timestamp_status": {
+      "enum": [
+        "provided",
+        "not_provided"
+      ],
+      "title": "Timestamp Status",
+      "type": "string"
+    },
+    "fetched_at": {
+      "format": "date-time",
+      "title": "Fetched At",
+      "type": "string"
+    },
+    "market_state": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Market State"
+    },
+    "exchange_timezone": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Exchange Timezone"
+    },
+    "previous_close": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Previous Close"
+    },
+    "change": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Change"
+    },
+    "change_percent": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Change Percent"
+    },
+    "delay_status": {
+      "const": "unknown",
+      "default": "unknown",
+      "title": "Delay Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "symbol",
+    "price",
+    "currency",
+    "exchange",
+    "price_basis",
+    "market_timestamp",
+    "timestamp_status",
+    "fetched_at",
+    "market_state",
+    "exchange_timezone",
+    "previous_close",
+    "change",
+    "change_percent"
+  ],
+  "title": "QuoteResponse",
+  "type": "object"
+}

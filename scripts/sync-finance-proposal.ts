@@ -8,6 +8,7 @@ import { financeDiagrams, financeDiagramMermaid, financeRetryRules } from '../li
 import { mcpExamples, mcpIntroduction, mcpMindmap, mcpMindmapMermaid, mcpOwnership, mcpReferences, mcpScenarios, mcpSetup, mcpStorySteps, mcpToolDefinition, mcpVersionNote, mcpWorkflowMermaid } from '../lib/finance-mcp';
 import { financeFunctionRoutes } from '../lib/finance-workflows';
 import { financeEvidenceGuide, financeSnapshotExample } from '../lib/finance-evidence';
+import { yfinanceDecision, yfinanceSetup } from '../lib/finance-yfinance';
 import { financeContextExample, financeGraphNodes, financeGraphScenarios, financeGraphState, financeGraphWiring, financeScenarioPath } from '../lib/finance-graph';
 import { financeAdrs, financeAssurance, financePromptFlow } from '../lib/finance-assurance';
 import { financeCompanies, financeDeferred, financeEngineeringWorkflows, financeFunctions, financeReferences, financeRepositoryTree, financeStack, financeStages, type FinanceFunctionGuide } from '../lib/finance-project';
@@ -51,6 +52,9 @@ const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
   financeDatabase.flow.join(' → '),
+  '### YFinance MCP integration / YFinance MCP 整合',
+  both(yfinanceDecision),
+  ...yfinanceSetup.map(both),
   ...financeEvidenceGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
   '### Fictional snapshot manifest / 虛構快照清單\n\n```json\n' + financeSnapshotExample + '\n```',
 ];
@@ -142,6 +146,8 @@ const atlas = [
   ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),
 ].join('\n\n') + '\n';
 outputs.push(['docs/FINANCE_POSTGRESQL_GUIDE.md', database + '\n'], ['public/downloads/stock-research-postgresql-guide.md', database + '\n'], ['public/downloads/finance-postgresql-schema.sql', financePostgresSchema]);
+const yfinanceGuide = await readFile(new URL('integrations/yfinance/README.md', root), 'utf8');
+outputs.push(['docs/FINANCE_YFINANCE_GUIDE.md', yfinanceGuide], ['public/downloads/stock-research-yfinance-guide.md', yfinanceGuide]);
 outputs.push(['public/downloads/stock-research-workflow-atlas.md', atlas], ['docs/FINANCE_WORKFLOW_ATLAS.md', atlas.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')]);
 for (const diagram of financeDiagrams) for (const lang of ['en', 'zh'] satisfies Array<'en' | 'zh'>) {
   const svg = renderToStaticMarkup(createElement(FinanceDiagramSvg, { diagram, lang, prefix: `${diagram.id}-${lang}` }));

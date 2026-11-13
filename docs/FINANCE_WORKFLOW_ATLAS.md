@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and twelve connected diagrams. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and thirteen connected diagrams, including the independent n8n daily-news workflow. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及十二張連線圖。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及十三張連線圖，包含獨立 n8n 每日新聞流程。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -319,33 +319,35 @@ flowchart TD
   n2["Unavailable → END"]
   n3["n8n validate + deduplicate run"]
   n4["Return structured receipt"]
-  n5["n8n provider attempt"]
-  n6["Rejected → END"]
-  n7["Normalize + validate records"]
-  n8["n8n retry decision"]
-  n9["n8n backoff + jitter"]
-  n10["Commit PostgreSQL evidence"]
-  n11["Pin combined snapshot"]
-  n12["Retrieve"]
-  n13["Insufficient → END"]
+  n5["In progress → END"]
+  n6["n8n provider attempt"]
+  n7["Rejected → END"]
+  n8["Normalize + validate records"]
+  n9["n8n retry decision"]
+  n10["n8n backoff + jitter"]
+  n11["Commit PostgreSQL evidence"]
+  n12["Pin combined snapshot"]
+  n13["Retrieve"]
+  n14["Insufficient → END"]
   n0 -- "Capability ready" --> n1
   n0 -- "Startup failed" --> n2
   n1 -- "New accepted prompt" --> n3
   n3 -- "Receipt exists" --> n4
-  n3 -- "Fetch required" --> n5
-  n3 -- "Reject" --> n6
-  n5 -- "Call ≤10s, within 25s" --> n7
-  n5 -- "Fetch failed" --> n8
-  n8 -. "Transient, attempts <3" .-> n9
-  n9 -. "Wait 1s / 2s + jitter" .-> n5
-  n8 -- "Stop fetching" --> n2
-  n7 -- "Valid records" --> n10
-  n7 -- "Invalid response" --> n6
-  n10 -- "Commit confirmed" --> n4
-  n10 -- "Storage failed" --> n2
-  n4 -- "Combine evidence versions" --> n11
-  n11 -- "Snapshot ready" --> n12
-  n11 -- "Coverage gap" --> n13
+  n3 -- "Already running" --> n5
+  n3 -- "Fetch required" --> n6
+  n3 -- "Reject" --> n7
+  n6 -- "Call ≤10s, within 25s" --> n8
+  n6 -- "Fetch failed" --> n9
+  n9 -. "Transient, attempts <3" .-> n10
+  n10 -. "Wait 1s / 2s + jitter" .-> n6
+  n9 -- "Stop fetching" --> n2
+  n8 -- "Valid records" --> n11
+  n8 -- "Invalid response" --> n7
+  n11 -- "Commit confirmed" --> n4
+  n11 -- "Storage failed" --> n2
+  n4 -- "Combine evidence versions" --> n12
+  n12 -- "Snapshot ready" --> n13
+  n12 -- "Coverage gap" --> n14
 ```
 
 - **Startup: MCP discovery → Ready for accepted request** — Capability ready / 功能就緒
@@ -364,9 +366,13 @@ flowchart TD
   This run already committed its evidence. Handoff: Existing receipt; resume reuses completed work
   此任務已提交證據。 交接資料：原紀錄；恢復重用已完成工作
 
+- **n8n validate + deduplicate run → In progress → END** — Already running / 已在執行
+  An atomic run claim already belongs to a running execution; do not start another provider call. Handoff: Existing execution ID and pending status for reconciliation
+  原子任務鍵已屬執行中的工作，不另開供應商呼叫。 交接資料：原執行 ID 及待完成狀態供核對
+
 - **n8n validate + deduplicate run → n8n provider attempt** — Fetch required / 需要抓取
-  Valid new acquisition with time remaining. Handoff: Allowlisted source and bounded timeout
-  有效新抓取且仍有時間。 交接資料：核准來源及有限 timeout
+  Valid new acquisition, atomic run lease claimed, matching request fingerprint and time remaining. Handoff: Allowlisted source and bounded timeout
+  有效新抓取、已原子取得任務 lease、請求指紋相符且仍有時間。 交接資料：核准來源及有限 timeout
 
 - **n8n validate + deduplicate run → Rejected → END** — Reject / 拒絕
   Invalid arguments, unsupported company or failed authorization. Handoff: Typed non-retryable error
@@ -812,3 +818,97 @@ flowchart TD
 - **Smoke tests → backup restore → Private deployment** — Checks pass / 檢查通過
   Access control and backups verified. Handoff: Release ID + reproducible demo and trace URL
   已驗證訪問控制及備份。 交接資料：發布 ID＋可重現 demo 及 trace URL
+
+## n8n daily macro + geopolitical news / n8n 每日宏觀及地緣新聞
+
+[English SVG](../public/downloads/finance-diagrams/n8n_daily-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/n8n_daily-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["n8n SCHEDULE + TIMEZONE"]
+  n1["n8n CLAIM BATCH KEY"]
+  n2["IN PROGRESS → END"]
+  n3["n8n APPROVED API / RSS"]
+  n4["n8n RETRY DECISION"]
+  n5["n8n BACKOFF + JITTER"]
+  n6["VALIDATE + DEDUPLICATE"]
+  n7["COMMIT COMPLETE BATCH"]
+  n8["RECORD FAILED JOB"]
+  n9["RETAIN PRIOR COMPLETED BATCH"]
+  n10["POSTGRESQL EVIDENCE POOL"]
+  n0 -- "Daily trigger" --> n1
+  n1 -- "New batch lease" --> n3
+  n1 -- "Existing completed batch" --> n10
+  n1 -- "Existing running execution" --> n2
+  n3 -- "Response received" --> n6
+  n3 -- "Provider error" --> n4
+  n4 -. "Transient + time left" .-> n5
+  n5 -. "Same batch; next attempt" .-> n3
+  n4 -- "Permanent / exhausted" --> n8
+  n6 -- "Valid batch" --> n7
+  n6 -- "Invalid / incomplete" --> n8
+  n7 -- "Complete versions ready" --> n10
+  n7 -- "Transaction rolled back" --> n8
+  n8 -- "Preserve prior batch" --> n9
+  n9 -- "Original age + failure status" --> n10
+```
+
+- **schedule → claim** — Daily trigger / 每日觸發
+  Daily trigger
+  每日觸發
+
+- **claim → fetch** — New batch lease / 新批次 lease
+  New batch lease
+  新批次 lease
+
+- **claim → pool** — Existing completed batch / 已有完整批次
+  Existing completed batch
+  已有完整批次
+
+- **claim → pending** — Existing running execution / 已有執行中工作
+  Existing running execution
+  已有執行中工作
+
+- **fetch → normalize** — Response received / 收到回應
+  Response received
+  收到回應
+
+- **fetch → retry** — Provider error / 供應商錯誤
+  Provider error
+  供應商錯誤
+
+- **retry → wait** — Transient + time left / 暫時錯誤＋有餘額
+  Transient + time left
+  暫時錯誤＋有餘額
+
+- **wait → fetch** — Same batch; next attempt / 同批次下一嘗試
+  Same batch; next attempt
+  同批次下一嘗試
+
+- **retry → failure** — Permanent / exhausted / 永久錯誤／用完
+  Permanent / exhausted
+  永久錯誤／用完
+
+- **normalize → commit** — Valid batch / 批次有效
+  Valid batch
+  批次有效
+
+- **normalize → failure** — Invalid / incomplete / 無效／未完整
+  Invalid / incomplete
+  無效／未完整
+
+- **commit → pool** — Complete versions ready / 完整版本就緒
+  Complete versions ready
+  完整版本就緒
+
+- **commit → failure** — Transaction rolled back / Transaction 已回滾
+  Transaction rolled back
+  Transaction 已回滾
+
+- **failure → prior** — Preserve prior batch / 保留舊完整批次
+  Preserve prior batch
+  保留舊完整批次
+
+- **prior → pool** — Original age + failure status / 原年齡＋失敗狀態
+  Original age + failure status
+  原年齡＋失敗狀態

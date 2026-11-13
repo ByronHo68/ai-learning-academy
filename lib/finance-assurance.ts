@@ -4,7 +4,7 @@ const t = (en: string, zh: string): Copy => ({ en, zh });
 
 export const financePromptFlow = [
   'Prompt + company + horizon → scope gate', 'n8n MCP → refresh_company_news', 'Versioned evidence + time filters',
-  'Sparse / gated hybrid → rerank', 'Conditional forecast + citations', 'Validate → feedback + trace URL',
+  'Sparse / gated hybrid → rank', 'Optional review → validate selection → evidence gate', 'Context → conditional forecast + citations', 'Validate → feedback + trace URL',
 ];
 
 export const financeAssurance = [

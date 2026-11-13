@@ -4,30 +4,32 @@ flowchart TD
   n2["Unavailable → END"]
   n3["n8n validate + deduplicate run"]
   n4["Return structured receipt"]
-  n5["n8n provider attempt"]
-  n6["Rejected → END"]
-  n7["Normalize + validate records"]
-  n8["n8n retry decision"]
-  n9["n8n backoff + jitter"]
-  n10["Commit PostgreSQL evidence"]
-  n11["Pin combined snapshot"]
-  n12["Retrieve"]
-  n13["Insufficient → END"]
+  n5["In progress → END"]
+  n6["n8n provider attempt"]
+  n7["Rejected → END"]
+  n8["Normalize + validate records"]
+  n9["n8n retry decision"]
+  n10["n8n backoff + jitter"]
+  n11["Commit PostgreSQL evidence"]
+  n12["Pin combined snapshot"]
+  n13["Retrieve"]
+  n14["Insufficient → END"]
   n0 -- "功能就緒" --> n1
   n0 -- "啟動失敗" --> n2
   n1 -- "新有效提示" --> n3
   n3 -- "已有紀錄" --> n4
-  n3 -- "需要抓取" --> n5
-  n3 -- "拒絕" --> n6
-  n5 -- "每次≤10秒，階段25秒" --> n7
-  n5 -- "抓取失敗" --> n8
-  n8 -. "暫時錯誤，次數<3" .-> n9
-  n9 -. "等待1／2秒＋jitter" .-> n5
-  n8 -- "停止抓取" --> n2
-  n7 -- "有效記錄" --> n10
-  n7 -- "回應無效" --> n6
-  n10 -- "提交確認" --> n4
-  n10 -- "儲存失敗" --> n2
-  n4 -- "組合證據版本" --> n11
-  n11 -- "快照就緒" --> n12
-  n11 -- "覆蓋不足" --> n13
+  n3 -- "已在執行" --> n5
+  n3 -- "需要抓取" --> n6
+  n3 -- "拒絕" --> n7
+  n6 -- "每次≤10秒，階段25秒" --> n8
+  n6 -- "抓取失敗" --> n9
+  n9 -. "暫時錯誤，次數<3" .-> n10
+  n10 -. "等待1／2秒＋jitter" .-> n6
+  n9 -- "停止抓取" --> n2
+  n8 -- "有效記錄" --> n11
+  n8 -- "回應無效" --> n7
+  n11 -- "提交確認" --> n4
+  n11 -- "儲存失敗" --> n2
+  n4 -- "組合證據版本" --> n12
+  n12 -- "快照就緒" --> n13
+  n12 -- "覆蓋不足" --> n14

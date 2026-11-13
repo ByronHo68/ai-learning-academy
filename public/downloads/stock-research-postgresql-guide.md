@@ -4,6 +4,8 @@ One PostgreSQL service holds evidence, full-text indexes, optional pgvector embe
 
 一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.
+
 n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → LLM → validate → PostgreSQL report
 
 ### YFinance MCP integration / YFinance MCP 整合

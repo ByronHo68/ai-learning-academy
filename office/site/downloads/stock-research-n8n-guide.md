@@ -4,6 +4,104 @@ Open `/finance-project/n8n` for the bilingual offline animation. The Python YFin
 
 打開 `/finance-project/n8n` 查看雙語離線動畫。Python YFinance bridge 已有實作；n8n 執行、匯入及真實研究後端仍是建議設計及 NOT RUN。
 
+## Alpha Vantage daily-news design / Alpha Vantage 每日新聞設計
+
+Proposed n8n configuration. Live Alpha Vantage execution and coverage evaluation are NOT RUN.
+
+### Alpha Vantage supplies the daily news / Alpha Vantage 供應每日新聞
+
+Use n8n HTTP Request with GET https://www.alphavantage.co/query and function=NEWS_SENTIMENT. Store apikey in an n8n Query Auth credential, outside exported workflow JSON and public traces. Company news and quotes still use the separate YFinance bridge. This is a provider configuration design; no Alpha Vantage requests have been made by the academy.
+
+n8n HTTP Request 用 GET https://www.alphavantage.co/query，function=NEWS_SENTIMENT。apikey 存 n8n Query Auth，不放匯出流程 JSON 或公開 trace。公司新聞及價格仍用獨立 YFinance bridge；這是供應商設定設計，學院沒有發送 Alpha Vantage 請求。
+
+### Separate macro and fiscal requests / 宏觀與財政分開請求
+
+Request economy_macro and economy_fiscal separately, union the responses and deduplicate shared articles. A comma-separated topics parameter requires articles to match both topics; it is not an OR search. economy_monetary is available for an optional interest-rate/inflation stream, with an explicit extra request budget. Omit tickers for shared context so articles need not name MSFT, AAPL or NVDA.
+
+economy_macro 及 economy_fiscal 分開請求，合併回應並去重。topics 用逗號會要求同時符合兩主題，不是 OR。可選 economy_monetary 抓利率／通脹新聞，但須另加請求預算。共用背景不設 tickers，文章毋須點名 MSFT、AAPL 或 NVDA。
+
+### Geopolitics needs a coverage check / 地緣政治須檢查覆蓋
+
+The documented topic list has no geopolitics filter or free-text search parameter. Fetch a broad NEWS_SENTIMENT candidate feed, then tag permitted titles/summaries for events such as sanctions, tariffs, conflict and export restrictions, with regions and provenance. Tagging is your classification step, not an Alpha Vantage query capability. A financial-news feed may miss geopolitical events: show limited coverage and abstain when a required event is absent.
+
+官方主題清單沒有 geopolitics 篩選或自由文字搜尋參數。抓廣泛 NEWS_SENTIMENT 候選，再按允許標題／摘要標記制裁、關稅、衝突、出口限制、地域及來源。標記是你的分類步驟，不是 Alpha Vantage 查詢功能。金融新聞可能漏地緣事件；須明示覆蓋有限，所需事件缺少時拒絕相關結論。
+
+### Freeze the UTC window and detect truncation / 固定 UTC 視窗並偵測截斷
+
+Add time_from/time_to in YYYYMMDDTHHMM UTC to every planned request. Start from the last successful watermark with a small configured overlap and freeze the end at job creation. Preserve provider publication time, first_seen_at and fetched_at separately. A capped response is not proof of complete coverage: reaching the limit flags possible truncation. Split the window only within the request budget, otherwise mark that stream incomplete and keep the previous completed batch eligible.
+
+每個請求加 YYYYMMDDTHHMM UTC 的 time_from/time_to。由最後成功 watermark 加設定的小重疊起計，工作建立時固定結束時間。發布、首次取得及抓取時間分開保存。達結果上限代表可能截斷，不能當完整覆蓋；只在預算內拆視窗，否則標記來源未完整並沿用上一完整批次。
+
+### Count requests across the whole daily job / 計算整個每日工作的請求數
+
+The base plan has three queries: macro, fiscal and broad geopolitical candidates. At most three transient attempts per query means at most nine provider requests, including failed attempts, all clipped to the shared daily deadline. Account quotas and rate spacing may reduce that cap. Handle provider error/rate-limit JSON even when HTTP is 200; do not treat it as an empty feed. An exhausted quota does not cause rapid retries. Confirm NEWS_SENTIMENT entitlement and quota for the configured key before enabling the job.
+
+基本方案三個查詢：宏觀、財政及廣泛地緣候選；每查詢最多三次暫時錯誤嘗試，即最多九次供應商請求，包含失敗，並受共用每日時限限制。帳戶配額及速率間隔可令上限更低。HTTP 200 仍須檢查供應商錯誤／限流 JSON，不能當空新聞；配額用完不能密集重試。啟用前確認金鑰有 NEWS_SENTIMENT 權限及配額。
+
+### Prepare evidence before embedding it / Embedding 之前先準備證據
+
+Normalize the response, deduplicate canonical URL/content versions, attach stream/topic/region/permission metadata and commit a completed batch with its receipt in PostgreSQL. Chunk permitted article text or summaries. Embed only new or changed chunks using a pinned model/version; reuse vectors only for the same text hash and model. Provider sentiment scores are stored metadata: they are not embeddings, your reranker scores or validated stock-return forecasts.
+
+先正規化、按 URL／內容版本去重，加來源／主題／地域／權限 metadata，在 PostgreSQL 提交完整批次及收據。將允許原文或摘要切段，以固定模型／版本只嵌入新增或改動段落；只有相同文字 hash 和模型才可重用向量。供應商情緒分數只是 metadata，不是 embedding、你的重排分數或已驗證股票回報預測。
+
+```json
+{
+  "disclosure": "Proposed n8n HTTP Request configuration; not a live response",
+  "method": "GET",
+  "url": "https://www.alphavantage.co/query",
+  "credential": "n8n Query Auth: apikey (private; not exported)",
+  "queries": [
+    {
+      "id": "macro",
+      "purpose": {
+        "en": "Macroeconomic news",
+        "zh": "宏觀經濟新聞"
+      },
+      "parameters": {
+        "function": "NEWS_SENTIMENT",
+        "topics": "economy_macro",
+        "sort": "LATEST",
+        "limit": 1000
+      }
+    },
+    {
+      "id": "fiscal",
+      "purpose": {
+        "en": "Fiscal-policy news",
+        "zh": "財政政策新聞"
+      },
+      "parameters": {
+        "function": "NEWS_SENTIMENT",
+        "topics": "economy_fiscal",
+        "sort": "LATEST",
+        "limit": 1000
+      }
+    },
+    {
+      "id": "geopolitics_candidates",
+      "purpose": {
+        "en": "Broad news for geopolitical tagging",
+        "zh": "供地緣政治標記的廣泛新聞"
+      },
+      "parameters": {
+        "function": "NEWS_SENTIMENT",
+        "sort": "LATEST",
+        "limit": 1000
+      }
+    }
+  ],
+  "shared_parameters": {
+    "time_from": "{{ frozen_window_from_utc }}",
+    "time_to": "{{ frozen_window_to_utc }}"
+  },
+  "optional_topic": "economy_monetary (separate request; adjust job budget)",
+  "geopolitics": "Post-fetch tagging; coverage is limited to returned financial news"
+}
+```
+
+[Alpha Vantage NEWS_SENTIMENT parameters](https://www.alphavantage.co/documentation/#news-sentiment)
+
+
 ## Ownership / 分工
 
 **LangGraph host**
@@ -37,7 +135,7 @@ Searches the snapshot, ranks evidence, optionally pauses for review, rechecks co
 搜尋快照、排序、可選暫停覆核及重查覆蓋後，才生成及驗證引用報告。
 
 - 1: logical refresh per question / 每題一次邏輯刷新
-- 3: provider attempts, then stop / 供應商最多 3 次，然後停止
+- 3: attempts per query, then stop / 每個查詢最多 3 次，然後停止
 - 10s: cap on each news call / 每次新聞呼叫上限
 - 25s: whole acquisition budget / 整段抓取預算
 
@@ -55,9 +153,9 @@ Validate the adapter response schema. Use canonical article identity plus conten
 
 ## Three acquisition paths / 三條抓取路徑
 
-Company news uses Python YFinance MCP through POST /news. Price uses POST /quote and is stored as a timestamped numerical observation, outside the news index. Daily macro/geopolitical news uses separately approved API/RSS providers with its own schedule, timezone, batch key and deadline. Company profiles are sourced, versioned records maintained separately.
+Company news uses Python YFinance MCP through POST /news. Price uses POST /quote and is stored as a timestamped numerical observation, outside the news index. Daily macro/fiscal news uses Alpha Vantage NEWS_SENTIMENT, with geopolitical tagging of broad-feed candidates and explicit coverage limits. It has its own schedule, timezone, batch key and deadline. Company profiles are sourced, versioned records maintained separately.
 
-公司新聞經 Python YFinance MCP 的 POST /news。價格用 POST /quote，存有時間戳數值觀察，不進新聞索引。每日宏觀／地緣新聞經獨立核准 API／RSS，有自己的排程、時區、批次鍵及時限。公司背景則獨立維護附來源版本記錄。
+公司新聞經 Python YFinance MCP 的 POST /news。價格用 POST /quote，存有時間戳數值觀察，不進新聞索引。每日宏觀／財政新聞用 Alpha Vantage NEWS_SENTIMENT，廣泛新聞另作地緣標記並明示覆蓋限制，有自己的排程、時區、批次鍵及時限。公司背景則獨立維護附來源版本記錄。
 
 ## n8n metadata is separate from finance evidence / n8n 管理資料與金融證據分開
 
@@ -111,9 +209,9 @@ For company news, use HTTP Request POST /news with X-YFinance-Token in an n8n He
 
 ### 6
 
-Build a second Schedule Trigger workflow for approved macro/geopolitical API or RSS sources. Configure its time and timezone. Validate, deduplicate and commit a complete batch before making it eligible for snapshots; failure keeps the prior completed batch with its original timestamp.
+Build a second Schedule Trigger workflow for Alpha Vantage NEWS_SENTIMENT: separate economy_macro and economy_fiscal queries, plus a broad candidate feed for post-fetch geopolitical tagging. Configure its time and timezone. Validate, deduplicate and commit a complete batch before making it eligible for snapshots; failure keeps the prior completed batch with its original timestamp.
 
-另建 Schedule Trigger 流程抓核准宏觀／地緣 API 或 RSS，設定時間及時區。驗證、去重並提交完整批次後才可入快照；失敗保留上一完整批次及原時間。
+另建 Schedule Trigger 流程抓 Alpha Vantage NEWS_SENTIMENT：分開 economy_macro、economy_fiscal，再抓廣泛候選作地緣標記，設定時間及時區。驗證、去重並提交完整批次後才可入快照；失敗保留上一完整批次及原時間。
 
 ```dotenv
 # Example environment for the n8n service, not finance evidence credentials.
@@ -233,11 +331,11 @@ full-text default · admitted hybrid may rerank
 
 10. **Optional evidence review / 可選證據覆核** — Research app → You
 
-Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Highlights change emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.
+Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Show system rank separately from user order. Highlights and order guide emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.
 
-自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。標記只改重點，排除後重查覆蓋，快照不變。
+自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。系統排名與用戶次序分開，標記及次序表達重點，排除後重查覆蓋，快照不變。
 
-highlight / exclude / reset · same snapshot
+highlight / exclude / user order / reset · same snapshot
 
 11. **Validate selection and coverage / 驗證選取及覆蓋** — Research app → Research app
 
@@ -335,11 +433,11 @@ full-text default · admitted hybrid may rerank
 
 10. **Optional evidence review / 可選證據覆核** — Research app → You
 
-Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Highlights change emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.
+Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Show system rank separately from user order. Highlights and order guide emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.
 
-自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。標記只改重點，排除後重查覆蓋，快照不變。
+自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。系統排名與用戶次序分開，標記及次序表達重點，排除後重查覆蓋，快照不變。
 
-highlight / exclude / reset · same snapshot
+highlight / exclude / user order / reset · same snapshot
 
 11. **Validate selection and coverage / 驗證選取及覆蓋** — Research app → Research app
 
@@ -475,11 +573,11 @@ full-text default · admitted hybrid may rerank
 
 7. **Optional evidence review / 可選證據覆核** — Research app → You
 
-Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Highlights change emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.
+Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Show system rank separately from user order. Highlights and order guide emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.
 
-自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。標記只改重點，排除後重查覆蓋，快照不變。
+自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。系統排名與用戶次序分開，標記及次序表達重點，排除後重查覆蓋，快照不變。
 
-highlight / exclude / reset · same snapshot
+highlight / exclude / user order / reset · same snapshot
 
 8. **Validate selection and coverage / 驗證選取及覆蓋** — Research app → Research app
 
@@ -593,13 +691,13 @@ This job has its own deadline and is independent of user requests.
 
 schedule + timezone + stable batch key
 
-2. **Provider attempts fail / 供應商嘗試失敗** — n8n → Approved macro / geopolitical API or RSS
+2. **Provider attempts fail / 供應商嘗試失敗** — n8n → Alpha Vantage NEWS_SENTIMENT
 
-Use approved daily-news APIs or RSS, not the company-only /news endpoint. Stop sooner if the daily acquisition budget expires.
+Use Alpha Vantage NEWS_SENTIMENT, separate from YFinance. Three planned queries have up to three attempts each, at most nine provider requests, all clipped to quota and the shared daily deadline.
 
-用核准每日新聞 API 或 RSS，不是只抓公司的 /news 端點；每日抓取預算用完須提早停。
+用 Alpha Vantage NEWS_SENTIMENT，與 YFinance 分開。三個查詢各最多三次，總共最多九個請求，受配額及共用每日時限限制。
 
-bounded transient retries · at most 3 attempts
+3 planned queries · ≤3 attempts/query · ≤9 requests/job
 
 3. **Record failure without publishing a partial batch / 記錄失敗，不發布部分批次** — n8n → PostgreSQL
 
@@ -631,13 +729,13 @@ This workflow runs even when nobody asks. Set the clock and timezone when you pu
 
 Schedule Trigger · your timezone
 
-2. **Fetch shared context / 抓取共用背景** — n8n → Approved macro / geopolitical API or RSS
+2. **Fetch shared context / 抓取共用背景** — n8n → Alpha Vantage NEWS_SENTIMENT
 
-The same retry limits apply, with this job’s own deadline.
+Query macro and fiscal separately; classify geopolitical candidates after fetching a broad feed. Multiple topics use AND, and there is no documented geopolitics topic. The shared job deadline and account quota bound all requests.
 
-同樣的重試上限，但使用這份工作自己的時限。
+宏觀及財政分開查詢，廣泛新聞抓取後再標記地緣候選。多個 topics 為 AND，沒有官方 geopolitics 主題；共用工作時限及帳戶配額限制全部請求。
 
-approved API / RSS · independent job deadline
+economy_macro + economy_fiscal + broad feed → geo tags
 
 3. **Commit the batch / 提交批次** — n8n → PostgreSQL
 

@@ -22,6 +22,8 @@ class ResearchState(TypedDict, total=False):
     review_expires_at: str  # Absolute expiry set at first pause, not refreshed.
     candidate_revision: int
     selection_revision: int
+    system_ordered_ids: list[str]
+    user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
     scope: Literal["accepted", "irrelevant", "ambiguous"]

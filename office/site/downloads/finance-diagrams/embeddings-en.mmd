@@ -1,0 +1,28 @@
+flowchart TD
+  n0["COMMITTED NEWS + PROFILES"]
+  n1["CHUNK + HASH + VERSION"]
+  n2["DOCUMENT EMBEDDING WORKER"]
+  n3["POSTGRESQL pgvector + STATUS"]
+  n4["REFRESH → SNAPSHOT → QUERY"]
+  n5["QUERY EMBEDDING"]
+  n6["FILTERED VECTOR SEARCH"]
+  n7["POSTGRESQL FULL-TEXT"]
+  n8["HYBRID FUSION + RERANK"]
+  n9["REVIEW SOURCES + USER ORDER"]
+  n10["COVERAGE → CONTEXT → LLM"]
+  n0 -- "Indexing pipeline" --> n1
+  n0 -- "Committed text + FTS index" --> n7
+  n1 -- "New / changed hash" --> n2
+  n1 -- "Matching hash + model cached" --> n3
+  n2 -- "Persist ready vectors" --> n3
+  n2 -- "Pending / failed; no blocking" --> n7
+  n4 -- "Admitted hybrid only" --> n5
+  n4 -- "Default full-text" --> n7
+  n5 -- "Query vector ready" --> n6
+  n5 -- "Embedding failure" --> n7
+  n3 -- "Eligible indexed chunks" --> n6
+  n6 -- "Dense candidates" --> n8
+  n7 -- "Hybrid sparse branch" --> n8
+  n7 -- "Default / fallback ranking" --> n9
+  n8 -- "Reranked passages" --> n9
+  n9 -- "Validated selection revision" --> n10

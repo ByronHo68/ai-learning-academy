@@ -8,7 +8,7 @@ export const financePlan = {
     zh: '暫估一位開發者加入每題 n8n MCP 新聞、量度混合 RAG、自架 Langfuse 及 LangSmith。首條真實新聞與追蹤流程完成後重估；Python 學習、供應商授權及基建可能延長時間。目標仍是面試研究 app。',
   },
 };
-export const financeRuntimeLimits = { newsRefreshes: 1, searchRounds: 2, sourceReads: 6, llmCalls: 3, timeoutSeconds: 60 };
+export const financeRuntimeLimits = { newsRefreshes: 1, searchRounds: 2, sourceReads: 6, llmCalls: 3, timeoutSeconds: 60, reviewExpiryMinutes: 15 };
 
 export const financeLocalCommands = `# Proposed application repository, after its scaffold exists.
 # These commands do not start finance services in this academy repository.

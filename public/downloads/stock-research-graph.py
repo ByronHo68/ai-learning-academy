@@ -17,6 +17,13 @@ class ResearchState(TypedDict, total=False):
     horizon: str
     as_of: str
     deadline: str
+    remaining_active_ms: int
+    review_mode: Literal["automatic", "review"]
+    review_expires_at: str  # Absolute expiry set at first pause, not refreshed.
+    candidate_revision: int
+    selection_revision: int
+    highlighted_ids: list[str]
+    excluded_ids: list[str]
     scope: Literal["accepted", "irrelevant", "ambiguous"]
     snapshot_id: str
     snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
@@ -46,10 +53,10 @@ def build_graph(nodes, checkpointer):
     # Wrappers enforce deadlines, tool/model budgets, exception mapping and spans.
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
-    for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "gate",
+    for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "review", "selection", "review_expired", "gate",
                  "refine", "context", "generate", "validate", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
-    builder.add_node(name, nodes[name])
+        builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
         "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
@@ -57,9 +64,11 @@ def build_graph(nodes, checkpointer):
     branches = {
         "refresh": ["snapshot", "insufficient", "unavailable"],
         "snapshot": ["retrieve", "insufficient", "unavailable"],
-        "retrieve": ["rerank", "gate", "fallback", "unavailable"],
-        "rerank": ["gate", "fallback", "unavailable"],
-        "fallback": ["gate", "unavailable"],
+        "retrieve": ["rerank", "review", "fallback", "unavailable"],
+        "rerank": ["review", "fallback", "unavailable"],
+        "fallback": ["review", "unavailable"],
+        "review": ["selection", "review_expired"],
+        "selection": ["gate", "review_expired", "unavailable"],
         "context": ["generate", "insufficient", "unavailable"],
         "generate": ["validate", "unavailable"],
         "validate": ["save", "blocked"],
@@ -71,12 +80,15 @@ def build_graph(nodes, checkpointer):
     builder.add_conditional_edges("gate", route_evidence,
         {name: name for name in ("context", "refine", "insufficient")})
     builder.add_edge("refine", "retrieve")
-    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
+    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired"):
         builder.add_edge(terminal, END)
     return builder.compile(checkpointer=checkpointer)
 
 # graph.invoke(validated_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
 # Thread ownership must be checked by the API. A recursion limit is only a backstop;
 # node wrappers enforce the actual time/call budget and idempotent MCP refresh.
-# Persist the original deadline. Resume does not grant another full budget.
+# Only a persisted human-review wait pauses active time. Save the remainder before
+# interrupt(); on resume atomically spend that remainder, never another full 60s.
+# Network waits and crash recovery count against the active deadline. All call
+# counters survive pauses. The first-pause 15-minute review expiry never moves.
 # Refine context/draft/result dictionaries to the application response schemas.

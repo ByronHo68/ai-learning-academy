@@ -1,3 +1,4 @@
+import { financeReviewGuide, financeReviewExample, financeReviewSketch } from '../lib/finance-review';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { financeDatabase, financePostgresSchema, financePostgresQuery, financePostgresCheckpoint } from '../lib/finance-database';
 import type { Copy } from '../lib/curriculum';
@@ -48,6 +49,15 @@ function diagram(guide: FinanceFunctionGuide): string {
 function functionMarkdown(guide: FinanceFunctionGuide): string {
   return [`## ${guide.title.en} / ${guide.title.zh}`, both(guide.purpose), `**Input / 輸入**\n\n${both(guide.input)}`, `**Output / 輸出**\n\n${both(guide.output)}`, `### Entry contract / 入口\n\n\`\`\`text\n${entryText(guide.entry)}\n\`\`\``, diagram(guide), ...financeFunctionRoutes[guide.id].map(route => `**${route.from} → ${route.to}**\n\n${both(route.when)}\n\nHandoff / 交接資料:\n\n${both(route.payload)}`), ...guide.steps.map((step, index) => `### ${index + 1}. ${step.keyword}\n\n${both(step.action)}\n\nTools: ${step.tools}\n\n**How / 如何應用**\n\n${both(step.how)}\n\n**Why / 為何使用**\n\n${both(step.why)}\n\nProposed files / 建議檔案: ${step.proposedFiles.map(file => `\`${file}\``).join(', ')}`), '### Return branches / 回傳分支', ...guide.branches.map(branch => `**${branch.kind}**\n\n${both(branch.condition)}\n\n${both(branch.result)}\n\n${both(branch.next)}`), '### Acceptance / 驗收', ...guide.acceptance.map(check => `- ${check.en}\n- ${check.zh}`)].join('\n\n');
 }
+const evidenceReview = [
+  '# Optional evidence review / 可選證據覆核',
+  'Proposed design and offline teaching demo only; the live finance backend is not implemented.',
+  '建議設計及離線教學示範；真實金融後端尚未實作。',
+  ...financeReviewGuide.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '```json\n' + financeReviewExample + '\n```',
+  '```python\n' + financeReviewSketch + '\n```',
+  '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
+].join('\n\n') + '\n';
 const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
@@ -55,6 +65,7 @@ const databaseOverview = [
   '### YFinance MCP integration / YFinance MCP 整合',
   both(yfinanceDecision),
   ...yfinanceSetup.map(both),
+  evidenceReview.replace(/^#/gm, '##'),
   ...financeEvidenceGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
   '### Fictional snapshot manifest / 虛構快照清單\n\n```json\n' + financeSnapshotExample + '\n```',
 ];
@@ -99,7 +110,7 @@ const graphWalkthrough = [
 const research = financeFunctions.find(item => item.id === 'research');
 const recovery = financeFunctions.find(item => item.id === 'recovery');
 if (!research || !recovery) throw new Error('Research and recovery guides are required.');
-const graph = [intro, database, graphWalkthrough, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. Code-owned nodes call search_company_evidence and read_source in the documented order. A query planner may refine once within the same limits; the model cannot choose a privileged route. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；程式節點其後按文件次序呼叫搜尋及讀取工具；查詢規劃最多修正一次，模型不能自行選取特權路由。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} seconds per run. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
+const graph = [intro, database, graphWalkthrough, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. Code-owned nodes call search_company_evidence and read_source in the documented order. A query planner may refine once within the same limits; the model cannot choose a privileged route. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；程式節點其後按文件次序呼叫搜尋及讀取工具；查詢規劃最多修正一次，模型不能自行選取特權路由。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} active-processing seconds per run, plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute absolute window from the first evidence-review pause. Only that human wait pauses active time; counters and the remaining budget survive resume. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
 const mcpGuide = [
   '# MCP visual guide / MCP 圖解指南',
   'Generated from `lib/finance-mcp.ts`. Open `/finance-project/mcp` for the playable bilingual animation and interactive mind map. Run `npm run proposal:sync` to regenerate this guide.',
@@ -124,6 +135,8 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_EVIDENCE_REVIEW.md', evidenceReview],
+  ['public/downloads/stock-research-evidence-review.md', evidenceReview],
   ['docs/FINANCE_MCP_GUIDE.md', mcpGuide],
   ['public/downloads/stock-research-mcp-guide.md', mcpGuide],
   ['public/downloads/stock-research-graph.py', financeGraphWiring],
@@ -141,7 +154,7 @@ const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
   'Open `/finance-project/workflows` for the interactive mind map and twelve connected diagrams. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
   '開啟 `/finance-project/workflows` 查看互動心智圖及十二張連線圖。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
-  `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and the original ${financeRuntimeLimits.timeoutSeconds}s deadline. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
+  `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),
   ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),
 ].join('\n\n') + '\n';

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { financeGraphScenarios, financeScenarioPath } from '../lib/finance-graph';
+import { spawnSync } from 'node:child_process';
+import { financeGraphScenarios, financeGraphWiring, financeScenarioPath } from '../lib/finance-graph';
+import { financeReviewSketch } from '../lib/finance-review';
 import { financeFunctionRoutes } from '../lib/finance-workflows';
 import { financeFunctions, financeEngineeringWorkflows } from '../lib/finance-project';
 
@@ -53,6 +55,38 @@ test('service outages and budget expiry differ from missing evidence', () => {
     assert.equal(path.at(-1), 'unavailable');
     assert.ok(!path.includes('generate'));
     assert.ok(!path.includes('insufficient'));
+  }
+});
+
+test('ranking paths validate review selections before checking coverage or generating', () => {
+  for (const scenario of financeGraphScenarios) {
+    const path = financeScenarioPath(scenario.id);
+    for (let i = 0; i < path.length; i++) {
+      if (path[i] === 'gate') {
+        assert.equal(path[i - 2], 'review', scenario.id);
+        assert.equal(path[i - 1], 'selection', scenario.id);
+      }
+    }
+  }
+  const highlight = financeScenarioPath('review_highlight');
+  assert.ok(highlight.indexOf('rerank') < highlight.indexOf('review'));
+  assert.equal(highlight.at(-1), 'answer');
+  const fallback = financeScenarioPath('rerank_failure');
+  assert.equal(fallback[fallback.indexOf('fallback') + 1], 'review');
+  const gap = financeScenarioPath('review_gap');
+  assert.equal(gap.filter(node => node === 'review').length, 2);
+  assert.equal(gap.filter(node => node === 'refresh').length, 1);
+  assert.equal(gap.at(-1), 'insufficient');
+  assert.ok(!gap.includes('generate'));
+  const expired = financeScenarioPath('review_expired');
+  assert.equal(expired.at(-1), 'review_expired');
+  assert.ok(!expired.includes('generate'));
+});
+
+test('downloadable LangGraph and review sketches are valid Python syntax', () => {
+  for (const sketch of [financeGraphWiring, financeReviewSketch]) {
+    const result = spawnSync('python3', ['-c', 'import ast, sys; ast.parse(sys.stdin.read())'], { input: sketch, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr || result.error?.message);
   }
 });
 

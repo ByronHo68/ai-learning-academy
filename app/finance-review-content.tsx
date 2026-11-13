@@ -9,6 +9,7 @@ export function FinanceReviewContent({ lang }: { lang: Lang }) {
   const [excluded, setExcluded] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const missing = financeReviewCoverage(excluded);
+  const missingLabels = financeReviewSources.filter(source => missing.includes(source.facet)).map(source => pick(source.title, lang));
   function toggle(id: string, action: 'highlight' | 'exclude') {
     setSubmitted(false);
     if (action === 'highlight') setHighlighted(ids => ids.includes(id) ? ids.filter(value => value !== id) : [...ids, id]);
@@ -36,7 +37,7 @@ export function FinanceReviewContent({ lang }: { lang: Lang }) {
         <button type="button" onClick={() => { setHighlighted([]); setExcluded([]); setSubmitted(false); }}>{lang === 'zh' ? '重設為系統建議' : 'Reset to system recommendation'}</button>
         <button type="button" onClick={() => setSubmitted(true)}>{lang === 'zh' ? '檢查選取（離線）' : 'Check selection (offline)'}</button>
       </div>
-      <p role="status" aria-live="polite">{submitted ? (missing.length ? (lang === 'zh' ? `證據不足：缺少 ${missing.join('、')}。真實流程最多補查一次；仍不足就不生成預測。` : `Insufficient evidence: missing ${missing.join(', ')}. The proposed workflow refines at most once, then withholds a forecast if support is still missing.`) : (lang === 'zh' ? '三個面向有支持，可進入 context 建立及後續驗證；這裡沒有生成報告。' : 'All three facets have support. Context building and later validation may proceed; no report is generated here.')) : (lang === 'zh' ? '選擇尚未提交；你可繼續編輯。' : 'Selection has not been submitted; you can keep editing.')}</p>
+      <p role="status" aria-live="polite">{submitted ? (missing.length ? (lang === 'zh' ? `證據不足：缺少 ${missingLabels.join('、')}。真實流程最多補查一次；仍不足就不生成預測。` : `Insufficient evidence: missing ${missingLabels.join(', ')}. The proposed workflow refines at most once, then withholds a forecast if support is still missing.`) : (lang === 'zh' ? '三個面向有支持，可進入 context 建立及後續驗證；這裡沒有生成報告。' : 'All three facets have support. Context building and later validation may proceed; no report is generated here.')) : (lang === 'zh' ? '選擇尚未提交；你可繼續編輯。' : 'Selection has not been submitted; you can keep editing.')}</p>
       <p>{lang === 'zh' ? `已標記 ${highlighted.length} · 已排除 ${excluded.length} · 新聞原文及快照不變 · 信心不因標記提高` : `${highlighted.length} highlighted · ${excluded.length} excluded · stored news and snapshot unchanged · highlights do not raise confidence`}</p>
       {highlighted.length > 0 && <p>{lang === 'zh' ? '討論重點（仍須證據支持）：' : 'Discussion emphasis (support still required): '}{financeReviewSources.filter(source => highlighted.includes(source.id)).map(source => pick(source.title, lang)).join(' · ')}</p>}
     </div>

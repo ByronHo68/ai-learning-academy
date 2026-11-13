@@ -4,30 +4,32 @@ flowchart TD
   n2["Unavailable → END"]
   n3["n8n validate + deduplicate run"]
   n4["Return structured receipt"]
-  n5["n8n provider attempt"]
-  n6["Rejected → END"]
-  n7["Normalize + validate records"]
-  n8["n8n retry decision"]
-  n9["n8n backoff + jitter"]
-  n10["Commit PostgreSQL evidence"]
-  n11["Pin combined snapshot"]
-  n12["Retrieve"]
-  n13["Insufficient → END"]
+  n5["In progress → END"]
+  n6["n8n provider attempt"]
+  n7["Rejected → END"]
+  n8["Normalize + validate records"]
+  n9["n8n retry decision"]
+  n10["n8n backoff + jitter"]
+  n11["Commit PostgreSQL evidence"]
+  n12["Pin combined snapshot"]
+  n13["Retrieve"]
+  n14["Insufficient → END"]
   n0 -- "Capability ready" --> n1
   n0 -- "Startup failed" --> n2
   n1 -- "New accepted prompt" --> n3
   n3 -- "Receipt exists" --> n4
-  n3 -- "Fetch required" --> n5
-  n3 -- "Reject" --> n6
-  n5 -- "Call ≤10s, within 25s" --> n7
-  n5 -- "Fetch failed" --> n8
-  n8 -. "Transient, attempts <3" .-> n9
-  n9 -. "Wait 1s / 2s + jitter" .-> n5
-  n8 -- "Stop fetching" --> n2
-  n7 -- "Valid records" --> n10
-  n7 -- "Invalid response" --> n6
-  n10 -- "Commit confirmed" --> n4
-  n10 -- "Storage failed" --> n2
-  n4 -- "Combine evidence versions" --> n11
-  n11 -- "Snapshot ready" --> n12
-  n11 -- "Coverage gap" --> n13
+  n3 -- "Already running" --> n5
+  n3 -- "Fetch required" --> n6
+  n3 -- "Reject" --> n7
+  n6 -- "Call ≤10s, within 25s" --> n8
+  n6 -- "Fetch failed" --> n9
+  n9 -. "Transient, attempts <3" .-> n10
+  n10 -. "Wait 1s / 2s + jitter" .-> n6
+  n9 -- "Stop fetching" --> n2
+  n8 -- "Valid records" --> n11
+  n8 -- "Invalid response" --> n7
+  n11 -- "Commit confirmed" --> n4
+  n11 -- "Storage failed" --> n2
+  n4 -- "Combine evidence versions" --> n12
+  n12 -- "Snapshot ready" --> n13
+  n12 -- "Coverage gap" --> n14

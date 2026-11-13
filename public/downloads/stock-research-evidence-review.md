@@ -4,6 +4,18 @@ Proposed design and offline teaching demo only; the live finance backend is not 
 
 建議設計及離線教學示範；真實金融後端尚未實作。
 
+## Your feedback here means evidence review / 此處回饋指證據覆核
+
+Before generation, show the news proposed for this report, original excerpts, source links/dates and the system relevance rank. You can exclude articles, highlight topics and change the discussion order. Call this evidence review so it is distinct from post-report ratings/corrections, which are stored separately. Exclusion changes this report selection and never deletes news from PostgreSQL.
+
+生成前展示本報告建議新聞、原文、來源連結／日期及系統相關排序。你可排除文章、標記主題及改討論次序。將這步稱「證據覆核」，與報告生成後另存的評分／更正分開；排除只改本次選取，不刪 PostgreSQL 新聞。
+
+## System rank and your order stay separate / 系統排名與你的次序分開
+
+Preserve system_ordered_ids and reranker scores, then store user_ordered_ids as an exact, duplicate-free permutation of selected IDs in the selection revision. Order can affect what the model attends to and how the report is organized; treat it as presentation/emphasis preference, not a new relevance or truth score. Pass the preference alongside evidence to context assembly. Required facets and counter-evidence take priority over arbitrary trimming. Recheck coverage after trimming and disclose exclusions; never increase forecast confidence because an article moved up. Reordering alone makes no provider, search or embedding call.
+
+保留 system_ordered_ids 及重排分數，再將 user_ordered_ids 存選取版本；它必須是所有已選 ID 的完整不重複排列。次序可影響模型注意及報告組織，只作呈現／重點偏好，不是新相關性或真實分數。建立 context 時連同證據傳入；必要面向及反方證據不能因裁剪優先次序而失去。裁剪後重查覆蓋並交代排除，不能因文章移前而提高信心；單純改次序不呼叫供應商、搜尋或 embedding。
+
 ## Where the review belongs / 覆核放在哪一步
 
 Retrieve → rerank → optional evidence review → validate selection → evidence gate → context → LLM → validation. Default full-text search and sparse fallback enter the same review step. Choose automatic or review mode at request creation. Automatic mode uses the system selection and still passes all evidence checks.
@@ -12,9 +24,9 @@ Retrieve → rerank → optional evidence review → validate selection → evid
 
 ## Highlight, exclude, reset, generate / 標記、排除、重設、生成
 
-Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Reset restores system recommendations for the current candidates. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
+Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Move up/down sets your discussion order without changing system scores. Reset restores system recommendations and their order. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
 
-標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。重設還原目前候選的系統建議；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
+標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。上移／下移只改討論次序，不改系統分數；重設還原系統建議及次序；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
 
 ## Coverage and confirmation bias / 覆蓋及確認偏誤
 
@@ -74,6 +86,15 @@ Live review checks are NOT RUN. Before enabling the feature, test another owner�
   "highlighted_ids": [
     "costs-v1-c1"
   ],
+  "system_ordered_ids": [
+    "costs-v1-c1",
+    "demand-v2-c1",
+    "outlook-v1-c1"
+  ],
+  "user_ordered_ids": [
+    "demand-v2-c1",
+    "costs-v1-c1"
+  ],
   "excluded_ids": [
     "outlook-v1-c1"
   ],
@@ -114,3 +135,5 @@ def review_node(state):
 ```
 
 [LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)
+
+[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)

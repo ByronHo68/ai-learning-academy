@@ -31,7 +31,7 @@ const app = copy('Research app', '研究 app');
 const n8n = copy('n8n', 'n8n');
 const adapter = copy('YFinance adapter', 'YFinance adapter');
 const db = copy('PostgreSQL', 'PostgreSQL');
-const dailyProviders = copy('Approved macro / geopolitical API or RSS', '核准宏觀／地緣 API 或 RSS');
+const dailyProviders = copy('Alpha Vantage NEWS_SENTIMENT', 'Alpha Vantage NEWS_SENTIMENT');
 
 const hop = (
   id: string,
@@ -66,7 +66,7 @@ export const n8nRoles = [
 
 export const n8nLimits = [
   { value: '1', label: copy('logical refresh per question', '每題一次邏輯刷新') },
-  { value: '3', label: copy('provider attempts, then stop', '供應商最多 3 次，然後停止') },
+  { value: '3', label: copy('attempts per query, then stop', '每個查詢最多 3 次，然後停止') },
   { value: '10s', label: copy('cap on each news call', '每次新聞呼叫上限') },
   { value: '25s', label: copy('whole acquisition budget', '整段抓取預算') },
 ];
@@ -77,7 +77,7 @@ export const n8nStart = [
   copy('Practice with Manual Trigger → Edit Fields (symbol MSFT) → Execute. Inspect the execution. This practice workflow does not fetch news or populate the finance database.', '先練習 Manual Trigger → Edit Fields（symbol MSFT）→ Execute，再看執行紀錄；這條練習不抓新聞或寫入金融資料庫。'),
   copy('Create a called sub-workflow with explicit inputs, then connect an MCP Server Trigger to a Custom n8n Workflow Tool named refresh_company_news. Use authenticated Streamable HTTP. Test URLs work while listening; after publishing, configure the host with the production URL and its separate MCP credential.', '建立明確輸入的子流程，再將 MCP Server Trigger 連接名為 refresh_company_news 的 Custom n8n Workflow Tool。使用已認證 Streamable HTTP；測試 URL 要保持 listening，發布後 host 改用 production URL 及獨立 MCP 憑證。'),
   copy('For company news, use HTTP Request POST /news with X-YFinance-Token in an n8n Header Auth credential. In Docker use http://yfinance-bridge:8002 on a shared private network; native n8n may use 127.0.0.1:8002. POST /quote is a separate numerical observation, outside the news vector index. The Python bridge already exists in integrations/yfinance; these n8n workflows are still proposed.', '公司新聞用 HTTP Request POST /news，X-YFinance-Token 存 n8n Header Auth。Docker 共用私人網絡用 http://yfinance-bridge:8002；本機 n8n 才用 127.0.0.1:8002。POST /quote 為獨立數值觀察，不進新聞向量索引。Python bridge 已在 integrations/yfinance，n8n 流程仍屬建議設計。'),
-  copy('Build a second Schedule Trigger workflow for approved macro/geopolitical API or RSS sources. Configure its time and timezone. Validate, deduplicate and commit a complete batch before making it eligible for snapshots; failure keeps the prior completed batch with its original timestamp.', '另建 Schedule Trigger 流程抓核准宏觀／地緣 API 或 RSS，設定時間及時區。驗證、去重並提交完整批次後才可入快照；失敗保留上一完整批次及原時間。'),
+  copy('Build a second Schedule Trigger workflow for Alpha Vantage NEWS_SENTIMENT: separate economy_macro and economy_fiscal queries, plus a broad candidate feed for post-fetch geopolitical tagging. Configure its time and timezone. Validate, deduplicate and commit a complete batch before making it eligible for snapshots; failure keeps the prior completed batch with its original timestamp.', '另建 Schedule Trigger 流程抓 Alpha Vantage NEWS_SENTIMENT：分開 economy_macro、economy_fiscal，再抓廣泛候選作地緣標記，設定時間及時區。驗證、去重並提交完整批次後才可入快照；失敗保留上一完整批次及原時間。'),
 ];
 
 export const n8nDatabaseEnvironment = `# Example environment for the n8n service, not finance evidence credentials.
@@ -96,7 +96,7 @@ TZ=Asia/Hong_Kong
 
 const reportHandoff: N8nStep[] = [
   hop('search', 'handoff', 'go', copy('Search and rank the snapshot', '搜尋並排序快照'), app, db, 'app', 'full-text default · admitted hybrid may rerank', copy('The research graph searches fixed evidence versions. Reranking measures relevance to the question, not future stock returns. No provider fetch is repeated.', '研究 graph 搜尋固定版本；重排量度問題相關性，不是未來股票回報，也不再抓供應商。')),
-  hop('review', 'handoff', 'wait', copy('Optional evidence review', '可選證據覆核'), app, you, 'app', 'highlight / exclude / reset · same snapshot', copy('Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Highlights change emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.', '自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。標記只改重點，排除後重查覆蓋，快照不變。')),
+  hop('review', 'handoff', 'wait', copy('Optional evidence review', '可選證據覆核'), app, you, 'app', 'highlight / exclude / user order / reset · same snapshot', copy('Automatic mode keeps system recommendations. Review mode checkpoints after ranking. Show system rank separately from user order. Highlights and order guide emphasis; exclusions trigger a new coverage check. The snapshot stays unchanged.', '自動模式沿用系統建議；覆核模式在排序後保存 checkpoint。系統排名與用戶次序分開，標記及次序表達重點，排除後重查覆蓋，快照不變。')),
   hop('gate', 'handoff', 'go', copy('Validate selection and coverage', '驗證選取及覆蓋'), app, app, 'app', 'owner + revision + source IDs + required facets', copy('Only permitted, current and supporting evidence can pass. A gap allows at most one refinement, then insufficient. Review resumes preserve counters and remaining processing time; n8n does not restart.', '只有可用、合時且有支持證據才通過；缺口最多補查一次，再回不足。覆核恢復保留計數及處理餘額，不重啟 n8n。')),
   hop('report', 'handoff', 'go', copy('Generate, validate and save', '生成、驗證及保存'), app, you, 'app', 'fictional sufficient-evidence path · cited report', copy('This teaching case assumes coverage passes. The LLM receives original excerpts, highlights and selection limitations. Release only after citation/support validation and save the report with its selection revision.', '此虛構案例假設覆蓋通過；LLM 收到原文、標記及選取限制。引用及支持驗證後才發布，報告保存所用選取版本。')),
 ];
@@ -200,7 +200,7 @@ export const n8nScenarios: N8nScenario[] = [
     stageLabels: { ask: copy('Daily clock', '每日時鐘'), receipt: copy('Failure status', '失敗狀態'), pin: copy('Prior completed batch', '上一完整批次') },
     steps: [
       hop('clock', 'ask', 'go', copy('Start the daily job', '開始每日工作'), n8n, n8n, 'n8n', 'schedule + timezone + stable batch key', copy('This job has its own deadline and is independent of user requests.', '工作有獨立時限，不依賴使用者問題。')),
-      hop('fetch', 'n8n', 'wait', copy('Provider attempts fail', '供應商嘗試失敗'), n8n, dailyProviders, 'outside', 'bounded transient retries · at most 3 attempts', copy('Use approved daily-news APIs or RSS, not the company-only /news endpoint. Stop sooner if the daily acquisition budget expires.', '用核准每日新聞 API 或 RSS，不是只抓公司的 /news 端點；每日抓取預算用完須提早停。')),
+      hop('fetch', 'n8n', 'wait', copy('Provider attempts fail', '供應商嘗試失敗'), n8n, dailyProviders, 'outside', '3 planned queries · ≤3 attempts/query · ≤9 requests/job', copy('Use Alpha Vantage NEWS_SENTIMENT, separate from YFinance. Three planned queries have up to three attempts each, at most nine provider requests, all clipped to quota and the shared daily deadline.', '用 Alpha Vantage NEWS_SENTIMENT，與 YFinance 分開。三個查詢各最多三次，總共最多九個請求，受配額及共用每日時限限制。')),
       hop('failure', 'receipt', 'stop', copy('Record failure without publishing a partial batch', '記錄失敗，不發布部分批次'), n8n, db, 'stop', 'failed batch is ineligible for snapshots', copy('Keep the failure and execution IDs for reconciliation and tracing.', '保留失敗及執行 ID 供核對和追蹤。')),
       hop('retain', 'pin', 'stop', copy('Retain the last completed batch', '保留最後完整批次'), db, app, 'stop', 'prior batch ID + original fetched_at + stale status', copy('The app sees the actual age and decides whether that evidence supports this question. Missing required freshness produces insufficient evidence, not a guessed update.', 'App 看實際資料年齡，判斷是否支持問題；所需新鮮度不足就回證據不足，不能猜更新。')),
     ],
@@ -218,7 +218,7 @@ export const n8nScenarios: N8nScenario[] = [
     },
     steps: [
       hop('clock', 'ask', 'go', copy('The schedule fires', '排程啟動'), n8n, n8n, 'n8n', 'Schedule Trigger · your timezone', copy('This workflow runs even when nobody asks. Set the clock and timezone when you publish it.', '即使沒有人發問，這條流程也會跑。發布時設定時間和時區。')),
-      hop('fetch', 'n8n', 'go', copy('Fetch shared context', '抓取共用背景'), n8n, dailyProviders, 'outside', 'approved API / RSS · independent job deadline', copy('The same retry limits apply, with this job’s own deadline.', '同樣的重試上限，但使用這份工作自己的時限。')),
+      hop('fetch', 'n8n', 'go', copy('Fetch shared context', '抓取共用背景'), n8n, dailyProviders, 'outside', 'economy_macro + economy_fiscal + broad feed → geo tags', copy('Query macro and fiscal separately; classify geopolitical candidates after fetching a broad feed. Multiple topics use AND, and there is no documented geopolitics topic. The shared job deadline and account quota bound all requests.', '宏觀及財政分開查詢，廣泛新聞抓取後再標記地緣候選。多個 topics 為 AND，沒有官方 geopolitics 主題；共用工作時限及帳戶配額限制全部請求。')),
       hop('save', 'n8n', 'go', copy('Commit the batch', '提交批次'), n8n, db, 'outside', 'shared evidence pool', copy('Company refresh is a different workflow. This batch is context, not the answer.', '公司刷新是另一條流程。這批資料是背景，不是答案。')),
       hop('ready', 'pin', 'go', copy('Make this completed batch eligible', '令此完整批次可入快照'), db, app, 'app', 'completed batch ID + versions + fetched_at', copy('A later accepted question can pin these exact versions. This successful path does not claim that the daily job failed.', '之後有效問題可固定這些版本；成功路徑不會聲稱每日工作失敗。')),
     ],
@@ -232,7 +232,7 @@ export function n8nStageLabel(scenario: N8nScenario, stage: N8nStage) {
 export const n8nIntegrationGuide = [
   { title: copy('One request, one committed receipt', '一個請求，一份已提交收據'), body: copy('Treat refresh_company_news as a deterministic workflow tool. Validate the schema, authenticated run binding and deadline. Atomically claim a unique owner/run key with a request fingerprint. A completed duplicate returns its receipt; a running duplicate returns its execution status. Conflicting arguments for the same key are rejected. A host timeout reconciles that execution, without starting another fetch.', 'refresh_company_news 是固定流程工具，須驗證 schema、已認證任務綁定及時限。以原子操作取得唯一擁有者／任務鍵及請求指紋；已完成重複回傳收據，執行中重複回傳狀態，相同鍵但參數不同須拒絕。Host 超時只核對原執行，不另開抓取。') },
   { title: copy('Normalize → deduplicate → commit', '正規化 → 去重 → 提交'), body: copy('Validate the adapter response schema. Use canonical article identity plus content hash as a unique version key in PostgreSQL; unchanged content updates last_seen_at, while changed content creates a new version. Commit evidence and its receipt in one transaction before returning success. Keep article text untrusted; no arbitrary URL fetch or article-provided SQL. Story-level deduplication still runs before LLM context assembly.', '驗證 adapter 回應 schema。PostgreSQL 用正規化文章身分加內容 hash 作唯一版本鍵；相同內容只更新 last_seen_at，內容改變才建新版本。證據及收據須同一 transaction 提交後才回成功。文章仍不可信，不執行任意 URL 或文章 SQL；LLM context 前仍做新聞故事層去重。') },
-  { title: copy('Three acquisition paths', '三條抓取路徑'), body: copy('Company news uses Python YFinance MCP through POST /news. Price uses POST /quote and is stored as a timestamped numerical observation, outside the news index. Daily macro/geopolitical news uses separately approved API/RSS providers with its own schedule, timezone, batch key and deadline. Company profiles are sourced, versioned records maintained separately.', '公司新聞經 Python YFinance MCP 的 POST /news。價格用 POST /quote，存有時間戳數值觀察，不進新聞索引。每日宏觀／地緣新聞經獨立核准 API／RSS，有自己的排程、時區、批次鍵及時限。公司背景則獨立維護附來源版本記錄。') },
+  { title: copy('Three acquisition paths', '三條抓取路徑'), body: copy('Company news uses Python YFinance MCP through POST /news. Price uses POST /quote and is stored as a timestamped numerical observation, outside the news index. Daily macro/fiscal news uses Alpha Vantage NEWS_SENTIMENT, with geopolitical tagging of broad-feed candidates and explicit coverage limits. It has its own schedule, timezone, batch key and deadline. Company profiles are sourced, versioned records maintained separately.', '公司新聞經 Python YFinance MCP 的 POST /news。價格用 POST /quote，存有時間戳數值觀察，不進新聞索引。每日宏觀／財政新聞用 Alpha Vantage NEWS_SENTIMENT，廣泛新聞另作地緣標記並明示覆蓋限制，有自己的排程、時區、批次鍵及時限。公司背景則獨立維護附來源版本記錄。') },
   { title: copy('n8n metadata is separate from finance evidence', 'n8n 管理資料與金融證據分開'), body: copy('Use PostgreSQL for n8n workflows, credentials and execution metadata, in n8n_metadata with its own role. A separate ingestion credential writes only permitted finance evidence and acquisition receipts. Research reports, selection revisions and checkpoints are owned by the research service. n8n metadata migrations must not run against the research or checkpoint database.', 'n8n 流程、憑證及執行管理資料用 PostgreSQL 的 n8n_metadata 及專用角色。另一匯入憑證只可寫允許證據及抓取收據；研究服務擁有報告、選取版本及 checkpoints。n8n 管理資料 migration 不能對研究或 checkpoint 資料庫執行。') },
   { title: copy('The handoff to LangGraph', '交回 LangGraph 之後'), body: copy('The host pins the receipt’s exact news versions, eligible completed daily batches, company profile and optional quote observation. Search and rank that snapshot, optionally review evidence, validate selection, recheck coverage, then build context and generate. Hybrid retrieval stays behind the frozen evaluation gate. Review pause/resume does not call n8n again or reset acquisition counters; only deliberate human wait pauses the proposed 60-second processing budget, with a fixed 15-minute review window from the first pause.', 'Host 固定收據新聞版本、合資格完整每日批次、公司背景及可選價格觀察。從快照搜尋排序，可選覆核、驗證選取、重查覆蓋，才建 context 及生成。混合檢索仍須過凍結評估門檻；覆核暫停／恢復不再叫 n8n，不重設抓取次數，只有刻意人手等待暫停建議 60 秒處理預算，首次暫停起另設固定 15 分鐘覆核期。') },
   { title: copy('Trace the boundary and verify it live', '追蹤邊界並真實驗證'), body: copy('Correlate run_id, trace_id and n8n execution ID. Record each provider attempt, retry reason, latency, ingestion counts and receipt status with OpenTelemetry; export sanitized run segments to Langfuse/LangSmith. These lesson scenarios make zero external calls. Live acceptance remains NOT RUN: verify concurrent duplicate calls, provider timeouts, valid empty results, malformed JSON, transaction rollback, daily failure and one accessible trace URL before treating the design as working.', '以 run_id、trace_id 及 n8n execution ID 關聯。OpenTelemetry 記每次供應商嘗試、重試原因、延遲、匯入數量及收據狀態，清理後送 Langfuse／LangSmith。教材沒有外部呼叫；真實驗收仍為 NOT RUN，須測並行重複、超時、有效空結果、壞 JSON、transaction 回滾、每日失敗及可開啟 trace URL。') },
@@ -256,15 +256,16 @@ export const n8nReferences = [
 const dailyNode = (id: string, label: string, en: string, zh: string) => ({ id, label, detail: copy(en, zh) });
 const dailyEdge = (from: string, to: string, en: string, zh: string, kind: FinanceDiagram['edges'][number]['kind'] = 'flow') => ({ from, to, label: copy(en, zh), detail: copy(en, zh), kind });
 export const financeN8nDailyDiagram: FinanceDiagram = {
-  id: 'n8n_daily', title: copy('n8n daily macro + geopolitical news', 'n8n 每日宏觀及地緣新聞'),
+  id: 'n8n_daily', title: copy('n8n daily Alpha Vantage news', 'n8n 每日 Alpha Vantage 新聞'),
   nodes: [
     dailyNode('schedule', 'n8n SCHEDULE + TIMEZONE', 'Independent daily job; no user prompt is required.', '獨立每日工作，不需要用戶提示。'),
     dailyNode('claim', 'n8n CLAIM BATCH KEY', 'Atomically claim stream + scheduled window + configuration version. An existing execution is reconciled, not duplicated.', '原子取得來源＋排程期間＋設定版本批次鍵；已有執行先核對，不重複。'),
     dailyNode('pending', 'IN PROGRESS → END', 'Return the existing execution status; do not launch another provider attempt or publish an incomplete batch.', '回傳原執行狀態，不另開供應商嘗試或發布未完整批次。'),
-    dailyNode('fetch', 'n8n APPROVED API / RSS', 'Macro/geopolitical providers are separate from the company-only YFinance endpoint. Up to 3 transient attempts within this job’s deadline.', '宏觀／地緣供應商與只抓公司的 YFinance 端點分開；工作時限內最多 3 次暫時錯誤嘗試。'),
-    dailyNode('retry', 'n8n RETRY DECISION', 'Retry transient failures only; stop at 3 attempts or the job deadline. Invalid schema/auth is permanent.', '只重試暫時錯誤，3 次或工作時限即停；格式／認證錯誤不重試。'),
+    dailyNode('plan', 'FREEZE WINDOW + QUERY PLAN', 'Separate macro/fiscal queries and broad geopolitical candidates; no ticker filter. Budget all three queries, retries, quota spacing and possible truncation together.', '分開宏觀／財政及廣泛地緣候選，不設 ticker；三查詢、重試、配額間隔及可能截斷共用預算。'),
+    dailyNode('fetch', 'n8n ALPHA VANTAGE NEWS_SENTIMENT', 'Use credential-managed API key. At most 3 attempts per query, at most 9 requests/job within the shared deadline and quota. HTTP 200 error/rate-limit payloads are classified before accepting a feed.', 'API 金鑰用憑證管理；每查詢最多三次，整工作最多九請求，受共用時限及配額限制。HTTP 200 的錯誤／限流內容須分類後才接納。'),
+    dailyNode('retry', 'n8n RETRY DECISION', 'Retry transient errors within per-query and whole-job caps. Quota exhaustion defers/stops; schema/auth errors are permanent.', '只在每查詢及整工作上限內重試暫時錯誤；配額用完延後／停止，格式／認證錯誤不重試。'),
     dailyNode('wait', 'n8n BACKOFF + JITTER', 'Wait 1s then 2s plus jitter, honor Retry-After and clip to the remaining job budget.', '等待 1 秒、2 秒加 jitter，遵守 Retry-After 並限制於工作餘額。'),
-    dailyNode('normalize', 'VALIDATE + DEDUPLICATE', 'Normalize provenance, dates, topics, regions and version hashes. Quarantine invalid records without publishing an incomplete batch.', '正規化來源、日期、主題、地域及版本 hash；隔離無效記錄，不發布未完整批次。'),
+    dailyNode('normalize', 'VALIDATE + DEDUP + GEO TAGS', 'Normalize dates, provenance and hashes. Tag geopolitical candidates separately; track missing/truncated streams. Publish only completed required query windows, with coverage limits.', '正規化日期、來源及 hash；地緣候選另作標記，追蹤缺少／截斷來源。只發布已完成必要查詢視窗，並附覆蓋限制。'),
     dailyNode('commit', 'COMMIT COMPLETE BATCH', 'Evidence versions and batch completion are committed atomically. Snapshot eligibility starts only after commit.', '證據版本及批次完成狀態原子提交，之後才可入快照。'),
     dailyNode('failure', 'RECORD FAILED JOB', 'Persist failure and execution IDs; an uncommitted or partial batch is not eligible evidence.', '保存失敗及執行 ID；未提交或部分批次不能當合資格證據。'),
     dailyNode('prior', 'RETAIN PRIOR COMPLETED BATCH', 'Keep the original fetched_at and show failure/staleness; do not claim it is today’s successful fetch.', '保留原 fetched_at 及失敗／過期狀態，不能聲稱今日成功抓取。'),
@@ -272,7 +273,8 @@ export const financeN8nDailyDiagram: FinanceDiagram = {
   ],
   edges: [
     dailyEdge('schedule', 'claim', 'Daily trigger', '每日觸發'),
-    dailyEdge('claim', 'fetch', 'New batch lease', '新批次 lease'),
+    dailyEdge('claim', 'plan', 'New batch lease', '新批次 lease'),
+    dailyEdge('plan', 'fetch', 'Budgeted query windows', '有預算查詢視窗'),
     dailyEdge('claim', 'pool', 'Existing completed batch', '已有完整批次'),
     dailyEdge('claim', 'pending', 'Existing running execution', '已有執行中工作', 'stop'),
     dailyEdge('fetch', 'normalize', 'Response received', '收到回應'),

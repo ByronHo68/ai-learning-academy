@@ -3,8 +3,10 @@ import type { Copy } from './curriculum';
 const t = (en: string, zh: string): Copy => ({ en, zh });
 
 export const financeReviewGuide = [
+  { title: t('Your feedback here means evidence review', '此處回饋指證據覆核'), body: t('Before generation, show the news proposed for this report, original excerpts, source links/dates and the system relevance rank. You can exclude articles, highlight topics and change the discussion order. Call this evidence review so it is distinct from post-report ratings/corrections, which are stored separately. Exclusion changes this report selection and never deletes news from PostgreSQL.', '生成前展示本報告建議新聞、原文、來源連結／日期及系統相關排序。你可排除文章、標記主題及改討論次序。將這步稱「證據覆核」，與報告生成後另存的評分／更正分開；排除只改本次選取，不刪 PostgreSQL 新聞。') },
+  { title: t('System rank and your order stay separate', '系統排名與你的次序分開'), body: t('Preserve system_ordered_ids and reranker scores, then store user_ordered_ids as an exact, duplicate-free permutation of selected IDs in the selection revision. Order can affect what the model attends to and how the report is organized; treat it as presentation/emphasis preference, not a new relevance or truth score. Pass the preference alongside evidence to context assembly. Required facets and counter-evidence take priority over arbitrary trimming. Recheck coverage after trimming and disclose exclusions; never increase forecast confidence because an article moved up. Reordering alone makes no provider, search or embedding call.', '保留 system_ordered_ids 及重排分數，再將 user_ordered_ids 存選取版本；它必須是所有已選 ID 的完整不重複排列。次序可影響模型注意及報告組織，只作呈現／重點偏好，不是新相關性或真實分數。建立 context 時連同證據傳入；必要面向及反方證據不能因裁剪優先次序而失去。裁剪後重查覆蓋並交代排除，不能因文章移前而提高信心；單純改次序不呼叫供應商、搜尋或 embedding。') },
   { title: t('Where the review belongs', '覆核放在哪一步'), body: t('Retrieve → rerank → optional evidence review → validate selection → evidence gate → context → LLM → validation. Default full-text search and sparse fallback enter the same review step. Choose automatic or review mode at request creation. Automatic mode uses the system selection and still passes all evidence checks.', '檢索 → 重排 → 可選證據覆核 → 驗證選取 → 證據關卡 → context → LLM → 驗證。預設全文及 sparse 回退都經同一步。建立請求時選自動或覆核模式；自動沿用系統選取，仍須通過所有證據檢查。') },
-  { title: t('Highlight, exclude, reset, generate', '標記、排除、重設、生成'), body: t('Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Reset restores system recommendations for the current candidates. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.', '標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。重設還原目前候選的系統建議；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。') },
+  { title: t('Highlight, exclude, reset, generate', '標記、排除、重設、生成'), body: t('Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Move up/down sets your discussion order without changing system scores. Reset restores system recommendations and their order. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.', '標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。上移／下移只改討論次序，不改系統分數；重設還原系統建議及次序；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。') },
   { title: t('Coverage and confirmation bias', '覆蓋及確認偏誤'), body: t('Show the question’s required facets, source dates, original excerpts, provenance and opposing evidence beside the controls. Recheck coverage after every submitted selection and after context trimming. An excluded dissenting source remains visible in the audit and report limitations; an exclusion cannot justify a broader claim. Missing required support triggers at most one refinement or an insufficient result. Highlighting an irrelevant passage does not make it admissible.', '操作旁展示問題必要面向、日期、原文、來源及反方證據。每次提交及裁剪 context 後重查覆蓋；被排除的反方來源保留於核對紀錄及報告限制，不能因排除而擴大結論。必要支持不足最多補查一次，否則回證據不足；標記無關段落亦不能令它合資格。') },
   { title: t('Snapshot and selection are different records', '快照與選取是不同紀錄'), body: t('PostgreSQL keeps immutable news versions and the run’s frozen snapshot manifest. Add append-only evidence_selection_revisions keyed by owner_id, run_id, thread_id, snapshot_id, candidate_revision and selection_revision, with selected/highlighted/excluded IDs and timestamps. Store final selection_revision with the report. The authenticated server derives owner_id, validates IDs against permitted snapshot candidates, requires highlighted IDs to be selected and excluded IDs to be disjoint, and uses an atomic revision check so a second browser tab cannot overwrite a newer selection.', 'PostgreSQL 保存不可變新聞版本及任務固定快照。另加只追加 evidence_selection_revisions，以擁有者、run、thread、快照、候選及選取版本綁定，保存已選／標記／排除 ID 及時間；報告引用最終選取版本。伺服器從驗證身分取得 owner_id，核對 ID 屬可用候選、標記屬已選及排除不重疊，並以原子版本核對避免另一分頁覆蓋新選取。') },
   { title: t('LangGraph pause and authenticated resume', 'LangGraph 暫停及身分驗證恢復'), body: t('Use interrupt() in a dedicated review node after retrieval has completed, a PostgreSQL checkpointer and Command(resume=...) with the same authenticated thread. The interrupted node starts again from its beginning on resume: keep news fetching, retrieval and other expensive side effects outside it. Validate the submitted schema, ownership, revision, permissions and expiry at the API boundary, then recheck the saved selection in the graph. Never pass arbitrary client state or article instructions into Command.', '檢索完成後由獨立覆核節點用 interrupt() 暫停，以 PostgreSQL checkpointer 保存；用相同已驗證 thread 及 Command(resume=...) 恢復。恢復會從中斷節點開頭重跑，新聞抓取、檢索及昂貴副作用須在節點外。API 邊界核對格式、擁有者、版本、權限及期限，再由 graph 核對已存選取；不能把任意 client 狀態或文章指令傳入 Command。') },
@@ -19,6 +21,8 @@ export const financeReviewExample = JSON.stringify({
   owner_id: 'server-derived-owner', run_id: 'example-run', thread_id: 'example-run',
   snapshot_id: 'snapshot-msft-example', candidate_revision: 1, selection_revision: 2,
   selected_ids: ['costs-v1-c1', 'demand-v2-c1'], highlighted_ids: ['costs-v1-c1'],
+  system_ordered_ids: ['costs-v1-c1', 'demand-v2-c1', 'outlook-v1-c1'],
+  user_ordered_ids: ['demand-v2-c1', 'costs-v1-c1'],
   excluded_ids: ['outlook-v1-c1'], missing_facets: ['earnings outlook'],
   selection_limitations: ['The only outlook passage was excluded; no outlook forecast is supported.'],
   remaining_active_ms: 32000, review_expires_at: '2026-11-13T01:15:00Z',
@@ -55,4 +59,15 @@ export const financeReviewSources = [
 
 export function financeReviewCoverage(excludedIds: readonly string[]) {
   return financeReviewSources.filter(source => excludedIds.includes(source.id)).map(source => source.facet);
+}
+
+export function moveFinanceReviewSource({ orderedIds, excludedIds, sourceId, direction }: {
+  orderedIds: readonly string[]; excludedIds: readonly string[]; sourceId: string; direction: 'up' | 'down';
+}): string[] {
+  const selected = orderedIds.filter(id => !excludedIds.includes(id));
+  const position = selected.indexOf(sourceId);
+  const adjacentId = selected[position + (direction === 'up' ? -1 : 1)];
+  if (position < 0 || adjacentId === undefined) return [...orderedIds];
+  // Swap selected entries while excluded cards keep their inspection positions.
+  return orderedIds.map(id => id === sourceId ? adjacentId : id === adjacentId ? sourceId : id);
 }

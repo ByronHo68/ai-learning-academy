@@ -61,7 +61,7 @@ test('daily success and failure are separate, and neither uses the company-only 
     assert.ok(scenario);
     const fetch = scenario.steps.find(step => step.id === 'fetch');
     assert.ok(fetch);
-    assert.equal(fetch.to.en, 'Approved macro / geopolitical API or RSS');
+    assert.equal(fetch.to.en, 'Alpha Vantage NEWS_SENTIMENT');
     assert.ok(!scenario.steps.some(step => step.id === 'call' || step.id === 'review'));
     assert.equal(scenario.steps.at(-1)?.tone, id === 'daily' ? 'go' : 'stop');
   }

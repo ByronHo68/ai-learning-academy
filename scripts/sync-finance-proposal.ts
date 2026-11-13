@@ -1,3 +1,5 @@
+import { alphaVantageDailyGuide, alphaVantageRequestExample, alphaVantageReference } from '../lib/finance-alpha-vantage';
+import { financeEmbeddingGuide } from '../lib/finance-embeddings';
 import { n8nStart, n8nRoles, n8nLimits, n8nScenarios, n8nIntegrationGuide, n8nReceiptExample, n8nDatabaseEnvironment, n8nReferences } from '../lib/finance-n8n';
 import { financeReviewGuide, financeReviewExample, financeReviewSketch } from '../lib/finance-review';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -58,11 +60,26 @@ const evidenceReview = [
   '```json\n' + financeReviewExample + '\n```',
   '```python\n' + financeReviewSketch + '\n```',
   '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
+  '[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)',
+].join('\n\n') + '\n';
+const alphaVantageGuide = [
+  '# Alpha Vantage daily-news design / Alpha Vantage 每日新聞設計',
+  'Proposed n8n configuration. Live Alpha Vantage execution and coverage evaluation are NOT RUN.',
+  ...alphaVantageDailyGuide.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '```json\n' + alphaVantageRequestExample + '\n```',
+  `[${alphaVantageReference.title}](${alphaVantageReference.url})`,
+].join('\n\n') + '\n';
+const embeddingGuide = [
+  '# Document and query embeddings / 文件及查詢 embedding',
+  'Proposed indexing and retrieval design, not a live finance service.',
+  ...financeEmbeddingGuide.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '[Embedding workflow SVG](finance-diagrams/embeddings-en.svg) · [繁中 SVG](finance-diagrams/embeddings-zh.svg)',
 ].join('\n\n') + '\n';
 const n8nGuide = [
   '# n8n acquisition and research handoff / n8n 抓取及研究交接',
   'Open `/finance-project/n8n` for the bilingual offline animation. The Python YFinance bridge exists; n8n execution, ingestion and the live research backend remain proposed and NOT RUN.',
   '打開 `/finance-project/n8n` 查看雙語離線動畫。Python YFinance bridge 已有實作；n8n 執行、匯入及真實研究後端仍是建議設計及 NOT RUN。',
+  alphaVantageGuide.replace(/^#/gm, '##'),
   '## Ownership / 分工',
   ...n8nRoles.map(item => `**${item.name}**\n\n${both(item.job)}`),
   n8nLimits.map(item => `- ${item.value}: ${item.label.en} / ${item.label.zh}`).join('\n'),
@@ -83,6 +100,7 @@ const databaseOverview = [
   both(yfinanceDecision),
   ...yfinanceSetup.map(both),
   evidenceReview.replace(/^#/gm, '##'),
+  ...financeEmbeddingGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
   ...financeEvidenceGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
   '### Fictional snapshot manifest / 虛構快照清單\n\n```json\n' + financeSnapshotExample + '\n```',
 ];
@@ -152,6 +170,10 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_ALPHA_VANTAGE_GUIDE.md', alphaVantageGuide],
+  ['public/downloads/stock-research-alpha-vantage-guide.md', alphaVantageGuide],
+  ['docs/FINANCE_EMBEDDING_GUIDE.md', embeddingGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-embedding-guide.md', embeddingGuide],
   ['docs/FINANCE_N8N_GUIDE.md', n8nGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-n8n-guide.md', n8nGuide],
   ['docs/FINANCE_EVIDENCE_REVIEW.md', evidenceReview],
@@ -171,8 +193,8 @@ const outputs: Array<[string, string]> = [
 ];
 const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
-  'Open `/finance-project/workflows` for the interactive mind map and thirteen connected diagrams, including the independent n8n daily-news workflow. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
-  '開啟 `/finance-project/workflows` 查看互動心智圖及十三張連線圖，包含獨立 n8n 每日新聞流程。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  'Open `/finance-project/workflows` for the interactive mind map and fourteen connected diagrams, including Alpha Vantage daily news and document/query embeddings. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及十四張連線圖，包含 Alpha Vantage 每日新聞及文件／問題 embedding。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
   `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),
   ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),

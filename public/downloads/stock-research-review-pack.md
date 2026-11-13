@@ -40,6 +40,18 @@ Proposed design and offline teaching demo only; the live finance backend is not 
 
 建議設計及離線教學示範；真實金融後端尚未實作。
 
+### Your feedback here means evidence review / 此處回饋指證據覆核
+
+Before generation, show the news proposed for this report, original excerpts, source links/dates and the system relevance rank. You can exclude articles, highlight topics and change the discussion order. Call this evidence review so it is distinct from post-report ratings/corrections, which are stored separately. Exclusion changes this report selection and never deletes news from PostgreSQL.
+
+生成前展示本報告建議新聞、原文、來源連結／日期及系統相關排序。你可排除文章、標記主題及改討論次序。將這步稱「證據覆核」，與報告生成後另存的評分／更正分開；排除只改本次選取，不刪 PostgreSQL 新聞。
+
+### System rank and your order stay separate / 系統排名與你的次序分開
+
+Preserve system_ordered_ids and reranker scores, then store user_ordered_ids as an exact, duplicate-free permutation of selected IDs in the selection revision. Order can affect what the model attends to and how the report is organized; treat it as presentation/emphasis preference, not a new relevance or truth score. Pass the preference alongside evidence to context assembly. Required facets and counter-evidence take priority over arbitrary trimming. Recheck coverage after trimming and disclose exclusions; never increase forecast confidence because an article moved up. Reordering alone makes no provider, search or embedding call.
+
+保留 system_ordered_ids 及重排分數，再將 user_ordered_ids 存選取版本；它必須是所有已選 ID 的完整不重複排列。次序可影響模型注意及報告組織，只作呈現／重點偏好，不是新相關性或真實分數。建立 context 時連同證據傳入；必要面向及反方證據不能因裁剪優先次序而失去。裁剪後重查覆蓋並交代排除，不能因文章移前而提高信心；單純改次序不呼叫供應商、搜尋或 embedding。
+
 ### Where the review belongs / 覆核放在哪一步
 
 Retrieve → rerank → optional evidence review → validate selection → evidence gate → context → LLM → validation. Default full-text search and sparse fallback enter the same review step. Choose automatic or review mode at request creation. Automatic mode uses the system selection and still passes all evidence checks.
@@ -48,9 +60,9 @@ Retrieve → rerank → optional evidence review → validate selection → evid
 
 ### Highlight, exclude, reset, generate / 標記、排除、重設、生成
 
-Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Reset restores system recommendations for the current candidates. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
+Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Move up/down sets your discussion order without changing system scores. Reset restores system recommendations and their order. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
 
-標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。重設還原目前候選的系統建議；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
+標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。上移／下移只改討論次序，不改系統分數；重設還原系統建議及次序；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
 
 ### Coverage and confirmation bias / 覆蓋及確認偏誤
 
@@ -110,6 +122,15 @@ Live review checks are NOT RUN. Before enabling the feature, test another owner�
   "highlighted_ids": [
     "costs-v1-c1"
   ],
+  "system_ordered_ids": [
+    "costs-v1-c1",
+    "demand-v2-c1",
+    "outlook-v1-c1"
+  ],
+  "user_ordered_ids": [
+    "demand-v2-c1",
+    "costs-v1-c1"
+  ],
   "excluded_ids": [
     "outlook-v1-c1"
   ],
@@ -151,12 +172,38 @@ def review_node(state):
 
 [LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)
 
+[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)
+
+
+### Document embeddings: during indexing / 文件 embedding：建立索引時
+
+After company/daily news is validated, deduplicated and committed, split permitted text into versioned chunks. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
+
+公司／每日新聞驗證、去重及提交後，將允許文字切成有版本段落。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
+
+### Question embeddings: just before vector retrieval / 問題 embedding：向量檢索之前
+
+On an accepted request, first refresh company news and pin the evidence snapshot. If the evaluated hybrid mode is enabled, encode the current query using the same compatible model/configuration as document vectors, then search pgvector under the snapshot, time and permission filters. Combine with full-text results and rerank question–passage pairs. A refined query needs its own query embedding; unchanged document chunks do not need another embedding.
+
+有效請求先刷新公司新聞及固定快照。若已啟用通過評估的混合模式，用與文件向量相容的相同模型／設定編碼當前查詢，再在快照、時間及權限條件下搜尋 pgvector，合併全文結果後重排問題與原文配對。補查的新 query 須再編碼；未改動文件不須重嵌入。
+
+### Pending vectors do not block sparse search / 向量未就緒不阻擋全文搜尋
+
+Full-text indexing remains the default and uses no embeddings. Run document embedding as a separate idempotent indexing job keyed by chunk hash and model. Pin the model/version and vector-ready chunk IDs with the run snapshot; refinement/resume reuse that view. Newly completed embeddings become available to the next request. Do not label pending embeddings as a complete hybrid index. A candidate vector/model failure falls back to working full-text evidence within budget. Neither n8n acquisition success nor an evidence snapshot promises that its vectors are ready. Hybrid remains blocked until it beats the written frozen evaluation margins.
+
+全文索引仍是預設，不用 embedding。文件嵌入作獨立冪等索引工作，以段落 hash 及模型為鍵，快照固定模型／版本及向量已就緒段落 ID，補查／恢復沿用此視圖；新完成向量供下次請求用，不能把待完成向量稱完整混合索引。向量／模型失敗可在預算內回退可用全文證據；n8n 抓取成功及固定快照不代表向量已就緒。混合模式仍須超越凍結評估書面門檻才准入。
+
+### Embeddings, reranking and review do different jobs / Embedding、重排及覆核分工不同
+
+Embeddings help find semantically similar passages. Reranking scores relevance to the exact question using the passage text. Evidence review shows the proposed sources and system rank, lets you exclude or reorder them, and records your preferred discussion order. None of these steps establishes factual support or predicts stock returns. The evidence gate and citation checks still decide which claims may be released.
+
+Embedding 協助找語義相似段落；重排用原文評估對當前問題的相關性。證據覆核展示建議來源及系統排序，讓你排除或改討論次序。這些步驟本身都不證明事實支持或預測股票回報；證據關卡及引用驗證仍決定哪些主張可發布。
 
 ### Three evidence streams / 三條證據來源
 
-Each accepted prompt refreshes company news through n8n MCP. A separate daily n8n Schedule Trigger fetches macroeconomic and geopolitical news into shared PostgreSQL records. Maintain sourced, versioned profiles for MSFT, AAPL and NVDA: business segments, products, geographic and supply-chain exposure, and financial figures with reporting periods. Review profiles after filings or material changes. Configure the daily time and workflow timezone when publishing n8n.
+Each accepted prompt refreshes company news through n8n MCP. A separate daily n8n Schedule Trigger calls Alpha Vantage NEWS_SENTIMENT for macro/fiscal news and a broad feed for geopolitical tagging, with explicit coverage limits, into shared PostgreSQL records. Maintain sourced, versioned profiles for MSFT, AAPL and NVDA: business segments, products, geographic and supply-chain exposure, and financial figures with reporting periods. Review profiles after filings or material changes. Configure the daily time and workflow timezone when publishing n8n.
 
-每個有效提示經 n8n MCP 刷新公司新聞。獨立每日 n8n Schedule Trigger 抓宏觀及地緣政治新聞，存至 PostgreSQL 共用記錄。MSFT、AAPL、NVDA 各有附來源及版本背景：業務、產品、地域與供應鏈曝險，以及附報告期間財務數據。財報或重大變化後覆核背景；發布 n8n 時設定每日時間及時區。
+每個有效提示經 n8n MCP 刷新公司新聞。獨立每日 n8n Schedule Trigger 經 Alpha Vantage NEWS_SENTIMENT 抓宏觀／財政及廣泛候選另作地緣標記，明示覆蓋限制，再存至 PostgreSQL 共用記錄。MSFT、AAPL、NVDA 各有附來源及版本背景：業務、產品、地域與供應鏈曝險，以及附報告期間財務數據。財報或重大變化後覆核背景；發布 n8n 時設定每日時間及時區。
 
 ### Snapshot = the evidence version used for this report / Snapshot＝這份報告使用的證據版本
 
@@ -198,6 +245,11 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
     "geopolitics": "geo-batch-example"
   },
   "company_profile_version": "nvda-profile-v2",
+  "retrieval_index": {
+    "mode": "sparse",
+    "embedding_model": null,
+    "vector_ready_chunk_ids": []
+  },
   "eligible_chunk_ids": [
     "nvda-news-v3-c1",
     "geo-policy-v1-c2",

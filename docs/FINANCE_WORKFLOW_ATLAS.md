@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and thirteen connected diagrams, including the independent n8n daily-news workflow. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and fourteen connected diagrams, including Alpha Vantage daily news and document/query embeddings. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及十三張連線圖，包含獨立 n8n 每日新聞流程。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及十四張連線圖，包含 Alpha Vantage 每日新聞及文件／問題 embedding。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -45,7 +45,7 @@ flowchart TD
   n0["SCOPE"]
   n1["n8n COMPANY NEWS REFRESH"]
   n2["PIN EVIDENCE SNAPSHOT"]
-  n3["POSTGRESQL SEARCH"]
+  n3["SEARCH + QUERY EMBEDDING"]
   n4["RERANK RELEVANCE"]
   n5["SPARSE FALLBACK"]
   n6["OPTIONAL EVIDENCE REVIEW"]
@@ -64,9 +64,9 @@ flowchart TD
   n19["UNAVAILABLE"]
   n20["VALIDATION FAILED"]
   n21["DAILY n8n SCHEDULE"]
-  n22["MACRO + GEOPOLITICAL NEWS"]
+  n22["ALPHA VANTAGE DAILY NEWS"]
   n23["VERSIONED COMPANY PROFILES"]
-  n24["POSTGRESQL EVIDENCE POOL"]
+  n24["POSTGRESQL TEXT + OPTIONAL VECTORS"]
   n25["DAILY FETCH FAILURE"]
   n0 -- "Supported" --> n1
   n0 -- "Ambiguous" --> n18
@@ -128,8 +128,8 @@ flowchart TD
   將公司新聞、合資格完整宏觀／地緣批次及附來源公司背景版本固定成清單。檢查發布與首次取得截止；當前研究刷新後固定截止，指定歷史截止則保持原值。背景匯入獨立繼續；補查及恢復沿用此清單。
 
 - **snapshot → retrieve** — Evidence versions pinned / 證據版本已固定
-  Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
-  預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
+  Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model and frozen vector-readiness view, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
+  預設使用 PostgreSQL 全文搜尋。混合准入後，以快照固定模型及向量就緒視圖轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
 - **snapshot → insufficient** — Required context missing / 缺少所需背景
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
@@ -152,8 +152,8 @@ flowchart TD
   評分每段原文與問題相關性；公司、宏觀、地緣及有日期背景按相關性排序。需要時按附來源公司曝險擴展查詢。業務影響推論由後面的 LLM 處理；相關分數不估計股票回報。
 
 - **retrieve → review** — Full-text default / 預設全文搜尋
-  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
-  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
+  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Show system rank beside your preferred order. Highlight, exclude, move up/down or reset locally, then submit once per search round. No source is deleted.
+  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；並列系統排名及你的次序，可標記、排除、上下移動或本機重設，每輪搜尋提交一次，不刪來源。
 
 - **retrieve → unavailable** — PostgreSQL unavailable / PostgreSQL 中斷
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
@@ -164,24 +164,24 @@ flowchart TD
   剩餘處理預算內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
 - **rerank → review** — Ranked passages / 已排序原文
-  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
-  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
+  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Show system rank beside your preferred order. Highlight, exclude, move up/down or reset locally, then submit once per search round. No source is deleted.
+  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；並列系統排名及你的次序，可標記、排除、上下移動或本機重設，每輪搜尋提交一次，不刪來源。
 
 - **rerank → fallback** — Reranker fails / 重排失敗
   Use working PostgreSQL full-text search within the saved active budget. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
   剩餘處理預算內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
 - **fallback → review** — Sparse works / Sparse 可用
-  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
-  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
+  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Show system rank beside your preferred order. Highlight, exclude, move up/down or reset locally, then submit once per search round. No source is deleted.
+  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；並列系統排名及你的次序，可標記、排除、上下移動或本機重設，每輪搜尋提交一次，不刪來源。
 
 - **fallback → unavailable** — Sparse also fails / Sparse 亦失敗
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
 - **review → selection** — Automatic / submitted review / 自動／已提交覆核
-  The API authenticates the owner and atomically validates run, thread, snapshot, candidate revision, IDs, permissions and expiry before resume. Require highlighted IDs to be selected and excluded IDs to be disjoint. Reject invalid or stale submissions without advancing the graph. Highlights prioritize supported discussion, never truth or confidence. Keep excluded counter-evidence visible as a selection limitation.
-  API 在恢復前驗證擁有者，並以原子操作核對任務、thread、快照、候選版本、ID、權限及期限。標記須屬已選，排除不可與已選重疊；無效或舊版本不推進 graph；標記只優先討論有支持內容，不提升真實性或信心。被排除的反方證據仍顯示為選取限制。
+  The API authenticates the owner and atomically validates run, thread, snapshot, candidate revision, IDs, permissions and expiry before resume. Require highlights to be selected, exclusions disjoint, and user order an exact duplicate-free permutation of selected IDs. Reject invalid or stale submissions without advancing the graph. Highlights prioritize supported discussion, never truth or confidence. Keep excluded counter-evidence visible as a selection limitation.
+  API 在恢復前驗證擁有者，並以原子操作核對任務、thread、快照、候選版本、ID、權限及期限。標記須屬已選，排除不可重疊，用戶次序須完整不重複排列已選 ID；無效或舊版本不推進 graph；標記只優先討論有支持內容，不提升真實性或信心。被排除的反方證據仍顯示為選取限制。
 
 - **review → review_expired** — Review window expired / 覆核期已過
   The proposed 15-minute review window starts at the first pause and is not extended by edits or refinement. Preserve the checkpoint for audit; require a new request and fresh evidence to continue.
@@ -204,16 +204,16 @@ flowchart TD
   針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
 
 - **refine → retrieve** — Search 2 of 2 / 第 2／2 次搜尋
-  Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
-  預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
+  Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model and frozen vector-readiness view, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
+  預設使用 PostgreSQL 全文搜尋。混合准入後，以快照固定模型及向量就緒視圖轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
 - **gate → insufficient** — Still insufficient / 仍不足
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
   說明缺少哪項證據，展示有支持事實及有用下一題；不能靠模型記憶補預測。
 
 - **gate → context** — Enough support / 支持足夠
-  Fetch original excerpts, deduplicate by story, preserve dates/IDs, and retain conflicting evidence. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
-  讀原文、按新聞去重、保留日期／ID 及矛盾；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
+  Fetch original excerpts, deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
+  讀原文、按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
 
 - **context → insufficient** — Trimming loses support / 裁剪後支持不足
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
@@ -256,8 +256,8 @@ flowchart TD
   n8n 設定每日時間及時區，抓取獨立於用戶問題。
 
 - **global_news → evidence_pool** — Commit completed batches / 提交完整批次
-  Fetch approved sources using n8n-owned bounded retries. Preserve topics, regions, dates, provenance and permissions.
-  以 n8n 有限重試抓核准來源，保留主題、地域、日期、來源及權限。
+  Fetch separate Alpha Vantage macro/fiscal queries and broad geopolitical candidates with n8n-owned bounded retries. Post-fetch geopolitical tagging has coverage limits; preserve provenance, dates and permissions.
+  n8n 有限重試分開抓 Alpha Vantage 宏觀／財政及廣泛地緣候選；抓取後標記地緣，附覆蓋限制及來源、日期、權限。
 
 - **global_news → daily_failure** — n8n retries exhausted / n8n 重試已用完
   n8n records exhausted/permanent failure. Retain the previous completed batch and its original fetched_at. Coverage checks decide whether its age is acceptable for this question.
@@ -272,8 +272,8 @@ flowchart TD
   MSFT／AAPL／NVDA 背景附來源、報告期間、生效及覆核日期；重大變化後更新。
 
 - **evidence_pool → snapshot** — Read eligible versions / 讀取合資格版本
-  Store completed daily batches and profile versions. Pin eligible completed versions without waiting for the next daily schedule.
-  保存完整每日批次及背景版本；固定合資格完整版本，不等待下一次每日排程。
+  Store committed daily/profile versions and full-text indexes. A separate chunk/hash → document embedding worker → pgvector job prepares optional vectors. Pin eligible evidence without waiting for vectors or the next daily schedule.
+  存完整每日／背景版本及全文索引；獨立切段／hash → 文件 embedding worker → pgvector 建可選向量。固定證據毋須等向量或下次排程。
 
 ## Choose a supported company / 選擇支援公司
 
@@ -495,16 +495,16 @@ flowchart TD
   原預算內使用可用 sparse 結果。 交接資料：原文＋回退原因
 
 - **Optional evidence review → Validate selection revision** — Auto / user submits / 自動／用戶提交
-  Automatic mode uses system recommendations; review mode pauses after retrieval for highlight, exclude or reset. Handoff: Same snapshot; ID-only selection; saved remaining budget
-  自動模式用系統建議；覆核模式在檢索後暫停，可標記、排除或重設。 交接資料：相同快照；只傳 ID 選取；保存剩餘預算
+  Automatic mode uses system recommendations; review mode shows original ranks and proposed news, then pauses for highlights, exclusions or user discussion order. Handoff: Same snapshot; ID-only selection; saved remaining budget
+  自動用系統建議；覆核展示原排名及建議新聞，可標記、排除或改討論次序。 交接資料：相同快照；只傳 ID 選取；保存剩餘預算
 
 - **Optional evidence review → Review expired → END** — Window expired / 期限已過
   The absolute 15-minute window from the first pause has expired. Handoff: Preserved checkpoint; new request required
   首次暫停起 15 分鐘絕對期限已過。 交接資料：保留 checkpoint；須新請求
 
 - **Validate selection revision → Evidence gate** — Recheck after exclusion / 排除後重查
-  Owner, run, thread, snapshot, revision, permitted IDs and expiry pass API and graph checks. Handoff: Selected/highlighted/excluded IDs; limitations; no changed truth scores
-  API 及 graph 核對擁有者、任務、thread、快照、版本、可用 ID 及期限。 交接資料：已選／標記／排除 ID；限制；不改真實分數
+  Owner, run, thread, snapshot, revision, permitted IDs and expiry pass API and graph checks. Handoff: Selected/highlighted/excluded IDs + system rank + validated user order; no changed truth scores
+  API 及 graph 核對擁有者、任務、thread、快照、版本、可用 ID 及期限。 交接資料：已選／標記／排除 ID＋系統排名＋已核對用戶次序；不改真實分數
 
 - **Sparse fallback → Unavailable → END** — No working path / 沒有可用路徑
   Sparse also fails or the deadline expires. Handoff: Dependency error, not an empty evidence claim
@@ -605,7 +605,7 @@ flowchart TD
   n2["Draft"]
   n3["Validation"]
   n4["Blocked → END"]
-  n5["Display + feedback"]
+  n5["Display + report rating"]
   n0 -- "Read + trim" --> n1
   n1 -- "Generate draft" --> n2
   n2 -- "Check support" --> n3
@@ -629,7 +629,7 @@ flowchart TD
   Unknown citation or unsupported factual claim. Handoff: Do not release draft
   未知引用或無支持事實。 交接資料：不發布草稿
 
-- **Validation → Display + feedback** — Valid + saved / 有效＋已存
+- **Validation → Display + report rating** — Valid + saved / 有效＋已存
   Persist before exposing the final answer. Handoff: Report ID, trace URL/status; separate feedback linked to run_id
   先保存，再顯示最終答案。 交接資料：報告 ID、trace URL／狀態；回饋另存並連結 run_id
 
@@ -819,7 +819,7 @@ flowchart TD
   Access control and backups verified. Handoff: Release ID + reproducible demo and trace URL
   已驗證訪問控制及備份。 交接資料：發布 ID＋可重現 demo 及 trace URL
 
-## n8n daily macro + geopolitical news / n8n 每日宏觀及地緣新聞
+## n8n daily Alpha Vantage news / n8n 每日 Alpha Vantage 新聞
 
 [English SVG](../public/downloads/finance-diagrams/n8n_daily-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/n8n_daily-zh.svg)
 
@@ -828,38 +828,44 @@ flowchart TD
   n0["n8n SCHEDULE + TIMEZONE"]
   n1["n8n CLAIM BATCH KEY"]
   n2["IN PROGRESS → END"]
-  n3["n8n APPROVED API / RSS"]
-  n4["n8n RETRY DECISION"]
-  n5["n8n BACKOFF + JITTER"]
-  n6["VALIDATE + DEDUPLICATE"]
-  n7["COMMIT COMPLETE BATCH"]
-  n8["RECORD FAILED JOB"]
-  n9["RETAIN PRIOR COMPLETED BATCH"]
-  n10["POSTGRESQL EVIDENCE POOL"]
+  n3["FREEZE WINDOW + QUERY PLAN"]
+  n4["n8n ALPHA VANTAGE NEWS_SENTIMENT"]
+  n5["n8n RETRY DECISION"]
+  n6["n8n BACKOFF + JITTER"]
+  n7["VALIDATE + DEDUP + GEO TAGS"]
+  n8["COMMIT COMPLETE BATCH"]
+  n9["RECORD FAILED JOB"]
+  n10["RETAIN PRIOR COMPLETED BATCH"]
+  n11["POSTGRESQL EVIDENCE POOL"]
   n0 -- "Daily trigger" --> n1
   n1 -- "New batch lease" --> n3
-  n1 -- "Existing completed batch" --> n10
+  n3 -- "Budgeted query windows" --> n4
+  n1 -- "Existing completed batch" --> n11
   n1 -- "Existing running execution" --> n2
-  n3 -- "Response received" --> n6
-  n3 -- "Provider error" --> n4
-  n4 -. "Transient + time left" .-> n5
-  n5 -. "Same batch; next attempt" .-> n3
-  n4 -- "Permanent / exhausted" --> n8
-  n6 -- "Valid batch" --> n7
-  n6 -- "Invalid / incomplete" --> n8
-  n7 -- "Complete versions ready" --> n10
-  n7 -- "Transaction rolled back" --> n8
-  n8 -- "Preserve prior batch" --> n9
-  n9 -- "Original age + failure status" --> n10
+  n4 -- "Response received" --> n7
+  n4 -- "Provider error" --> n5
+  n5 -. "Transient + time left" .-> n6
+  n6 -. "Same batch; next attempt" .-> n4
+  n5 -- "Permanent / exhausted" --> n9
+  n7 -- "Valid batch" --> n8
+  n7 -- "Invalid / incomplete" --> n9
+  n8 -- "Complete versions ready" --> n11
+  n8 -- "Transaction rolled back" --> n9
+  n9 -- "Preserve prior batch" --> n10
+  n10 -- "Original age + failure status" --> n11
 ```
 
 - **schedule → claim** — Daily trigger / 每日觸發
   Daily trigger
   每日觸發
 
-- **claim → fetch** — New batch lease / 新批次 lease
+- **claim → plan** — New batch lease / 新批次 lease
   New batch lease
   新批次 lease
+
+- **plan → fetch** — Budgeted query windows / 有預算查詢視窗
+  Budgeted query windows
+  有預算查詢視窗
 
 - **claim → pool** — Existing completed batch / 已有完整批次
   Existing completed batch
@@ -912,3 +918,102 @@ flowchart TD
 - **prior → pool** — Original age + failure status / 原年齡＋失敗狀態
   Original age + failure status
   原年齡＋失敗狀態
+
+## Where document and question embeddings happen / 文件及問題在哪一步 embedding
+
+[English SVG](../public/downloads/finance-diagrams/embeddings-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/embeddings-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["COMMITTED NEWS + PROFILES"]
+  n1["CHUNK + HASH + VERSION"]
+  n2["DOCUMENT EMBEDDING WORKER"]
+  n3["POSTGRESQL pgvector + STATUS"]
+  n4["REFRESH → SNAPSHOT → QUERY"]
+  n5["QUERY EMBEDDING"]
+  n6["FILTERED VECTOR SEARCH"]
+  n7["POSTGRESQL FULL-TEXT"]
+  n8["HYBRID FUSION + RERANK"]
+  n9["REVIEW SOURCES + USER ORDER"]
+  n10["COVERAGE → CONTEXT → LLM"]
+  n0 -- "Indexing pipeline" --> n1
+  n0 -- "Committed text + FTS index" --> n7
+  n1 -- "New / changed hash" --> n2
+  n1 -- "Matching hash + model cached" --> n3
+  n2 -- "Persist ready vectors" --> n3
+  n2 -- "Pending / failed; no blocking" --> n7
+  n4 -- "Admitted hybrid only" --> n5
+  n4 -- "Default full-text" --> n7
+  n5 -- "Query vector ready" --> n6
+  n5 -- "Embedding failure" --> n7
+  n3 -- "Eligible indexed chunks" --> n6
+  n6 -- "Dense candidates" --> n8
+  n7 -- "Hybrid sparse branch" --> n8
+  n7 -- "Default / fallback ranking" --> n9
+  n8 -- "Reranked passages" --> n9
+  n9 -- "Validated selection revision" --> n10
+```
+
+- **news → chunks** — Indexing pipeline / 索引流程
+  Indexing pipeline
+  索引流程
+
+- **news → sparse** — Committed text + FTS index / 已提交文字及全文索引
+  Committed text + FTS index
+  已提交文字及全文索引
+
+- **chunks → document_embed** — New / changed hash / 新增／改動 hash
+  New / changed hash
+  新增／改動 hash
+
+- **chunks → vectors** — Matching hash + model cached / 相同 hash＋模型已快取
+  Matching hash + model cached
+  相同 hash＋模型已快取
+
+- **document_embed → vectors** — Persist ready vectors / 保存就緒向量
+  Persist ready vectors
+  保存就緒向量
+
+- **document_embed → sparse** — Pending / failed; no blocking / 待完成／失敗，不阻擋
+  Pending / failed; no blocking
+  待完成／失敗，不阻擋
+
+- **question → query_embed** — Admitted hybrid only / 只限已准入混合
+  Admitted hybrid only
+  只限已准入混合
+
+- **question → sparse** — Default full-text / 預設全文
+  Default full-text
+  預設全文
+
+- **query_embed → dense** — Query vector ready / 查詢向量就緒
+  Query vector ready
+  查詢向量就緒
+
+- **query_embed → sparse** — Embedding failure / 嵌入失敗
+  Embedding failure
+  嵌入失敗
+
+- **vectors → dense** — Eligible indexed chunks / 合資格已索引段落
+  Eligible indexed chunks
+  合資格已索引段落
+
+- **dense → fuse** — Dense candidates / 向量候選
+  Dense candidates
+  向量候選
+
+- **sparse → fuse** — Hybrid sparse branch / 混合的稀疏分支
+  Hybrid sparse branch
+  混合的稀疏分支
+
+- **sparse → review** — Default / fallback ranking / 預設／回退排序
+  Default / fallback ranking
+  預設／回退排序
+
+- **fuse → review** — Reranked passages / 已重排原文
+  Reranked passages
+  已重排原文
+
+- **review → gate** — Validated selection revision / 已驗證選取版本
+  Validated selection revision
+  已驗證選取版本

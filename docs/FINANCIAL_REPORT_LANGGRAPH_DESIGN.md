@@ -51,6 +51,18 @@ Proposed design and offline teaching demo only; the live finance backend is not 
 
 建議設計及離線教學示範；真實金融後端尚未實作。
 
+### Your feedback here means evidence review / 此處回饋指證據覆核
+
+Before generation, show the news proposed for this report, original excerpts, source links/dates and the system relevance rank. You can exclude articles, highlight topics and change the discussion order. Call this evidence review so it is distinct from post-report ratings/corrections, which are stored separately. Exclusion changes this report selection and never deletes news from PostgreSQL.
+
+生成前展示本報告建議新聞、原文、來源連結／日期及系統相關排序。你可排除文章、標記主題及改討論次序。將這步稱「證據覆核」，與報告生成後另存的評分／更正分開；排除只改本次選取，不刪 PostgreSQL 新聞。
+
+### System rank and your order stay separate / 系統排名與你的次序分開
+
+Preserve system_ordered_ids and reranker scores, then store user_ordered_ids as an exact, duplicate-free permutation of selected IDs in the selection revision. Order can affect what the model attends to and how the report is organized; treat it as presentation/emphasis preference, not a new relevance or truth score. Pass the preference alongside evidence to context assembly. Required facets and counter-evidence take priority over arbitrary trimming. Recheck coverage after trimming and disclose exclusions; never increase forecast confidence because an article moved up. Reordering alone makes no provider, search or embedding call.
+
+保留 system_ordered_ids 及重排分數，再將 user_ordered_ids 存選取版本；它必須是所有已選 ID 的完整不重複排列。次序可影響模型注意及報告組織，只作呈現／重點偏好，不是新相關性或真實分數。建立 context 時連同證據傳入；必要面向及反方證據不能因裁剪優先次序而失去。裁剪後重查覆蓋並交代排除，不能因文章移前而提高信心；單純改次序不呼叫供應商、搜尋或 embedding。
+
 ### Where the review belongs / 覆核放在哪一步
 
 Retrieve → rerank → optional evidence review → validate selection → evidence gate → context → LLM → validation. Default full-text search and sparse fallback enter the same review step. Choose automatic or review mode at request creation. Automatic mode uses the system selection and still passes all evidence checks.
@@ -59,9 +71,9 @@ Retrieve → rerank → optional evidence review → validate selection → evid
 
 ### Highlight, exclude, reset, generate / 標記、排除、重設、生成
 
-Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Reset restores system recommendations for the current candidates. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
+Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Move up/down sets your discussion order without changing system scores. Reset restores system recommendations and their order. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
 
-標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。重設還原目前候選的系統建議；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
+標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。上移／下移只改討論次序，不改系統分數；重設還原系統建議及次序；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
 
 ### Coverage and confirmation bias / 覆蓋及確認偏誤
 
@@ -121,6 +133,15 @@ Live review checks are NOT RUN. Before enabling the feature, test another owner�
   "highlighted_ids": [
     "costs-v1-c1"
   ],
+  "system_ordered_ids": [
+    "costs-v1-c1",
+    "demand-v2-c1",
+    "outlook-v1-c1"
+  ],
+  "user_ordered_ids": [
+    "demand-v2-c1",
+    "costs-v1-c1"
+  ],
   "excluded_ids": [
     "outlook-v1-c1"
   ],
@@ -162,12 +183,38 @@ def review_node(state):
 
 [LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)
 
+[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)
+
+
+### Document embeddings: during indexing / 文件 embedding：建立索引時
+
+After company/daily news is validated, deduplicated and committed, split permitted text into versioned chunks. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
+
+公司／每日新聞驗證、去重及提交後，將允許文字切成有版本段落。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
+
+### Question embeddings: just before vector retrieval / 問題 embedding：向量檢索之前
+
+On an accepted request, first refresh company news and pin the evidence snapshot. If the evaluated hybrid mode is enabled, encode the current query using the same compatible model/configuration as document vectors, then search pgvector under the snapshot, time and permission filters. Combine with full-text results and rerank question–passage pairs. A refined query needs its own query embedding; unchanged document chunks do not need another embedding.
+
+有效請求先刷新公司新聞及固定快照。若已啟用通過評估的混合模式，用與文件向量相容的相同模型／設定編碼當前查詢，再在快照、時間及權限條件下搜尋 pgvector，合併全文結果後重排問題與原文配對。補查的新 query 須再編碼；未改動文件不須重嵌入。
+
+### Pending vectors do not block sparse search / 向量未就緒不阻擋全文搜尋
+
+Full-text indexing remains the default and uses no embeddings. Run document embedding as a separate idempotent indexing job keyed by chunk hash and model. Pin the model/version and vector-ready chunk IDs with the run snapshot; refinement/resume reuse that view. Newly completed embeddings become available to the next request. Do not label pending embeddings as a complete hybrid index. A candidate vector/model failure falls back to working full-text evidence within budget. Neither n8n acquisition success nor an evidence snapshot promises that its vectors are ready. Hybrid remains blocked until it beats the written frozen evaluation margins.
+
+全文索引仍是預設，不用 embedding。文件嵌入作獨立冪等索引工作，以段落 hash 及模型為鍵，快照固定模型／版本及向量已就緒段落 ID，補查／恢復沿用此視圖；新完成向量供下次請求用，不能把待完成向量稱完整混合索引。向量／模型失敗可在預算內回退可用全文證據；n8n 抓取成功及固定快照不代表向量已就緒。混合模式仍須超越凍結評估書面門檻才准入。
+
+### Embeddings, reranking and review do different jobs / Embedding、重排及覆核分工不同
+
+Embeddings help find semantically similar passages. Reranking scores relevance to the exact question using the passage text. Evidence review shows the proposed sources and system rank, lets you exclude or reorder them, and records your preferred discussion order. None of these steps establishes factual support or predicts stock returns. The evidence gate and citation checks still decide which claims may be released.
+
+Embedding 協助找語義相似段落；重排用原文評估對當前問題的相關性。證據覆核展示建議來源及系統排序，讓你排除或改討論次序。這些步驟本身都不證明事實支持或預測股票回報；證據關卡及引用驗證仍決定哪些主張可發布。
 
 ### Three evidence streams / 三條證據來源
 
-Each accepted prompt refreshes company news through n8n MCP. A separate daily n8n Schedule Trigger fetches macroeconomic and geopolitical news into shared PostgreSQL records. Maintain sourced, versioned profiles for MSFT, AAPL and NVDA: business segments, products, geographic and supply-chain exposure, and financial figures with reporting periods. Review profiles after filings or material changes. Configure the daily time and workflow timezone when publishing n8n.
+Each accepted prompt refreshes company news through n8n MCP. A separate daily n8n Schedule Trigger calls Alpha Vantage NEWS_SENTIMENT for macro/fiscal news and a broad feed for geopolitical tagging, with explicit coverage limits, into shared PostgreSQL records. Maintain sourced, versioned profiles for MSFT, AAPL and NVDA: business segments, products, geographic and supply-chain exposure, and financial figures with reporting periods. Review profiles after filings or material changes. Configure the daily time and workflow timezone when publishing n8n.
 
-每個有效提示經 n8n MCP 刷新公司新聞。獨立每日 n8n Schedule Trigger 抓宏觀及地緣政治新聞，存至 PostgreSQL 共用記錄。MSFT、AAPL、NVDA 各有附來源及版本背景：業務、產品、地域與供應鏈曝險，以及附報告期間財務數據。財報或重大變化後覆核背景；發布 n8n 時設定每日時間及時區。
+每個有效提示經 n8n MCP 刷新公司新聞。獨立每日 n8n Schedule Trigger 經 Alpha Vantage NEWS_SENTIMENT 抓宏觀／財政及廣泛候選另作地緣標記，明示覆蓋限制，再存至 PostgreSQL 共用記錄。MSFT、AAPL、NVDA 各有附來源及版本背景：業務、產品、地域與供應鏈曝險，以及附報告期間財務數據。財報或重大變化後覆核背景；發布 n8n 時設定每日時間及時區。
 
 ### Snapshot = the evidence version used for this report / Snapshot＝這份報告使用的證據版本
 
@@ -209,6 +256,11 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
     "geopolitics": "geo-batch-example"
   },
   "company_profile_version": "nvda-profile-v2",
+  "retrieval_index": {
+    "mode": "sparse",
+    "embedding_model": null,
+    "vector_ready_chunk_ids": []
+  },
   "eligible_chunk_ids": [
     "nvda-news-v3-c1",
     "geo-policy-v1-c2",
@@ -225,9 +277,9 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
 
 ### evidence_selection_revisions (proposed extension)
 
-Append a selection revision bound to the authenticated owner, run/thread, snapshot and candidate revision. Save selected/highlighted/excluded IDs, timestamps and selection limitations; the final report references that revision. Validate snapshot membership and permissions, require highlights to be selected and exclusions to be disjoint, and atomically check the expected revision. These records never modify stored news. Persist remaining active time and an absolute review expiry alongside checkpoints; do not hold a database transaction while awaiting the user.
+Append a selection revision bound to the authenticated owner, run/thread, snapshot and candidate revision. Save selected/highlighted/excluded IDs, system ranks, validated user order, timestamps and selection limitations; the final report references that revision. Validate snapshot membership and permissions, require highlights to be selected and exclusions to be disjoint, and atomically check the expected revision. These records never modify stored news. Persist remaining active time and an absolute review expiry alongside checkpoints; do not hold a database transaction while awaiting the user.
 
-選取版本以只追加紀錄綁定已驗證擁有者、run/thread、快照及候選版本，存已選／標記／排除 ID、時間及限制；最終報告引用此版本。核對快照成員及權限、標記屬已選及排除不重疊，以原子操作核對預期版本。不改新聞原文；checkpoint 另存剩餘處理預算及絕對覆核期限，等待用戶時不持有 transaction。
+選取版本以只追加紀錄綁定已驗證擁有者、run/thread、快照及候選版本，存已選／標記／排除 ID、系統排名、已驗證用戶次序、時間及限制；最終報告引用此版本。核對快照成員及權限、標記屬已選及排除不重疊，以原子操作核對預期版本。不改新聞原文；checkpoint 另存剩餘處理預算及絕對覆核期限，等待用戶時不持有 transaction。
 
 ### Shared news + versioned company profiles
 
@@ -428,9 +480,9 @@ Assumption: news is already chunked and indexed in PostgreSQL; the live app stil
 
 ### State / 狀態
 
-Immutable request: owner_id, run_id, thread_id, original_question, company_id, horizon, as_of and review_mode. Persist remaining_active_ms (60,000 initially), active deadline, first-pause review_expires_at (15 minutes), all call counters, snapshot manifest, candidate revision and append-only selection revisions. Revisions contain selected/highlighted/excluded IDs and exclusion limitations, not edited article text. Review wait pauses active time only; crashes, network waits and other recovery do not. Resume spends only the saved remainder. Replace candidate/context lists per search, preserve known exclusions and never reset counters. Only sanitized IDs and metadata go to public traces.
+Immutable request: owner_id, run_id, thread_id, original_question, company_id, horizon, as_of and review_mode. Persist remaining_active_ms (60,000 initially), active deadline, first-pause review_expires_at (15 minutes), all call counters, snapshot manifest, candidate revision and append-only selection revisions. Revisions contain selected/highlighted/excluded IDs, immutable system rank, user-ordered IDs and exclusion limitations, not edited article text. Review wait pauses active time only; crashes, network waits and other recovery do not. Resume spends only the saved remainder. Replace candidate/context lists per search, preserve known exclusions and never reset counters. Only sanitized IDs and metadata go to public traces.
 
-不可變請求：擁有者、run_id、thread_id、原問題、公司、期間、截止及覆核模式。保存剩餘處理毫秒（初始 60,000）、處理時限、首次暫停起 15 分鐘覆核期限、所有呼叫計數、快照清單、候選版本及只追加的選取版本。選取存已選／標記／排除 ID 及限制，不改文章原文。只有覆核等待暫停處理計時；故障、網絡等待及其他恢復照計。恢復只可用剩餘預算；每輪取代候選／context，保留已知排除，不能重設計數。公開 trace 只用清理後 ID 及 metadata。
+不可變請求：擁有者、run_id、thread_id、原問題、公司、期間、截止及覆核模式。保存剩餘處理毫秒（初始 60,000）、處理時限、首次暫停起 15 分鐘覆核期限、所有呼叫計數、快照清單、候選版本及只追加的選取版本。選取存已選／標記／排除 ID、原系統排名、用戶次序及限制，不改文章原文。只有覆核等待暫停處理計時；故障、網絡等待及其他恢復照計。恢復只可用剩餘預算；每輪取代候選／context，保留已知排除，不能重設計數。公開 trace 只用清理後 ID 及 metadata。
 
 ### SCOPE (`scope`)
 
@@ -462,15 +514,15 @@ Pin company news together with eligible completed macro/geopolitical batches and
 
 將公司新聞、合資格完整宏觀／地緣批次及附來源公司背景版本固定成清單。檢查發布與首次取得截止；當前研究刷新後固定截止，指定歷史截止則保持原值。背景匯入獨立繼續；補查及恢復沿用此清單。
 
-### POSTGRESQL SEARCH (`retrieve`)
+### SEARCH + QUERY EMBEDDING (`retrieve`)
 
 Reads: query + snapshot + metadata filters
 
 Writes / handoff: sparse candidates | hybrid RRF top 20
 
-Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
+Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model and frozen vector-readiness view, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
 
-預設使用 PostgreSQL 全文搜尋。混合准入後，以固定模型轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
+預設使用 PostgreSQL 全文搜尋。混合准入後，以快照固定模型及向量就緒視圖轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。
 
 ### RERANK RELEVANCE (`rerank`)
 
@@ -498,9 +550,9 @@ Reads: ranked candidates + snapshot + review mode
 
 Writes / handoff: automatic selection | checkpointed user selection
 
-All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
+All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Show system rank beside your preferred order. Highlight, exclude, move up/down or reset locally, then submit once per search round. No source is deleted.
 
-所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
+所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；並列系統排名及你的次序，可標記、排除、上下移動或本機重設，每輪搜尋提交一次，不刪來源。
 
 ### VALIDATE SELECTION (`selection`)
 
@@ -508,9 +560,9 @@ Reads: selection revision + current owner/run/snapshot/candidates
 
 Writes / handoff: validated selection + highlight IDs + exclusion log
 
-The API authenticates the owner and atomically validates run, thread, snapshot, candidate revision, IDs, permissions and expiry before resume. Require highlighted IDs to be selected and excluded IDs to be disjoint. Reject invalid or stale submissions without advancing the graph. Highlights prioritize supported discussion, never truth or confidence. Keep excluded counter-evidence visible as a selection limitation.
+The API authenticates the owner and atomically validates run, thread, snapshot, candidate revision, IDs, permissions and expiry before resume. Require highlights to be selected, exclusions disjoint, and user order an exact duplicate-free permutation of selected IDs. Reject invalid or stale submissions without advancing the graph. Highlights prioritize supported discussion, never truth or confidence. Keep excluded counter-evidence visible as a selection limitation.
 
-API 在恢復前驗證擁有者，並以原子操作核對任務、thread、快照、候選版本、ID、權限及期限。標記須屬已選，排除不可與已選重疊；無效或舊版本不推進 graph；標記只優先討論有支持內容，不提升真實性或信心。被排除的反方證據仍顯示為選取限制。
+API 在恢復前驗證擁有者，並以原子操作核對任務、thread、快照、候選版本、ID、權限及期限。標記須屬已選，排除不可重疊，用戶次序須完整不重複排列已選 ID；無效或舊版本不推進 graph；標記只優先討論有支持內容，不提升真實性或信心。被排除的反方證據仍顯示為選取限制。
 
 ### REVIEW EXPIRED → END (`review_expired`)
 
@@ -548,9 +600,9 @@ Reads: supported selection + highlights + limitations + original question
 
 Writes / handoff: ≤6 excerpts in a token-bounded evidence envelope
 
-Fetch original excerpts, deduplicate by story, preserve dates/IDs, and retain conflicting evidence. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
+Fetch original excerpts, deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
 
-讀原文、按新聞去重、保留日期／ID 及矛盾；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
+讀原文、按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
 
 ### LLM GENERATE (`generate`)
 
@@ -651,7 +703,7 @@ How could MSFT costs affect the next 1–3 months?
 MSFT 成本可能如何影響未來 1–3 個月？
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Default PostgreSQL full-text search supplies the evidence for a validated report.
@@ -665,7 +717,7 @@ Highlight the cost evidence before generating the MSFT report.
 生成 MSFT 報告前標記成本證據。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Pause, validate the selection, recheck coverage and emphasize supported cost discussion. Confidence is unchanged.
@@ -679,7 +731,7 @@ Exclude the only earnings-outlook passage from this report.
 在這份報告排除唯一盈利展望原文。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 Recheck after exclusion; one refinement still lacks permitted support, so return insufficient without a forecast.
@@ -693,7 +745,7 @@ Resume after the review window has expired.
 覆核期過後才恢復。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → REVIEW EXPIRED → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → REVIEW EXPIRED → END
 ```
 
 Stop before generation. Start a new request for refreshed evidence; counters and the original snapshot are preserved.
@@ -707,7 +759,7 @@ What is the latest MSFT earnings outlook?
 MSFT 最新盈利展望如何？
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 No outlook passage after two searches: explain the gap and abstain from forecasting.
@@ -763,7 +815,7 @@ Why do MSFT reports disagree about demand?
 為何 MSFT 報道對需求有不同說法？
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Preserve both sources and explain competing scenarios; do not invent a consensus.
@@ -777,7 +829,7 @@ Summarize MSFT news; one retrieved article contains an instruction attack.
 摘要 MSFT 新聞，其中一篇含指令攻擊。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Treat article instructions as data; keep code-enforced permissions and legitimate evidence.
@@ -791,7 +843,7 @@ Research MSFT costs while the reranker is offline.
 重排服務離線時研究 MSFT 成本。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → SPARSE FALLBACK → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → SPARSE FALLBACK → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
 ```
 
 Use sparse fallback and identify the actual mode in the report.
@@ -805,7 +857,7 @@ Research MSFT when PostgreSQL goes offline after news refresh.
 新聞刷新後 PostgreSQL 中斷時研究 MSFT。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → UNAVAILABLE → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → UNAVAILABLE → END
 ```
 
 Return an operational error, not an insufficient-news claim.
@@ -819,7 +871,7 @@ A draft cites a source that does not support its claim.
 草稿引用不能支持主張的來源。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
 ```
 
 Withhold the draft and surface validation_failed.
@@ -833,7 +885,7 @@ The live run exceeds its deadline before generation.
 真實任務在生成前已超時。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → POSTGRESQL SEARCH → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
+SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
 ```
 
 Stop without calling the model; keep the checkpoint and original limits.
@@ -874,6 +926,16 @@ Fictional supported-case example. Source excerpts are untrusted data, separate f
   "selection": {
     "mode": "automatic",
     "selection_revision": 1,
+    "system_ordered_ids": [
+      "MSFT-DEMO-demand",
+      "MSFT-DEMO-cost",
+      "MSFT-DEMO-outlook"
+    ],
+    "user_ordered_ids": [
+      "MSFT-DEMO-demand",
+      "MSFT-DEMO-cost",
+      "MSFT-DEMO-outlook"
+    ],
     "highlighted_ids": [],
     "excluded_ids": [],
     "limitations": []
@@ -941,6 +1003,8 @@ class ResearchState(TypedDict, total=False):
     review_expires_at: str  # Absolute expiry set at first pause, not refreshed.
     candidate_revision: int
     selection_revision: int
+    system_ordered_ids: list[str]
+    user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
     scope: Literal["accepted", "irrelevant", "ambiguous"]

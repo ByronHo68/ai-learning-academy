@@ -7,6 +7,7 @@ import { pick, type Lang } from '../lib/curriculum';
 import { n8nLimits, n8nRoles, n8nScenarios, n8nStageLabel, n8nStages, n8nStart, n8nDatabaseEnvironment, n8nIntegrationGuide, n8nReceiptExample, n8nReferences, financeN8nDailyDiagram } from '../lib/finance-n8n';
 import { financeFunctionDiagram } from '../lib/finance-diagrams';
 import { FinanceDiagramCanvas } from './finance-diagram';
+import { FinanceAlphaVantageContent } from './finance-alpha-vantage-content';
 
 function N8nAnimation({ lang }: { lang: Lang }) {
   const [player, setPlayer] = useState({ scenario: 0, position: 0, playing: false });
@@ -117,9 +118,10 @@ export default function FinanceN8nContent({ lang }: { lang: Lang }) {
       <p className="eyebrow">01 · WHO DOES THE JOB</p>
       <h2>{lang === 'zh' ? 'n8n 負責抓取、驗證及匯入' : 'n8n owns acquisition, validation and ingestion'}</h2>
       <div className="mcp-ownership">{n8nRoles.map(item => <div key={item.name}><strong>{item.name}</strong><p>{pick(item.job, lang)}</p></div>)}</div>
-      <p>{lang === 'zh' ? '有兩條流程。每條已接納的問題呼叫 refresh_company_news。另外一條 Schedule Trigger 每天抓宏觀同地緣新聞，即使沒有人發問。每日批次是背景，不能取代每題的公司新聞。' : 'There are two workflows. Every accepted question calls refresh_company_news. A separate Schedule Trigger fetches macroeconomic and geopolitical news once a day, even if nobody asks. That daily batch is context. It does not replace the company news for the question.'}</p>
+      <p>{lang === 'zh' ? '每個有效問題經 YFinance 刷新公司新聞。獨立每日 Schedule Trigger 向 Alpha Vantage 抓宏觀／財政及廣泛候選，再作地緣標記；完整批次補充報告快照。' : 'Every accepted question refreshes company news through YFinance. A separate daily Schedule Trigger calls Alpha Vantage for macro/fiscal news and broad candidates for geopolitical tagging. It runs independently, and its completed batch supplements the report snapshot.'}</p>
     </section>
 
+    <FinanceAlphaVantageContent lang={lang}/>
     <N8nAnimation lang={lang}/>
     <section className="finance-section" id="n8n-connected-workflow">
       <p className="eyebrow">CONNECTED WORKFLOWS · SAME CATALOG AS THE ATLAS</p>

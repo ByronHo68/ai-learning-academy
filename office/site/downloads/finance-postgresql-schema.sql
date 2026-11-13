@@ -37,7 +37,10 @@ CREATE TABLE research.runs (
   question text NOT NULL,
   horizon text NOT NULL,
   snapshot_id uuid REFERENCES research.snapshots,
-  deadline timestamptz NOT NULL,
+  deadline timestamptz NOT NULL, -- Active segment deadline, clipped to saved remainder.
+  remaining_active_ms integer NOT NULL DEFAULT 60000 CHECK (remaining_active_ms BETWEEN 0 AND 60000),
+  review_mode text NOT NULL DEFAULT 'automatic' CHECK (review_mode IN ('automatic', 'review')),
+  review_expires_at timestamptz, -- First pause + 15 minutes; never extend on edits/refinement.
   search_attempts integer NOT NULL DEFAULT 0 CHECK (search_attempts BETWEEN 0 AND 2),
   UNIQUE (run_id, snapshot_id)
 );

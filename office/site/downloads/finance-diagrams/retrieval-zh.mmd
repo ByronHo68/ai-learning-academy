@@ -2,12 +2,15 @@ flowchart TD
   n0["PostgreSQL → full-text / pgvector"]
   n1["Unavailable → END"]
   n2["Candidates"]
-  n3["Evidence gate"]
+  n3["Optional evidence review"]
   n4["RRF fusion + reranker"]
   n5["Sparse fallback"]
-  n6["Refine query once"]
-  n7["Insufficient → END"]
-  n8["Build context"]
+  n6["Validate selection revision"]
+  n7["Review expired → END"]
+  n8["Evidence gate"]
+  n9["Refine query once"]
+  n10["Insufficient → END"]
+  n11["Build context"]
   n0 -- "資料庫不可用" --> n1
   n0 -- "套用篩選" --> n2
   n2 -- "預設全文搜尋" --> n3
@@ -16,8 +19,11 @@ flowchart TD
   n0 -- "向量路徑失敗" --> n5
   n4 -- "重排失敗" --> n5
   n5 -- "Sparse 可用" --> n3
+  n3 -- "自動／用戶提交" --> n6
+  n3 -- "期限已過" --> n7
+  n6 -- "排除後重查" --> n8
   n5 -- "沒有可用路徑" --> n1
-  n3 -. "首次搜尋有缺口" .-> n6
-  n6 -. "第 2／2 次搜尋" .-> n0
-  n3 -- "仍不足" --> n7
-  n3 -- "支持足夠" --> n8
+  n8 -. "首次搜尋有缺口" .-> n9
+  n9 -. "第 2／2 次搜尋" .-> n0
+  n8 -- "仍不足" --> n10
+  n8 -- "支持足夠" --> n11

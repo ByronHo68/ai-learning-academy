@@ -5,56 +5,64 @@ flowchart TD
   n3["POSTGRESQL SEARCH"]
   n4["RERANK RELEVANCE"]
   n5["SPARSE FALLBACK"]
-  n6["EVIDENCE GATE"]
-  n7["REFINE ONCE"]
-  n8["BUILD CONTEXT"]
-  n9["LLM GENERATE"]
-  n10["VALIDATE"]
-  n11["SAVE + TRACE"]
-  n12["ANSWER"]
-  n13["INSUFFICIENT"]
-  n14["OUT OF SCOPE"]
-  n15["CLARIFY"]
-  n16["UNAVAILABLE"]
-  n17["VALIDATION FAILED"]
-  n18["DAILY n8n SCHEDULE"]
-  n19["MACRO + GEOPOLITICAL NEWS"]
-  n20["VERSIONED COMPANY PROFILES"]
-  n21["POSTGRESQL EVIDENCE POOL"]
-  n22["DAILY FETCH FAILURE"]
+  n6["OPTIONAL EVIDENCE REVIEW"]
+  n7["VALIDATE SELECTION"]
+  n8["REVIEW EXPIRED"]
+  n9["EVIDENCE GATE"]
+  n10["REFINE ONCE"]
+  n11["BUILD CONTEXT"]
+  n12["LLM GENERATE"]
+  n13["VALIDATE"]
+  n14["SAVE + TRACE"]
+  n15["ANSWER"]
+  n16["INSUFFICIENT"]
+  n17["OUT OF SCOPE"]
+  n18["CLARIFY"]
+  n19["UNAVAILABLE"]
+  n20["VALIDATION FAILED"]
+  n21["DAILY n8n SCHEDULE"]
+  n22["MACRO + GEOPOLITICAL NEWS"]
+  n23["VERSIONED COMPANY PROFILES"]
+  n24["POSTGRESQL EVIDENCE POOL"]
+  n25["DAILY FETCH FAILURE"]
   n0 -- "Supported" --> n1
-  n0 -- "Ambiguous" --> n15
-  n0 -- "Unrelated" --> n14
+  n0 -- "Ambiguous" --> n18
+  n0 -- "Unrelated" --> n17
   n1 -- "n8n receipt ready" --> n2
   n2 -- "Evidence versions pinned" --> n3
-  n2 -- "Required context missing" --> n13
-  n2 -- "Snapshot storage failed" --> n16
-  n1 -- "Only stale news" --> n13
-  n1 -- "Refresh failed" --> n16
+  n2 -- "Required context missing" --> n16
+  n2 -- "Snapshot storage failed" --> n19
+  n1 -- "Only stale news" --> n16
+  n1 -- "Refresh failed" --> n19
   n3 -- "Admitted hybrid" --> n4
   n3 -- "Full-text default" --> n6
-  n3 -- "PostgreSQL unavailable" --> n16
+  n3 -- "PostgreSQL unavailable" --> n19
   n3 -- "Vector path fails" --> n5
   n4 -- "Ranked passages" --> n6
   n4 -- "Reranker fails" --> n5
   n5 -- "Sparse works" --> n6
-  n5 -- "Sparse also fails" --> n16
-  n6 -. "Gap + budget left" .-> n7
-  n7 -. "Search 2 of 2" .-> n3
-  n6 -- "Still insufficient" --> n13
-  n6 -- "Enough support" --> n8
-  n8 -- "Trimming loses support" --> n13
-  n8 -- "Context ready" --> n9
-  n8 -- "Deadline reached" --> n16
-  n9 -- "Draft ready" --> n10
-  n9 -- "Model / schema error" --> n16
-  n10 -- "Invalid support" --> n17
-  n10 -- "All checks pass" --> n11
-  n11 -- "Persisted result" --> n12
-  n11 -- "Save failed" --> n16
-  n18 -- "Daily, configured timezone" --> n19
-  n19 -- "Commit completed batches" --> n21
-  n19 -- "n8n retries exhausted" --> n22
-  n22 -- "Prior batch + failure status" --> n21
-  n20 -- "Sourced profile versions" --> n21
-  n21 -- "Read eligible versions" --> n2
+  n5 -- "Sparse also fails" --> n19
+  n6 -- "Automatic / submitted review" --> n7
+  n6 -- "Review window expired" --> n8
+  n7 -- "Valid selection revision" --> n9
+  n7 -- "Expired before resume" --> n8
+  n7 -- "Selection storage failed" --> n19
+  n9 -. "Gap + budget left" .-> n10
+  n10 -. "Search 2 of 2" .-> n3
+  n9 -- "Still insufficient" --> n16
+  n9 -- "Enough support" --> n11
+  n11 -- "Trimming loses support" --> n16
+  n11 -- "Context ready" --> n12
+  n11 -- "Deadline reached" --> n19
+  n12 -- "Draft ready" --> n13
+  n12 -- "Model / schema error" --> n19
+  n13 -- "Invalid support" --> n20
+  n13 -- "All checks pass" --> n14
+  n14 -- "Persisted result" --> n15
+  n14 -- "Save failed" --> n19
+  n21 -- "Daily, configured timezone" --> n22
+  n22 -- "Commit completed batches" --> n24
+  n22 -- "n8n retries exhausted" --> n25
+  n25 -- "Prior batch + failure status" --> n24
+  n23 -- "Sourced profile versions" --> n24
+  n24 -- "Read eligible versions" --> n2

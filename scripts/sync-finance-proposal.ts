@@ -1,3 +1,4 @@
+import { n8nStart, n8nRoles, n8nLimits, n8nScenarios, n8nIntegrationGuide, n8nReceiptExample, n8nDatabaseEnvironment, n8nReferences } from '../lib/finance-n8n';
 import { financeReviewGuide, financeReviewExample, financeReviewSketch } from '../lib/finance-review';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { financeDatabase, financePostgresSchema, financePostgresQuery, financePostgresCheckpoint } from '../lib/finance-database';
@@ -58,9 +59,25 @@ const evidenceReview = [
   '```python\n' + financeReviewSketch + '\n```',
   '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
 ].join('\n\n') + '\n';
+const n8nGuide = [
+  '# n8n acquisition and research handoff / n8n 抓取及研究交接',
+  'Open `/finance-project/n8n` for the bilingual offline animation. The Python YFinance bridge exists; n8n execution, ingestion and the live research backend remain proposed and NOT RUN.',
+  '打開 `/finance-project/n8n` 查看雙語離線動畫。Python YFinance bridge 已有實作；n8n 執行、匯入及真實研究後端仍是建議設計及 NOT RUN。',
+  '## Ownership / 分工',
+  ...n8nRoles.map(item => `**${item.name}**\n\n${both(item.job)}`),
+  n8nLimits.map(item => `- ${item.value}: ${item.label.en} / ${item.label.zh}`).join('\n'),
+  ...n8nIntegrationGuide.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Local setup / 本機設定', ...n8nStart.map((item, i) => `### ${i + 1}\n\n${both(item)}`),
+  '```dotenv\n' + n8nDatabaseEnvironment + '\n```',
+  '## Fictional receipt / 虛構收據\n\n```json\n' + n8nReceiptExample + '\n```',
+  ...n8nScenarios.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.prompt)}\n\n` + item.steps.map((step, i) => `${i + 1}. **${step.title.en} / ${step.title.zh}** — ${step.from.en} → ${step.to.en}\n\n${both(step.explanation)}\n\n${step.message}`).join('\n\n')),
+  '## Diagrams / 圖解\n\n[Per-question refresh SVG](finance-diagrams/sources-en.svg) · [Daily news SVG](finance-diagrams/n8n_daily-en.svg) · [Overall workflow SVG](finance-diagrams/overall-en.svg)',
+  '## Official references / 官方參考', ...n8nReferences.map(item => `- [${item.title}](${item.url})`),
+].join('\n\n') + '\n';
 const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
+  'See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.',
   financeDatabase.flow.join(' → '),
   '### YFinance MCP integration / YFinance MCP 整合',
   both(yfinanceDecision),
@@ -135,6 +152,8 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_N8N_GUIDE.md', n8nGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-n8n-guide.md', n8nGuide],
   ['docs/FINANCE_EVIDENCE_REVIEW.md', evidenceReview],
   ['public/downloads/stock-research-evidence-review.md', evidenceReview],
   ['docs/FINANCE_MCP_GUIDE.md', mcpGuide],
@@ -152,8 +171,8 @@ const outputs: Array<[string, string]> = [
 ];
 const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
-  'Open `/finance-project/workflows` for the interactive mind map and twelve connected diagrams. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
-  '開啟 `/finance-project/workflows` 查看互動心智圖及十二張連線圖。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  'Open `/finance-project/workflows` for the interactive mind map and thirteen connected diagrams, including the independent n8n daily-news workflow. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及十三張連線圖，包含獨立 n8n 每日新聞流程。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
   `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),
   ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),

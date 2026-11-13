@@ -31,6 +31,8 @@ One PostgreSQL service holds evidence, full-text indexes, optional pgvector embe
 
 一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.
+
 n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → LLM → validate → PostgreSQL report
 
 ### YFinance MCP integration / YFinance MCP 整合
@@ -432,7 +434,7 @@ app = FastAPI(lifespan=lifespan)
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rerank → Conditional forecast + citations → Validate → feedback + trace URL
+Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Context → conditional forecast + citations → Validate → feedback + trace URL
 
 ### Fresh news for every prompt / 每個提示都取得新聞
 
@@ -850,33 +852,35 @@ flowchart TD
   n2["Unavailable → END"]
   n3["n8n validate + deduplicate run"]
   n4["Return structured receipt"]
-  n5["n8n provider attempt"]
-  n6["Rejected → END"]
-  n7["Normalize + validate records"]
-  n8["n8n retry decision"]
-  n9["n8n backoff + jitter"]
-  n10["Commit PostgreSQL evidence"]
-  n11["Pin combined snapshot"]
-  n12["Retrieve"]
-  n13["Insufficient → END"]
+  n5["In progress → END"]
+  n6["n8n provider attempt"]
+  n7["Rejected → END"]
+  n8["Normalize + validate records"]
+  n9["n8n retry decision"]
+  n10["n8n backoff + jitter"]
+  n11["Commit PostgreSQL evidence"]
+  n12["Pin combined snapshot"]
+  n13["Retrieve"]
+  n14["Insufficient → END"]
   n0 -->|"Connect to n8n over Streamable HTTP, list tools and validate the refresh schema. Compile with PostgreSQL checkpoints."| n1
   n0 -->|"Required tool or authenticated endpoint is unavailable."| n2
   n1 -->|"The host sends one logical refresh after scope acceptance."| n3
   n3 -->|"This run already committed its evidence."| n4
-  n3 -->|"Valid new acquisition with time remaining."| n5
-  n3 -->|"Invalid arguments, unsupported company or failed authorization."| n6
-  n5 -->|"Successful response, including a valid empty response. Cap each call at 10s and clip it to the remaining 25s acquisition phase and run deadline."| n7
-  n5 -->|"Provider request failed."| n8
-  n8 -->|"Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After."| n9
-  n9 -->|"The bounded wait completes before the original deadline."| n5
-  n8 -->|"Permanent failure, exhausted attempts or insufficient remaining time."| n2
-  n7 -->|"Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text."| n10
-  n7 -->|"Provider payload is malformed or violates the evidence contract."| n6
-  n10 -->|"Evidence and receipt are durably committed with an idempotency key."| n4
-  n10 -->|"Storage failed or commit outcome needs reconciliation."| n2
-  n4 -->|"Host validates the receipt and reads eligible completed daily batches and the company-profile version."| n11
-  n11 -->|"Required coverage is available under the fixed cutoff and current permissions."| n12
-  n11 -->|"The question requires missing or stale evidence."| n13
+  n3 -->|"An atomic run claim already belongs to a running execution; do not start another provider call."| n5
+  n3 -->|"Valid new acquisition, atomic run lease claimed, matching request fingerprint and time remaining."| n6
+  n3 -->|"Invalid arguments, unsupported company or failed authorization."| n7
+  n6 -->|"Successful response, including a valid empty response. Cap each call at 10s and clip it to the remaining 25s acquisition phase and run deadline."| n8
+  n6 -->|"Provider request failed."| n9
+  n9 -->|"Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After."| n10
+  n10 -->|"The bounded wait completes before the original deadline."| n6
+  n9 -->|"Permanent failure, exhausted attempts or insufficient remaining time."| n2
+  n8 -->|"Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text."| n11
+  n8 -->|"Provider payload is malformed or violates the evidence contract."| n7
+  n11 -->|"Evidence and receipt are durably committed with an idempotency key."| n4
+  n11 -->|"Storage failed or commit outcome needs reconciliation."| n2
+  n4 -->|"Host validates the receipt and reads eligible completed daily batches and the company-profile version."| n12
+  n12 -->|"Required coverage is available under the fixed cutoff and current permissions."| n13
+  n12 -->|"The question requires missing or stale evidence."| n14
 ```
 
 **Startup: MCP discovery → Ready for accepted request**
@@ -927,11 +931,23 @@ Existing receipt; resume reuses completed work
 
 原紀錄；恢復重用已完成工作
 
+**n8n validate + deduplicate run → In progress → END**
+
+An atomic run claim already belongs to a running execution; do not start another provider call.
+
+原子任務鍵已屬執行中的工作，不另開供應商呼叫。
+
+Handoff / 交接資料:
+
+Existing execution ID and pending status for reconciliation
+
+原執行 ID 及待完成狀態供核對
+
 **n8n validate + deduplicate run → n8n provider attempt**
 
-Valid new acquisition with time remaining.
+Valid new acquisition, atomic run lease claimed, matching request fingerprint and time remaining.
 
-有效新抓取且仍有時間。
+有效新抓取、已原子取得任務 lease、請求指紋相符且仍有時間。
 
 Handoff / 交接資料:
 

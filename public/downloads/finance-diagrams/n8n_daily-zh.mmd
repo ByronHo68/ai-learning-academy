@@ -1,0 +1,27 @@
+flowchart TD
+  n0["n8n SCHEDULE + TIMEZONE"]
+  n1["n8n CLAIM BATCH KEY"]
+  n2["IN PROGRESS → END"]
+  n3["n8n APPROVED API / RSS"]
+  n4["n8n RETRY DECISION"]
+  n5["n8n BACKOFF + JITTER"]
+  n6["VALIDATE + DEDUPLICATE"]
+  n7["COMMIT COMPLETE BATCH"]
+  n8["RECORD FAILED JOB"]
+  n9["RETAIN PRIOR COMPLETED BATCH"]
+  n10["POSTGRESQL EVIDENCE POOL"]
+  n0 -- "每日觸發" --> n1
+  n1 -- "新批次 lease" --> n3
+  n1 -- "已有完整批次" --> n10
+  n1 -- "已有執行中工作" --> n2
+  n3 -- "收到回應" --> n6
+  n3 -- "供應商錯誤" --> n4
+  n4 -. "暫時錯誤＋有餘額" .-> n5
+  n5 -. "同批次下一嘗試" .-> n3
+  n4 -- "永久錯誤／用完" --> n8
+  n6 -- "批次有效" --> n7
+  n6 -- "無效／未完整" --> n8
+  n7 -- "完整版本就緒" --> n10
+  n7 -- "Transaction 已回滾" --> n8
+  n8 -- "保留舊完整批次" --> n9
+  n9 -- "原年齡＋失敗狀態" --> n10

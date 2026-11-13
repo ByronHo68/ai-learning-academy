@@ -1,0 +1,27 @@
+flowchart TD
+  n0["n8n SCHEDULE + TIMEZONE"]
+  n1["n8n CLAIM BATCH KEY"]
+  n2["IN PROGRESS → END"]
+  n3["n8n APPROVED API / RSS"]
+  n4["n8n RETRY DECISION"]
+  n5["n8n BACKOFF + JITTER"]
+  n6["VALIDATE + DEDUPLICATE"]
+  n7["COMMIT COMPLETE BATCH"]
+  n8["RECORD FAILED JOB"]
+  n9["RETAIN PRIOR COMPLETED BATCH"]
+  n10["POSTGRESQL EVIDENCE POOL"]
+  n0 -- "Daily trigger" --> n1
+  n1 -- "New batch lease" --> n3
+  n1 -- "Existing completed batch" --> n10
+  n1 -- "Existing running execution" --> n2
+  n3 -- "Response received" --> n6
+  n3 -- "Provider error" --> n4
+  n4 -. "Transient + time left" .-> n5
+  n5 -. "Same batch; next attempt" .-> n3
+  n4 -- "Permanent / exhausted" --> n8
+  n6 -- "Valid batch" --> n7
+  n6 -- "Invalid / incomplete" --> n8
+  n7 -- "Complete versions ready" --> n10
+  n7 -- "Transaction rolled back" --> n8
+  n8 -- "Preserve prior batch" --> n9
+  n9 -- "Original age + failure status" --> n10

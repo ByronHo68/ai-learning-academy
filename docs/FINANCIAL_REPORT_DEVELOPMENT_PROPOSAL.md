@@ -31,7 +31,7 @@ One PostgreSQL service holds evidence, full-text indexes, optional pgvector embe
 
 一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
-n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → LLM → validate → PostgreSQL report
+n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → LLM → validate → PostgreSQL report
 
 ### YFinance MCP integration / YFinance MCP 整合
 
@@ -54,6 +54,124 @@ Keep the existing refresh_company_news workflow contract. Inside it, call /news,
 Use one adapter call per n8n attempt. Route errors by retryable and remaining time. HTTP 401/422 stops, while retryable 429/503/504 follows the existing bounded n8n retry loop. Daily macro/geopolitical sources and versioned company profiles continue through their own acquisition paths.
 
 每次 n8n 嘗試只呼叫 adapter 一次；按 retryable 及餘下時間路由。HTTP 401／422 停止，可重試 429／503／504 沿用有限 n8n 回圈；每日宏觀／地緣及版本化公司背景使用各自擷取路徑。
+
+## Optional evidence review / 可選證據覆核
+
+Proposed design and offline teaching demo only; the live finance backend is not implemented.
+
+建議設計及離線教學示範；真實金融後端尚未實作。
+
+### Where the review belongs / 覆核放在哪一步
+
+Retrieve → rerank → optional evidence review → validate selection → evidence gate → context → LLM → validation. Default full-text search and sparse fallback enter the same review step. Choose automatic or review mode at request creation. Automatic mode uses the system selection and still passes all evidence checks.
+
+檢索 → 重排 → 可選證據覆核 → 驗證選取 → 證據關卡 → context → LLM → 驗證。預設全文及 sparse 回退都經同一步。建立請求時選自動或覆核模式；自動沿用系統選取，仍須通過所有證據檢查。
+
+### Highlight, exclude, reset, generate / 標記、排除、重設、生成
+
+Highlight asks for more discussion of a supported topic. It does not raise relevance scores, factual reliability or forecast confidence. Exclude from report removes a passage from this report selection; it never deletes stored news. Reset restores system recommendations for the current candidates. Generate submits the selection for validation and coverage checks before the LLM is allowed to run.
+
+標記要求多討論有證據支持的主題，不提高相關分數、真實性或預測信心。「排除此報告」只改本次選取，不刪新聞。重設還原目前候選的系統建議；生成先提交選取，驗證及覆蓋檢查通過後才可呼叫 LLM。
+
+### Coverage and confirmation bias / 覆蓋及確認偏誤
+
+Show the question’s required facets, source dates, original excerpts, provenance and opposing evidence beside the controls. Recheck coverage after every submitted selection and after context trimming. An excluded dissenting source remains visible in the audit and report limitations; an exclusion cannot justify a broader claim. Missing required support triggers at most one refinement or an insufficient result. Highlighting an irrelevant passage does not make it admissible.
+
+操作旁展示問題必要面向、日期、原文、來源及反方證據。每次提交及裁剪 context 後重查覆蓋；被排除的反方來源保留於核對紀錄及報告限制，不能因排除而擴大結論。必要支持不足最多補查一次，否則回證據不足；標記無關段落亦不能令它合資格。
+
+### Snapshot and selection are different records / 快照與選取是不同紀錄
+
+PostgreSQL keeps immutable news versions and the run’s frozen snapshot manifest. Add append-only evidence_selection_revisions keyed by owner_id, run_id, thread_id, snapshot_id, candidate_revision and selection_revision, with selected/highlighted/excluded IDs and timestamps. Store final selection_revision with the report. The authenticated server derives owner_id, validates IDs against permitted snapshot candidates, requires highlighted IDs to be selected and excluded IDs to be disjoint, and uses an atomic revision check so a second browser tab cannot overwrite a newer selection.
+
+PostgreSQL 保存不可變新聞版本及任務固定快照。另加只追加 evidence_selection_revisions，以擁有者、run、thread、快照、候選及選取版本綁定，保存已選／標記／排除 ID 及時間；報告引用最終選取版本。伺服器從驗證身分取得 owner_id，核對 ID 屬可用候選、標記屬已選及排除不重疊，並以原子版本核對避免另一分頁覆蓋新選取。
+
+### LangGraph pause and authenticated resume / LangGraph 暫停及身分驗證恢復
+
+Use interrupt() in a dedicated review node after retrieval has completed, a PostgreSQL checkpointer and Command(resume=...) with the same authenticated thread. The interrupted node starts again from its beginning on resume: keep news fetching, retrieval and other expensive side effects outside it. Validate the submitted schema, ownership, revision, permissions and expiry at the API boundary, then recheck the saved selection in the graph. Never pass arbitrary client state or article instructions into Command.
+
+檢索完成後由獨立覆核節點用 interrupt() 暫停，以 PostgreSQL checkpointer 保存；用相同已驗證 thread 及 Command(resume=...) 恢復。恢復會從中斷節點開頭重跑，新聞抓取、檢索及昂貴副作用須在節點外。API 邊界核對格式、擁有者、版本、權限及期限，再由 graph 核對已存選取；不能把任意 client 狀態或文章指令傳入 Command。
+
+### Two clocks, bounded review / 兩個時鐘，有上限覆核
+
+Proposed change: 60 seconds of active processing plus a 15-minute review window from the first pause. Persist the remaining active budget before waiting; only intentional review wait is excluded. Network waits and crash recovery still count. On resume use only the saved remainder, preserve the original evidence cutoff and all counters: one refresh, two searches, six source reads and three LLM calls. The review window is absolute and is not extended by edits or a second search. Expired review stops before generation and requires a new request. Report processing latency and review-wait/wall-clock latency separately; the 60s target applies to processing only.
+
+建議改為 60 秒處理預算，加首次暫停起 15 分鐘覆核期。等待前保存剩餘處理預算，只有刻意覆核等待可扣除；網絡等待及故障恢復仍計時。恢復只用餘額，保留原證據截止及全部計數：一次刷新、兩次搜尋、六次來源讀取、三次 LLM。編輯或第二輪不延長覆核期；過期停止生成並須新請求。分開報處理延遲、覆核等待及總耗時，60 秒目標只適用處理。
+
+### Refinement does not erase your choices / 補查不會抹掉選擇
+
+Allow at most two candidate rounds and one submitted selection per round. Local edits before Generate need no graph loop. Refinement uses the same snapshot, preserves exclusions/highlights for known source IDs and exposes new candidates for a second review within the original window. Reset is explicit. New candidates are not silently approved, excluded sources are not silently reintroduced and no edit grants another refresh or search budget. After the second failed coverage check, stop as insufficient.
+
+最多兩輪候選，每輪提交一次選取；生成前的本機編輯毋須 graph 迴圈。補查用相同快照，保留已知來源的排除／標記；原覆核期內展示新候選再覆核，重設須明確操作。不暗中批准新候選或重新加入被排除來源；編輯不增加刷新或搜尋預算。第二次覆蓋檢查仍不足就停止。
+
+### Prompt injection stays outside the controls / 提示注入不能控制操作
+
+Article text, highlighted passages and optional user notes remain untrusted data. They cannot change the company allowlist, scope route, budget, tool arguments or system policy. Selection controls submit source IDs and enumerated actions rather than executable instructions. Keep the scope gate before news access. Trace selection revisions, pause/resume and gate outcomes with redacted IDs; do not expose article text or private notes in public traces.
+
+文章、標記原文及可選筆記仍是不可信資料，不能改公司清單、範圍路由、預算、工具參數或系統規則。操作只傳來源 ID 及固定動作，不傳可執行指令；scope gate 維持在新聞存取前。追蹤選取版本、暫停／恢復及關卡結果，公開 trace 只用清理 ID，不放文章或私人筆記。
+
+### What must be verified in the future backend / 未來後端必須驗證甚麼
+
+Live review checks are NOT RUN. Before enabling the feature, test another owner’s IDs, stale revisions, revoked permissions, duplicate/concurrent resumes, expiry during a pause, crash recovery and injection inside a highlighted article. Verify that no rejected submission advances the graph, no source is deleted, known exclusions survive refinement, completed acquisition is not repeated and all budgets only decrease. Evaluate automatic reports separately from user-curated selections on the frozen golden set; do not count human choices as a retrieval improvement.
+
+真實覆核檢查為 NOT RUN。啟用前測其他擁有者 ID、舊版本、權限撤銷、重複／並行恢復、等待期間過期、故障恢復及標記文章內注入。核對被拒提交不推進 graph、不刪來源、補查保留排除、已完成抓取不重做，全部預算只減少。凍結 golden set 分開評估自動及人手選取報告，不能把人手選擇當檢索改善。
+
+```json
+{
+  "disclosure": "Fictional proposed record; the academy has no live report backend",
+  "owner_id": "server-derived-owner",
+  "run_id": "example-run",
+  "thread_id": "example-run",
+  "snapshot_id": "snapshot-msft-example",
+  "candidate_revision": 1,
+  "selection_revision": 2,
+  "selected_ids": [
+    "costs-v1-c1",
+    "demand-v2-c1"
+  ],
+  "highlighted_ids": [
+    "costs-v1-c1"
+  ],
+  "excluded_ids": [
+    "outlook-v1-c1"
+  ],
+  "missing_facets": [
+    "earnings outlook"
+  ],
+  "selection_limitations": [
+    "The only outlook passage was excluded; no outlook forecast is supported."
+  ],
+  "remaining_active_ms": 32000,
+  "review_expires_at": "2026-11-13T01:15:00Z"
+}
+```
+
+```python
+## Design sketch: API/storage/budget helpers must be implemented and tested.
+from langgraph.types import interrupt, Command
+
+def review_node(state):
+    if state["review_mode"] == "automatic":
+        return system_selection_update(state)  # Route to selection validation.
+    if review_expired(state):
+        return {"route": "review_expired"}
+    # Candidate payload is already persisted. This node may execute twice.
+    # The wrapper saves remaining active time once before the first interrupt.
+    resume = interrupt(review_payload(state))
+    # API has authenticated and atomically saved an ID-only selection revision.
+    # Reload and validate the server record; do not trust client-provided state.
+    return load_validated_selection_update(state, resume["selection_revision"])
+
+## API resume sketch (server-owned config; never accept arbitrary thread state):
+## owner = authenticate_request()
+## selection = validate_and_commit_selection(owner, payload, expected_revision)
+## graph.invoke(Command(resume={"selection_revision": selection.revision}),
+##              {"configurable": {"thread_id": selection.thread_id}})
+## Scope/news/retrieval are completed nodes and are not re-run on this resume.
+
+```
+
+[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)
+
 
 ### Three evidence streams / 三條證據來源
 
@@ -115,6 +233,12 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
 }
 ```
 
+### evidence_selection_revisions (proposed extension)
+
+Append a selection revision bound to the authenticated owner, run/thread, snapshot and candidate revision. Save selected/highlighted/excluded IDs, timestamps and selection limitations; the final report references that revision. Validate snapshot membership and permissions, require highlights to be selected and exclusions to be disjoint, and atomically check the expected revision. These records never modify stored news. Persist remaining active time and an absolute review expiry alongside checkpoints; do not hold a database transaction while awaiting the user.
+
+選取版本以只追加紀錄綁定已驗證擁有者、run/thread、快照及候選版本，存已選／標記／排除 ID、時間及限制；最終報告引用此版本。核對快照成員及權限、標記屬已選及排除不重疊，以原子操作核對預期版本。不改新聞原文；checkpoint 另存剩餘處理預算及絕對覆核期限，等待用戶時不持有 transaction。
+
 ### Shared news + versioned company profiles
 
 Extend the evidence model with shared macro/geopolitical document versions and company-profile versions, plus explicit snapshot membership. Keep shared news tagged by topic, region and sector. A profile belongs to its company and keeps reporting/effective/review dates. Every run manifest records the selected versions. The SQL examples below demonstrate the company-news subset; shared-context membership and retrieval are part of the proposed backend extension.
@@ -141,15 +265,15 @@ pgvector 在 PostgreSQL 內加入向量欄位及距離搜尋。先用過濾後�
 
 ### runs + reports + report_sources + feedback
 
-Persist the run owner, question, original deadline, counters, validated report and citation links. Save a report and its source links in one transaction. Unique run IDs make retries idempotent. Feedback is a separate record and never changes frozen evidence.
+Persist the run owner, question, active deadline and remaining budget, counters, validated report and citation links. Save a report and its source links in one transaction. Unique run IDs make retries idempotent. Feedback is a separate record and never changes frozen evidence.
 
-保存任務擁有者、問題、原時限、計數、已驗證報告及引用關聯。報告與來源關聯用同一 transaction 保存，唯一任務 ID 讓重試具冪等性；回饋另存，不改凍結證據。
+保存任務擁有者、問題、處理時限及剩餘預算、計數、已驗證報告及引用關聯。報告與來源關聯用同一 transaction 保存，唯一任務 ID 讓重試具冪等性；回饋另存，不改凍結證據。
 
 ### research_checkpoints · AsyncPostgresSaver
 
-Use langgraph-checkpoint-postgres and a server-owned thread_id mapped to the authenticated run. Run setup once as a migration, keep the async saver open for the application lifespan, and resume with the original counters and deadline. Checkpoints do not authorize a user or make external tool effects exactly-once.
+Use langgraph-checkpoint-postgres and a server-owned thread_id mapped to the authenticated run. Run setup once as a migration, keep the async saver open for the application lifespan, and resume with the saved counters and remaining active budget. Only explicit review wait pauses active time, with an absolute 15-minute review expiry. Checkpoints do not authorize a user or make external tool effects exactly-once.
 
-使用 langgraph-checkpoint-postgres，thread_id 由伺服器建立並連結已認證任務。setup 作一次性 migration；async saver 在 app 生命週期保持開啟，恢復保留原計數及時限。Checkpoint 不負責授權，也不能保證外部工具只執行一次。
+使用 langgraph-checkpoint-postgres，thread_id 由伺服器建立並連結已認證任務。setup 作一次性 migration；async saver 在 app 生命週期保持開啟，恢復保留計數及剩餘處理預算；只有明確覆核等待暫停計時，另有 15 分鐘絕對覆核期限。Checkpoint 不負責授權，也不能保證外部工具只執行一次。
 
 ### Connections, retries and backups / 連線、重試及備份
 
@@ -211,7 +335,10 @@ CREATE TABLE research.runs (
   question text NOT NULL,
   horizon text NOT NULL,
   snapshot_id uuid REFERENCES research.snapshots,
-  deadline timestamptz NOT NULL,
+  deadline timestamptz NOT NULL, -- Active segment deadline, clipped to saved remainder.
+  remaining_active_ms integer NOT NULL DEFAULT 60000 CHECK (remaining_active_ms BETWEEN 0 AND 60000),
+  review_mode text NOT NULL DEFAULT 'automatic' CHECK (review_mode IN ('automatic', 'review')),
+  review_expires_at timestamptz, -- First pause + 15 minutes; never extend on edits/refinement.
   search_attempts integer NOT NULL DEFAULT 0 CHECK (search_attempts BETWEEN 0 AND 2),
   UNIQUE (run_id, snapshot_id)
 );
@@ -298,7 +425,8 @@ app = FastAPI(lifespan=lifespan)
 # config = {"configurable": {"thread_id": str(server_owned_run_id)}}
 # result = await app.state.research_graph.ainvoke(initial_state, config)
 # Resume the SAME authorized run with ainvoke(None, config).
-# Preserve the original deadline/counters; deduplicate external writes by run_id.
+# Preserve counters and active-time remainder; only explicit review wait pauses time.
+# Review expiry is absolute. Deduplicate external writes by run_id.
 
 ```
 
@@ -352,9 +480,9 @@ Self-hosted Langfuse owns operational traces. LangSmith adds dataset experiments
 
 自架 Langfuse 保存運行記錄；LangSmith 提供資料集實驗、提示比較及評估回饋。同一組 spans 經遮蔽敏感資料的 OTel Collector 分送兩邊，關聯任務／trace ID、資料 hash 及模型／提示／重排版本。避免重複 instrumentation 或將兩邊 token 相加。
 
-Record actual input/output tokens (unknown stays null), tool errors/retries and end-to-end plus stage latency. Publish p50/p95 over at least 30 completed live runs with sample size, concurrency, warm/cold conditions and failed-run counts; a single demo has duration, not its own p95. Initial end-to-end p95 target: ≤60 s; separately report timeout rate.
+Record actual input/output tokens (unknown stays null), tool errors/retries and end-to-end plus stage latency. Publish p50/p95 over at least 30 completed live runs with sample size, concurrency, warm/cold conditions and failed-run counts; a single demo has duration, not its own p95. Initial processing p95 target: ≤60 s; report review-wait duration, wall-clock latency, timeout rate and automatic/review cohorts separately. Do not keep a live root span open during human wait; correlate resumed segments by run_id.
 
-記錄實際輸入／輸出 token（未知保留 null）、工具錯誤／重試、全程及各階段延遲。至少 30 次已完成真實任務才報 p50／p95，附樣本數、並行數、冷暖狀態及失敗數；單次 demo 只有耗時，沒有自己的 p95。初步全程 p95 目標 ≤60 秒，另報超時比例。
+記錄實際輸入／輸出 token（未知保留 null）、工具錯誤／重試、全程及各階段延遲。至少 30 次已完成真實任務才報 p50／p95，附樣本數、並行數、冷暖狀態及失敗數；單次 demo 只有耗時，沒有自己的 p95。初步處理 p95 目標 ≤60 秒；另報覆核等待、總耗時、超時比例，分開自動／覆核樣本。等待用戶時不保持 live root span，恢復片段以 run_id 關聯。
 
 Every live demo must save one verified shareable trace URL in its report and report card. Exporters flush before resolving the link; verify that a reviewer can open it. Redact keys, personal prompts and restricted article text before export or sharing. Private production traces remain private; share sanitized demonstration runs. If export fails, retain the report but mark the observable-demo gate incomplete.
 
@@ -1298,12 +1426,15 @@ flowchart TD
   n0["PostgreSQL → full-text / pgvector"]
   n1["Unavailable → END"]
   n2["Candidates"]
-  n3["Evidence gate"]
+  n3["Optional evidence review"]
   n4["RRF fusion + reranker"]
   n5["Sparse fallback"]
-  n6["Refine query once"]
-  n7["Insufficient → END"]
-  n8["Build context"]
+  n6["Validate selection revision"]
+  n7["Review expired → END"]
+  n8["Evidence gate"]
+  n9["Refine query once"]
+  n10["Insufficient → END"]
+  n11["Build context"]
   n0 -->|"The shared PostgreSQL service is unavailable; neither retrieval path can run."| n1
   n0 -->|"Company, permissions and both timestamps pass."| n2
   n2 -->|"Use the default full-text ranking while hybrid is blocked."| n3
@@ -1312,11 +1443,14 @@ flowchart TD
   n0 -->|"Vector retrieval fails but PostgreSQL full-text search remains available."| n5
   n4 -->|"Reranker fails while a working sparse path remains within the deadline."| n5
   n5 -->|"Use the working sparse result within the original budget."| n3
+  n3 -->|"Automatic mode uses system recommendations; review mode pauses after retrieval for highlight, exclude or reset."| n6
+  n3 -->|"The absolute 15-minute window from the first pause has expired."| n7
+  n6 -->|"Owner, run, thread, snapshot, revision, permitted IDs and expiry pass API and graph checks."| n8
   n5 -->|"Sparse also fails or the deadline expires."| n1
-  n3 -->|"First search lacks coverage and the original budget remains."| n6
-  n6 -->|"Search again with a narrower query; at most two searches total, including failed attempts."| n0
-  n3 -->|"The second search still lacks support, or no refinement budget remains."| n7
-  n3 -->|"Relevant, current passages cover the question."| n8
+  n8 -->|"First search lacks coverage and the original budget remains."| n9
+  n9 -->|"Search again with a narrower query; at most two searches total, including failed attempts."| n0
+  n8 -->|"The second search still lacks support, or no refinement budget remains."| n10
+  n8 -->|"Relevant, current passages cover the question."| n11
 ```
 
 **PostgreSQL → full-text / pgvector → Unavailable → END**
@@ -1343,7 +1477,7 @@ Handoff / 交接資料:
 
 每分支 20 候選：切段 ID＋原文＋初始排序
 
-**Candidates → Evidence gate**
+**Candidates → Optional evidence review**
 
 Use the default full-text ranking while hybrid is blocked.
 
@@ -1367,7 +1501,7 @@ Deduplicated top 20 → cross-encoder top 10
 
 去重前 20 → cross-encoder 前 10
 
-**RRF fusion + reranker → Evidence gate**
+**RRF fusion + reranker → Optional evidence review**
 
 Ranking succeeds using the admitted mode.
 
@@ -1403,7 +1537,7 @@ Original question and snapshot; no fabricated scores
 
 原問題及快照；不捏造分數
 
-**Sparse fallback → Evidence gate**
+**Sparse fallback → Optional evidence review**
 
 Use the working sparse result within the original budget.
 
@@ -1414,6 +1548,42 @@ Handoff / 交接資料:
 Passages + fallback_reason
 
 原文＋回退原因
+
+**Optional evidence review → Validate selection revision**
+
+Automatic mode uses system recommendations; review mode pauses after retrieval for highlight, exclude or reset.
+
+自動模式用系統建議；覆核模式在檢索後暫停，可標記、排除或重設。
+
+Handoff / 交接資料:
+
+Same snapshot; ID-only selection; saved remaining budget
+
+相同快照；只傳 ID 選取；保存剩餘預算
+
+**Optional evidence review → Review expired → END**
+
+The absolute 15-minute window from the first pause has expired.
+
+首次暫停起 15 分鐘絕對期限已過。
+
+Handoff / 交接資料:
+
+Preserved checkpoint; new request required
+
+保留 checkpoint；須新請求
+
+**Validate selection revision → Evidence gate**
+
+Owner, run, thread, snapshot, revision, permitted IDs and expiry pass API and graph checks.
+
+API 及 graph 核對擁有者、任務、thread、快照、版本、可用 ID 及期限。
+
+Handoff / 交接資料:
+
+Selected/highlighted/excluded IDs; limitations; no changed truth scores
+
+已選／標記／排除 ID；限制；不改真實分數
 
 **Sparse fallback → Unavailable → END**
 
@@ -1541,6 +1711,28 @@ Retrieval recall and answer context have different budgets; reranking must prove
 
 Proposed files / 建議檔案: `services/research/app/rerank.py`, `services/research/app/tools.py`
 
+### 4. REVIEW + RECHECK
+
+Optionally highlight or exclude evidence after ranking, then recheck support.
+
+排序後可標記或排除證據，再重查支持。
+
+Tools: LangGraph interrupt / Command · PostgreSQL selection revisions
+
+**How / 如何應用**
+
+Sparse default, admitted reranking and fallback share this step. Automatic mode keeps system recommendations. Review mode persists the selection separately from the immutable snapshot; verify owner, run, candidate revision and permitted IDs on resume. Highlights affect emphasis only. Exclusions recheck required facets, conflicting evidence and report limitations before context assembly.
+
+預設 sparse、已准入重排及回退共用此步。自動用系統建議；覆核選取獨立於不可變快照保存，恢復核對擁有者、任務、候選版本及可用 ID。標記只改重點；排除後在 context 前重查面向、矛盾證據及報告限制。
+
+**Why / 為何使用**
+
+Human control is useful only if missing support still blocks a forecast.
+
+讓人選擇重點，同時保留支持不足就不預測的限制。
+
+Proposed files / 建議檔案: `services/research/app/selection.py`, `services/research/app/graph.py`, `apps/web/app/evidence-review.tsx`
+
 ### Return branches / 回傳分支
 
 **success**
@@ -1618,35 +1810,63 @@ Next.js proxy → POST /research → run_id + result
 
 ```mermaid
 flowchart TD
-  n0["Validated request → scope → refresh → retrieve → rerank"]
-  n1["Evidence gate"]
-  n2["Refine → retrieve"]
-  n3["Insufficient → END"]
-  n4["Context → LLM → validation"]
-  n5["Save → answer"]
-  n6["Blocked → END"]
-  n7["Unavailable → END"]
-  n0 -->|"Code owns mandatory ordering and budgets."| n1
-  n1 -->|"First attempt only, and budget remains."| n2
-  n2 -->|"Recheck the second retrieval with the same filters."| n1
-  n1 -->|"Second attempt fails to cover the question."| n3
-  n1 -->|"All required facets have support; conflicts are retained."| n4
-  n4 -->|"Validation passes within the budget."| n5
-  n4 -->|"Citation or support validation fails."| n6
-  n4 -->|"Deadline, call limit or dependency failure."| n7
+  n0["Validated request → scope → refresh → snapshot → retrieve → rank"]
+  n1["Optional review + selection validation"]
+  n2["Evidence gate"]
+  n3["Review expired → END"]
+  n4["Refine → retrieve"]
+  n5["Insufficient → END"]
+  n6["Context → LLM → validation"]
+  n7["Save → answer"]
+  n8["Blocked → END"]
+  n9["Unavailable → END"]
+  n0 -->|"Code owns mandatory ordering and budgets. Sparse default also enters review."| n1
+  n1 -->|"Automatic selection or authenticated resume passes validation within the review window."| n2
+  n1 -->|"The review window is over; do not generate from this paused run."| n3
+  n2 -->|"First attempt only, and budget remains."| n4
+  n4 -->|"Recheck the second retrieval under the same snapshot; retain known choices and review new candidates within the original window."| n1
+  n2 -->|"Second attempt fails to cover the question."| n5
+  n2 -->|"All required facets have support; conflicts are retained."| n6
+  n6 -->|"Validation passes within the budget."| n7
+  n6 -->|"Citation or support validation fails."| n8
+  n6 -->|"Deadline, call limit or dependency failure."| n9
 ```
 
-**Validated request → scope → refresh → retrieve → rerank → Evidence gate**
+**Validated request → scope → refresh → snapshot → retrieve → rank → Optional review + selection validation**
 
-Code owns mandatory ordering and budgets.
+Code owns mandatory ordering and budgets. Sparse default also enters review.
 
-程式控制必需次序及預算。
+程式控制必需次序及預算；預設 sparse 亦經覆核。
 
 Handoff / 交接資料:
 
-Typed state, original prompt, snapshot, attempts, deadline, trace_id
+Ranked candidates, fixed snapshot, review mode and candidate revision
 
-型別狀態、原提示、快照、次數、時限及 trace_id
+已排序候選、固定快照、覆核模式及候選版本
+
+**Optional review + selection validation → Evidence gate**
+
+Automatic selection or authenticated resume passes validation within the review window.
+
+自動選取或已驗證恢復在覆核期內通過核對。
+
+Handoff / 交接資料:
+
+Selection revision, exclusions, highlights and remaining budgets
+
+選取版本、排除、標記及剩餘預算
+
+**Optional review + selection validation → Review expired → END**
+
+The review window is over; do not generate from this paused run.
+
+覆核期已過，不能用暫停任務生成。
+
+Handoff / 交接資料:
+
+Expired status and saved checkpoint
+
+過期狀態及已存 checkpoint
 
 **Evidence gate → Refine → retrieve**
 
@@ -1660,17 +1880,17 @@ Refined query; same original question and snapshot
 
 修正查詢；相同原問題及快照
 
-**Refine → retrieve → Evidence gate**
+**Refine → retrieve → Optional review + selection validation**
 
-Recheck the second retrieval with the same filters.
+Recheck the second retrieval under the same snapshot; retain known choices and review new candidates within the original window.
 
-以相同條件重新檢查第二輪檢索。
+同一快照重查第二輪；保留已知選擇，原期限內覆核新候選。
 
 Handoff / 交接資料:
 
-Updated evidence; attempts = 2
+Updated candidates; attempts = 2; no reset of exclusions or budgets
 
-更新證據；次數 = 2
+更新候選；次數 = 2；不重設排除或預算
 
 **Evidence gate → Insufficient → END**
 
@@ -1742,9 +1962,9 @@ Tools: LangGraph · one tool-capable LLM
 
 **How / 如何應用**
 
-Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/rerank/context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
+Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/ranking, optional evidence review, selection validation, evidence gate and context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
 
-新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／重排／組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
+新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／排序、可選覆核、驗證選取、證據檢查及組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
 
 **Why / 為何使用**
 
@@ -2468,11 +2688,11 @@ flowchart TD
   n0["run_id → authenticate"]
   n1["PostgreSQL checkpoint"]
   n2["404 / 409 → END"]
-  n3["Next unfinished node"]
+  n3["Next unfinished / interrupted node"]
   n4["Stopped → END"]
   n0 -->|"Resolve the same thread and original request."| n1
   n1 -->|"Cannot safely resume the saved state."| n2
-  n1 -->|"Deadline remains; replayed effects use idempotency keys."| n3
+  n1 -->|"Active budget remains; review resumes also require a valid selection revision and unexpired review window. Interrupted nodes restart at their beginning; use idempotency keys for effects."| n3
   n1 -->|"A later fresh prompt requires a new run."| n4
 ```
 
@@ -2500,11 +2720,11 @@ Keep saved state; explain recovery failure
 
 保留狀態並交代恢復失敗
 
-**PostgreSQL checkpoint → Next unfinished node**
+**PostgreSQL checkpoint → Next unfinished / interrupted node**
 
-Deadline remains; replayed effects use idempotency keys.
+Active budget remains; review resumes also require a valid selection revision and unexpired review window. Interrupted nodes restart at their beginning; use idempotency keys for effects.
 
-未超時；重播副作用使用冪等鍵。
+仍有處理預算；覆核恢復另須有效選取版本及未過期覆核期。中斷節點從頭開始，副作用須用冪等鍵。
 
 Handoff / 交接資料:
 

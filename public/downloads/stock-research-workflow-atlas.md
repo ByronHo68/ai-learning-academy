@@ -4,7 +4,7 @@ Open `/finance-project/workflows` for the interactive mind map and twelve connec
 
 開啟 `/finance-project/workflows` 查看互動心智圖及十二張連線圖。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
-Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and the original 60s deadline. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
+Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
 ## n8n retries news providers / n8n 重試新聞供應商
 
@@ -14,9 +14,9 @@ One logical company refresh per run. n8n owns up to 3 transient provider attempt
 
 ## Refine a weak search / 補查不足證據
 
-At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and deadline. If evidence is still weak, return insufficient evidence.
+At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and remaining active budget. If evidence is still weak, return insufficient evidence.
 
-最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及時限；仍不足就回傳證據不足。
+最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及剩餘處理預算；仍不足就回傳證據不足。
 
 ## Fall back after a component failure / 元件失敗時回退
 
@@ -26,9 +26,9 @@ Use working sparse evidence when the vector/reranker path fails. Stay inside the
 
 ## Resume an interrupted run / 恢復中斷任務
 
-Authenticate the owner, reload the checkpoint and continue at the next unfinished node. Reuse completed results and idempotency keys. Keep counters and the original deadline; expiry needs a new request.
+Authenticate the owner and resume the same PostgreSQL checkpoint. Completed retrieval stays completed; an interrupted review node restarts at its beginning. Only explicit review wait pauses the 60s active budget. Persist the remainder and all counters; edits and refinement never extend the first-pause 15-minute review expiry. Crash recovery and network waits still consume active time.
 
-驗證擁有者、載入 checkpoint，從下一個未完成節點繼續。重用已完成結果及冪等鍵；保留計數及原時限，過期後須新請求。
+驗證擁有者並恢復同一 PostgreSQL checkpoint。已完成檢索不重做；中斷覆核節點從頭重跑。只有刻意覆核等待暫停 60 秒處理預算；保存餘額及全部計數，編輯或補查不延長首次暫停起 15 分鐘期限。故障恢復及網絡等待仍計處理時間。
 
 ## Stop when a retry would be misleading / 不能靠重試解決就停止
 
@@ -48,59 +48,67 @@ flowchart TD
   n3["POSTGRESQL SEARCH"]
   n4["RERANK RELEVANCE"]
   n5["SPARSE FALLBACK"]
-  n6["EVIDENCE GATE"]
-  n7["REFINE ONCE"]
-  n8["BUILD CONTEXT"]
-  n9["LLM GENERATE"]
-  n10["VALIDATE"]
-  n11["SAVE + TRACE"]
-  n12["ANSWER"]
-  n13["INSUFFICIENT"]
-  n14["OUT OF SCOPE"]
-  n15["CLARIFY"]
-  n16["UNAVAILABLE"]
-  n17["VALIDATION FAILED"]
-  n18["DAILY n8n SCHEDULE"]
-  n19["MACRO + GEOPOLITICAL NEWS"]
-  n20["VERSIONED COMPANY PROFILES"]
-  n21["POSTGRESQL EVIDENCE POOL"]
-  n22["DAILY FETCH FAILURE"]
+  n6["OPTIONAL EVIDENCE REVIEW"]
+  n7["VALIDATE SELECTION"]
+  n8["REVIEW EXPIRED"]
+  n9["EVIDENCE GATE"]
+  n10["REFINE ONCE"]
+  n11["BUILD CONTEXT"]
+  n12["LLM GENERATE"]
+  n13["VALIDATE"]
+  n14["SAVE + TRACE"]
+  n15["ANSWER"]
+  n16["INSUFFICIENT"]
+  n17["OUT OF SCOPE"]
+  n18["CLARIFY"]
+  n19["UNAVAILABLE"]
+  n20["VALIDATION FAILED"]
+  n21["DAILY n8n SCHEDULE"]
+  n22["MACRO + GEOPOLITICAL NEWS"]
+  n23["VERSIONED COMPANY PROFILES"]
+  n24["POSTGRESQL EVIDENCE POOL"]
+  n25["DAILY FETCH FAILURE"]
   n0 -- "Supported" --> n1
-  n0 -- "Ambiguous" --> n15
-  n0 -- "Unrelated" --> n14
+  n0 -- "Ambiguous" --> n18
+  n0 -- "Unrelated" --> n17
   n1 -- "n8n receipt ready" --> n2
   n2 -- "Evidence versions pinned" --> n3
-  n2 -- "Required context missing" --> n13
-  n2 -- "Snapshot storage failed" --> n16
-  n1 -- "Only stale news" --> n13
-  n1 -- "Refresh failed" --> n16
+  n2 -- "Required context missing" --> n16
+  n2 -- "Snapshot storage failed" --> n19
+  n1 -- "Only stale news" --> n16
+  n1 -- "Refresh failed" --> n19
   n3 -- "Admitted hybrid" --> n4
   n3 -- "Full-text default" --> n6
-  n3 -- "PostgreSQL unavailable" --> n16
+  n3 -- "PostgreSQL unavailable" --> n19
   n3 -- "Vector path fails" --> n5
   n4 -- "Ranked passages" --> n6
   n4 -- "Reranker fails" --> n5
   n5 -- "Sparse works" --> n6
-  n5 -- "Sparse also fails" --> n16
-  n6 -. "Gap + budget left" .-> n7
-  n7 -. "Search 2 of 2" .-> n3
-  n6 -- "Still insufficient" --> n13
-  n6 -- "Enough support" --> n8
-  n8 -- "Trimming loses support" --> n13
-  n8 -- "Context ready" --> n9
-  n8 -- "Deadline reached" --> n16
-  n9 -- "Draft ready" --> n10
-  n9 -- "Model / schema error" --> n16
-  n10 -- "Invalid support" --> n17
-  n10 -- "All checks pass" --> n11
-  n11 -- "Persisted result" --> n12
-  n11 -- "Save failed" --> n16
-  n18 -- "Daily, configured timezone" --> n19
-  n19 -- "Commit completed batches" --> n21
-  n19 -- "n8n retries exhausted" --> n22
-  n22 -- "Prior batch + failure status" --> n21
-  n20 -- "Sourced profile versions" --> n21
-  n21 -- "Read eligible versions" --> n2
+  n5 -- "Sparse also fails" --> n19
+  n6 -- "Automatic / submitted review" --> n7
+  n6 -- "Review window expired" --> n8
+  n7 -- "Valid selection revision" --> n9
+  n7 -- "Expired before resume" --> n8
+  n7 -- "Selection storage failed" --> n19
+  n9 -. "Gap + budget left" .-> n10
+  n10 -. "Search 2 of 2" .-> n3
+  n9 -- "Still insufficient" --> n16
+  n9 -- "Enough support" --> n11
+  n11 -- "Trimming loses support" --> n16
+  n11 -- "Context ready" --> n12
+  n11 -- "Deadline reached" --> n19
+  n12 -- "Draft ready" --> n13
+  n12 -- "Model / schema error" --> n19
+  n13 -- "Invalid support" --> n20
+  n13 -- "All checks pass" --> n14
+  n14 -- "Persisted result" --> n15
+  n14 -- "Save failed" --> n19
+  n21 -- "Daily, configured timezone" --> n22
+  n22 -- "Commit completed batches" --> n24
+  n22 -- "n8n retries exhausted" --> n25
+  n25 -- "Prior batch + failure status" --> n24
+  n23 -- "Sourced profile versions" --> n24
+  n24 -- "Read eligible versions" --> n2
 ```
 
 - **scope → refresh** — Supported / 範圍符合
@@ -143,31 +151,51 @@ flowchart TD
   Score how well each passage addresses the question. Company news, macro, geopolitics and dated profile excerpts compete on relevance. Use question expansion from sourced company exposure where needed. Business-impact reasoning comes later in the LLM step; the relevance score does not estimate a stock return.
   評分每段原文與問題相關性；公司、宏觀、地緣及有日期背景按相關性排序。需要時按附來源公司曝險擴展查詢。業務影響推論由後面的 LLM 處理；相關分數不估計股票回報。
 
-- **retrieve → gate** — Full-text default / 預設全文搜尋
-  Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
-  檢查原文相關性、新鮮度、來源及當前問題覆蓋，保留反方證據；分數門檻用開發集校準，數量或相似度本身不足證明支持。
+- **retrieve → review** — Full-text default / 預設全文搜尋
+  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
+  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
 
 - **retrieve → unavailable** — PostgreSQL unavailable / PostgreSQL 中斷
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
 - **retrieve → fallback** — Vector path fails / 向量路徑失敗
-  Use working PostgreSQL full-text search within the original deadline. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
-  原時限內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
+  Use working PostgreSQL full-text search within the saved active budget. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
+  剩餘處理預算內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
-- **rerank → gate** — Ranked passages / 已排序原文
-  Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
-  檢查原文相關性、新鮮度、來源及當前問題覆蓋，保留反方證據；分數門檻用開發集校準，數量或相似度本身不足證明支持。
+- **rerank → review** — Ranked passages / 已排序原文
+  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
+  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
 
 - **rerank → fallback** — Reranker fails / 重排失敗
-  Use working PostgreSQL full-text search within the original deadline. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
-  原時限內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
+  Use working PostgreSQL full-text search within the saved active budget. A PostgreSQL outage affects both paths and returns unavailable. If sparse also fails, stop as unavailable; never present a tool outage as zero search hits.
+  剩餘處理預算內使用可用 PostgreSQL 全文；資料庫中斷會令兩路徑皆失效，回 unavailable；兩者皆失敗則回服務不可用，不能將工具中斷當零搜尋結果。
 
-- **fallback → gate** — Sparse works / Sparse 可用
-  Check passage relevance, freshness, attribution and coverage of the exact question. Keep opposing evidence. Calibrate any score threshold on development data; count and similarity alone cannot establish support.
-  檢查原文相關性、新鮮度、來源及當前問題覆蓋，保留反方證據；分數門檻用開發集校準，數量或相似度本身不足證明支持。
+- **fallback → review** — Sparse works / Sparse 可用
+  All ranking paths enter here. Automatic mode keeps system recommendations. Review mode pauses with interrupt() after completed retrieval. Show original excerpts, dates, source links, relevance and counter-evidence. Highlight, exclude from this report or reset locally, then submit once per search round. No source is deleted.
+  所有排序路徑都經此處。自動模式沿用系統建議；覆核模式在已完成檢索後用 interrupt() 暫停。展示原文、日期、來源、相關性及反方證據；可標記、排除此報告或本機重設，每輪搜尋提交一次，不刪來源。
 
 - **fallback → unavailable** — Sparse also fails / Sparse 亦失敗
+  Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
+  展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
+
+- **review → selection** — Automatic / submitted review / 自動／已提交覆核
+  The API authenticates the owner and atomically validates run, thread, snapshot, candidate revision, IDs, permissions and expiry before resume. Require highlighted IDs to be selected and excluded IDs to be disjoint. Reject invalid or stale submissions without advancing the graph. Highlights prioritize supported discussion, never truth or confidence. Keep excluded counter-evidence visible as a selection limitation.
+  API 在恢復前驗證擁有者，並以原子操作核對任務、thread、快照、候選版本、ID、權限及期限。標記須屬已選，排除不可與已選重疊；無效或舊版本不推進 graph；標記只優先討論有支持內容，不提升真實性或信心。被排除的反方證據仍顯示為選取限制。
+
+- **review → review_expired** — Review window expired / 覆核期已過
+  The proposed 15-minute review window starts at the first pause and is not extended by edits or refinement. Preserve the checkpoint for audit; require a new request and fresh evidence to continue.
+  建議 15 分鐘覆核期從首次暫停起計，編輯或補查不延長。保留 checkpoint 供核對；繼續須新請求及新證據。
+
+- **selection → gate** — Valid selection revision / 選取版本有效
+  Recheck relevance, freshness, attribution and coverage after exclusions. Highlighting cannot waive missing support. Preserve opposing evidence and disclose selection limitations. Excluded counter-evidence must limit the affected conclusion; do not imply consensus. If a required facet is lost, refine once within budget or return insufficient; recheck again after context trimming.
+  排除後重查相關性、新鮮度、來源及覆蓋；標記不能免除所需支持。保留反方證據及選取限制；缺少必要面向時預算內補查一次，否則回證據不足，context 裁剪後再次核對。
+
+- **selection → review_expired** — Expired before resume / 恢復前已過期
+  The proposed 15-minute review window starts at the first pause and is not extended by edits or refinement. Preserve the checkpoint for audit; require a new request and fresh evidence to continue.
+  建議 15 分鐘覆核期從首次暫停起計，編輯或補查不延長。保留 checkpoint 供核對；繼續須新請求及新證據。
+
+- **selection → unavailable** — Selection storage failed / 選取儲存失敗
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
@@ -401,12 +429,15 @@ flowchart TD
   n0["PostgreSQL → full-text / pgvector"]
   n1["Unavailable → END"]
   n2["Candidates"]
-  n3["Evidence gate"]
+  n3["Optional evidence review"]
   n4["RRF fusion + reranker"]
   n5["Sparse fallback"]
-  n6["Refine query once"]
-  n7["Insufficient → END"]
-  n8["Build context"]
+  n6["Validate selection revision"]
+  n7["Review expired → END"]
+  n8["Evidence gate"]
+  n9["Refine query once"]
+  n10["Insufficient → END"]
+  n11["Build context"]
   n0 -- "Database unavailable" --> n1
   n0 -- "Apply filters" --> n2
   n2 -- "Full-text default" --> n3
@@ -415,11 +446,14 @@ flowchart TD
   n0 -- "Vector path fails" --> n5
   n4 -- "Reranker fails" --> n5
   n5 -- "Sparse works" --> n3
+  n3 -- "Auto / user submits" --> n6
+  n3 -- "Window expired" --> n7
+  n6 -- "Recheck after exclusion" --> n8
   n5 -- "No working path" --> n1
-  n3 -. "Gap after search 1" .-> n6
-  n6 -. "Search 2 of 2" .-> n0
-  n3 -- "Still insufficient" --> n7
-  n3 -- "Enough support" --> n8
+  n8 -. "Gap after search 1" .-> n9
+  n9 -. "Search 2 of 2" .-> n0
+  n8 -- "Still insufficient" --> n10
+  n8 -- "Enough support" --> n11
 ```
 
 - **PostgreSQL → full-text / pgvector → Unavailable → END** — Database unavailable / 資料庫不可用
@@ -430,7 +464,7 @@ flowchart TD
   Company, permissions and both timestamps pass. Handoff: 20 candidates per branch: chunk IDs + passages + original ranks
   公司、權限及兩個時間戳符合。 交接資料：每分支 20 候選：切段 ID＋原文＋初始排序
 
-- **Candidates → Evidence gate** — Full-text default / 預設全文搜尋
+- **Candidates → Optional evidence review** — Full-text default / 預設全文搜尋
   Use the default full-text ranking while hybrid is blocked. Handoff: Ranked passages + sparse mode
   混合檢索未獲准入時採用預設全文排序。 交接資料：已排序原文＋sparse 模式
 
@@ -438,7 +472,7 @@ flowchart TD
   Use hybrid after it passes admission. Handoff: Deduplicated top 20 → cross-encoder top 10
   混合檢索通過准入後採用。 交接資料：去重前 20 → cross-encoder 前 10
 
-- **RRF fusion + reranker → Evidence gate** — Ranking succeeds / 排序成功
+- **RRF fusion + reranker → Optional evidence review** — Ranking succeeds / 排序成功
   Ranking succeeds using the admitted mode. Handoff: Ranked passages and actual mode
   使用已准入模式成功排序。 交接資料：已排序原文及實際模式
 
@@ -450,9 +484,21 @@ flowchart TD
   Reranker fails while a working sparse path remains within the deadline. Handoff: Original question and snapshot; no fabricated scores
   重排失敗，但時限內 sparse 仍可用。 交接資料：原問題及快照；不捏造分數
 
-- **Sparse fallback → Evidence gate** — Sparse works / Sparse 可用
+- **Sparse fallback → Optional evidence review** — Sparse works / Sparse 可用
   Use the working sparse result within the original budget. Handoff: Passages + fallback_reason
   原預算內使用可用 sparse 結果。 交接資料：原文＋回退原因
+
+- **Optional evidence review → Validate selection revision** — Auto / user submits / 自動／用戶提交
+  Automatic mode uses system recommendations; review mode pauses after retrieval for highlight, exclude or reset. Handoff: Same snapshot; ID-only selection; saved remaining budget
+  自動模式用系統建議；覆核模式在檢索後暫停，可標記、排除或重設。 交接資料：相同快照；只傳 ID 選取；保存剩餘預算
+
+- **Optional evidence review → Review expired → END** — Window expired / 期限已過
+  The absolute 15-minute window from the first pause has expired. Handoff: Preserved checkpoint; new request required
+  首次暫停起 15 分鐘絕對期限已過。 交接資料：保留 checkpoint；須新請求
+
+- **Validate selection revision → Evidence gate** — Recheck after exclusion / 排除後重查
+  Owner, run, thread, snapshot, revision, permitted IDs and expiry pass API and graph checks. Handoff: Selected/highlighted/excluded IDs; limitations; no changed truth scores
+  API 及 graph 核對擁有者、任務、thread、快照、版本、可用 ID 及期限。 交接資料：已選／標記／排除 ID；限制；不改真實分數
 
 - **Sparse fallback → Unavailable → END** — No working path / 沒有可用路徑
   Sparse also fails or the deadline expires. Handoff: Dependency error, not an empty evidence claim
@@ -480,35 +526,47 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  n0["Validated request → scope → refresh → retrieve → rerank"]
-  n1["Evidence gate"]
-  n2["Refine → retrieve"]
-  n3["Insufficient → END"]
-  n4["Context → LLM → validation"]
-  n5["Save → answer"]
-  n6["Blocked → END"]
-  n7["Unavailable → END"]
-  n0 -- "Bounded run" --> n1
-  n1 -. "Gap + budget" .-> n2
-  n2 -. "Search 2 of 2" .-> n1
-  n1 -- "Still insufficient" --> n3
-  n1 -- "Enough evidence" --> n4
-  n4 -- "Validation passed" --> n5
-  n4 -- "Invalid citation" --> n6
-  n4 -- "Timeout / error" --> n7
+  n0["Validated request → scope → refresh → snapshot → retrieve → rank"]
+  n1["Optional review + selection validation"]
+  n2["Evidence gate"]
+  n3["Review expired → END"]
+  n4["Refine → retrieve"]
+  n5["Insufficient → END"]
+  n6["Context → LLM → validation"]
+  n7["Save → answer"]
+  n8["Blocked → END"]
+  n9["Unavailable → END"]
+  n0 -- "Ranked evidence" --> n1
+  n1 -- "Validate then recheck" --> n2
+  n1 -- "Window expired" --> n3
+  n2 -. "Gap + budget" .-> n4
+  n4 -. "Search 2 of 2" .-> n1
+  n2 -- "Still insufficient" --> n5
+  n2 -- "Enough evidence" --> n6
+  n6 -- "Validation passed" --> n7
+  n6 -- "Invalid citation" --> n8
+  n6 -- "Timeout / error" --> n9
 ```
 
-- **Validated request → scope → refresh → retrieve → rerank → Evidence gate** — Bounded run / 有限次執行
-  Code owns mandatory ordering and budgets. Handoff: Typed state, original prompt, snapshot, attempts, deadline, trace_id
-  程式控制必需次序及預算。 交接資料：型別狀態、原提示、快照、次數、時限及 trace_id
+- **Validated request → scope → refresh → snapshot → retrieve → rank → Optional review + selection validation** — Ranked evidence / 已排序證據
+  Code owns mandatory ordering and budgets. Sparse default also enters review. Handoff: Ranked candidates, fixed snapshot, review mode and candidate revision
+  程式控制必需次序及預算；預設 sparse 亦經覆核。 交接資料：已排序候選、固定快照、覆核模式及候選版本
+
+- **Optional review + selection validation → Evidence gate** — Validate then recheck / 驗證後重查
+  Automatic selection or authenticated resume passes validation within the review window. Handoff: Selection revision, exclusions, highlights and remaining budgets
+  自動選取或已驗證恢復在覆核期內通過核對。 交接資料：選取版本、排除、標記及剩餘預算
+
+- **Optional review + selection validation → Review expired → END** — Window expired / 期限已過
+  The review window is over; do not generate from this paused run. Handoff: Expired status and saved checkpoint
+  覆核期已過，不能用暫停任務生成。 交接資料：過期狀態及已存 checkpoint
 
 - **Evidence gate → Refine → retrieve** — Gap + budget / 缺口＋有預算
   First attempt only, and budget remains. Handoff: Refined query; same original question and snapshot
   只限首次嘗試，而且仍有預算。 交接資料：修正查詢；相同原問題及快照
 
-- **Refine → retrieve → Evidence gate** — Search 2 of 2 / 第 2／2 次搜尋
-  Recheck the second retrieval with the same filters. Handoff: Updated evidence; attempts = 2
-  以相同條件重新檢查第二輪檢索。 交接資料：更新證據；次數 = 2
+- **Refine → retrieve → Optional review + selection validation** — Search 2 of 2 / 第 2／2 次搜尋
+  Recheck the second retrieval under the same snapshot; retain known choices and review new candidates within the original window. Handoff: Updated candidates; attempts = 2; no reset of exclusions or budgets
+  同一快照重查第二輪；保留已知選擇，原期限內覆核新候選。 交接資料：更新候選；次數 = 2；不重設排除或預算
 
 - **Evidence gate → Insufficient → END** — Still insufficient / 仍不足
   Second attempt fails to cover the question. Handoff: Supported facts + missing facets; no forecast
@@ -632,7 +690,7 @@ flowchart TD
   n0["run_id → authenticate"]
   n1["PostgreSQL checkpoint"]
   n2["404 / 409 → END"]
-  n3["Next unfinished node"]
+  n3["Next unfinished / interrupted node"]
   n4["Stopped → END"]
   n0 -- "Same owner / run" --> n1
   n1 -- "Unsafe state" --> n2
@@ -648,9 +706,9 @@ flowchart TD
   Cannot safely resume the saved state. Handoff: Keep saved state; explain recovery failure
   無法安全恢復儲存狀態。 交接資料：保留狀態並交代恢復失敗
 
-- **PostgreSQL checkpoint → Next unfinished node** — Resume, same budget / 原預算恢復
-  Deadline remains; replayed effects use idempotency keys. Handoff: Same refresh receipt and search count; no budget reset
-  未超時；重播副作用使用冪等鍵。 交接資料：相同刷新紀錄及搜尋次數；不重設預算
+- **PostgreSQL checkpoint → Next unfinished / interrupted node** — Resume, same budget / 原預算恢復
+  Active budget remains; review resumes also require a valid selection revision and unexpired review window. Interrupted nodes restart at their beginning; use idempotency keys for effects. Handoff: Same refresh receipt and search count; no budget reset
+  仍有處理預算；覆核恢復另須有效選取版本及未過期覆核期。中斷節點從頭開始，副作用須用冪等鍵。 交接資料：相同刷新紀錄及搜尋次數；不重設預算
 
 - **PostgreSQL checkpoint → Stopped → END** — Expired / 已過期
   A later fresh prompt requires a new run. Handoff: Supported partial findings and explicit expiry

@@ -5,56 +5,64 @@ flowchart TD
   n3["POSTGRESQL SEARCH"]
   n4["RERANK RELEVANCE"]
   n5["SPARSE FALLBACK"]
-  n6["EVIDENCE GATE"]
-  n7["REFINE ONCE"]
-  n8["BUILD CONTEXT"]
-  n9["LLM GENERATE"]
-  n10["VALIDATE"]
-  n11["SAVE + TRACE"]
-  n12["ANSWER"]
-  n13["INSUFFICIENT"]
-  n14["OUT OF SCOPE"]
-  n15["CLARIFY"]
-  n16["UNAVAILABLE"]
-  n17["VALIDATION FAILED"]
-  n18["DAILY n8n SCHEDULE"]
-  n19["MACRO + GEOPOLITICAL NEWS"]
-  n20["VERSIONED COMPANY PROFILES"]
-  n21["POSTGRESQL EVIDENCE POOL"]
-  n22["DAILY FETCH FAILURE"]
+  n6["OPTIONAL EVIDENCE REVIEW"]
+  n7["VALIDATE SELECTION"]
+  n8["REVIEW EXPIRED"]
+  n9["EVIDENCE GATE"]
+  n10["REFINE ONCE"]
+  n11["BUILD CONTEXT"]
+  n12["LLM GENERATE"]
+  n13["VALIDATE"]
+  n14["SAVE + TRACE"]
+  n15["ANSWER"]
+  n16["INSUFFICIENT"]
+  n17["OUT OF SCOPE"]
+  n18["CLARIFY"]
+  n19["UNAVAILABLE"]
+  n20["VALIDATION FAILED"]
+  n21["DAILY n8n SCHEDULE"]
+  n22["MACRO + GEOPOLITICAL NEWS"]
+  n23["VERSIONED COMPANY PROFILES"]
+  n24["POSTGRESQL EVIDENCE POOL"]
+  n25["DAILY FETCH FAILURE"]
   n0 -- "範圍符合" --> n1
-  n0 -- "不明確" --> n15
-  n0 -- "不相關" --> n14
+  n0 -- "不明確" --> n18
+  n0 -- "不相關" --> n17
   n1 -- "n8n 紀錄就緒" --> n2
   n2 -- "證據版本已固定" --> n3
-  n2 -- "缺少所需背景" --> n13
-  n2 -- "快照儲存失敗" --> n16
-  n1 -- "只有過期新聞" --> n13
-  n1 -- "刷新失敗" --> n16
+  n2 -- "缺少所需背景" --> n16
+  n2 -- "快照儲存失敗" --> n19
+  n1 -- "只有過期新聞" --> n16
+  n1 -- "刷新失敗" --> n19
   n3 -- "已准入混合" --> n4
   n3 -- "預設全文搜尋" --> n6
-  n3 -- "PostgreSQL 中斷" --> n16
+  n3 -- "PostgreSQL 中斷" --> n19
   n3 -- "向量路徑失敗" --> n5
   n4 -- "已排序原文" --> n6
   n4 -- "重排失敗" --> n5
   n5 -- "Sparse 可用" --> n6
-  n5 -- "Sparse 亦失敗" --> n16
-  n6 -. "有缺口＋餘額" .-> n7
-  n7 -. "第 2／2 次搜尋" .-> n3
-  n6 -- "仍不足" --> n13
-  n6 -- "支持足夠" --> n8
-  n8 -- "裁剪後支持不足" --> n13
-  n8 -- "上下文就緒" --> n9
-  n8 -- "到達時限" --> n16
-  n9 -- "草稿就緒" --> n10
-  n9 -- "模型／格式錯誤" --> n16
-  n10 -- "支持無效" --> n17
-  n10 -- "檢查通過" --> n11
-  n11 -- "已保存結果" --> n12
-  n11 -- "保存失敗" --> n16
-  n18 -- "每日，已設定時區" --> n19
-  n19 -- "提交完整批次" --> n21
-  n19 -- "n8n 重試已用完" --> n22
-  n22 -- "舊批次＋失敗狀態" --> n21
-  n20 -- "附來源背景版本" --> n21
-  n21 -- "讀取合資格版本" --> n2
+  n5 -- "Sparse 亦失敗" --> n19
+  n6 -- "自動／已提交覆核" --> n7
+  n6 -- "覆核期已過" --> n8
+  n7 -- "選取版本有效" --> n9
+  n7 -- "恢復前已過期" --> n8
+  n7 -- "選取儲存失敗" --> n19
+  n9 -. "有缺口＋餘額" .-> n10
+  n10 -. "第 2／2 次搜尋" .-> n3
+  n9 -- "仍不足" --> n16
+  n9 -- "支持足夠" --> n11
+  n11 -- "裁剪後支持不足" --> n16
+  n11 -- "上下文就緒" --> n12
+  n11 -- "到達時限" --> n19
+  n12 -- "草稿就緒" --> n13
+  n12 -- "模型／格式錯誤" --> n19
+  n13 -- "支持無效" --> n20
+  n13 -- "檢查通過" --> n14
+  n14 -- "已保存結果" --> n15
+  n14 -- "保存失敗" --> n19
+  n21 -- "每日，已設定時區" --> n22
+  n22 -- "提交完整批次" --> n24
+  n22 -- "n8n 重試已用完" --> n25
+  n25 -- "舊批次＋失敗狀態" --> n24
+  n23 -- "附來源背景版本" --> n24
+  n24 -- "讀取合資格版本" --> n2

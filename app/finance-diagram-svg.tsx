@@ -36,6 +36,6 @@ export function FinanceDiagramSvg({ diagram, lang, prefix, active, route = [], o
         <text x={node.x + 140} textAnchor="middle" fill="#082c38" fontSize="14" fontWeight="600" pointerEvents="none">{lines.map((line, i) => <tspan key={i} x={node.x + 140} y={node.y + 56 - (lines.length - 1) * 10 + i * 20 + 4}>{line}</tspan>)}</text>
       </g>;
     })}
-    <text x="36" y={layout.height - 22} fontSize="11" fill="#536b72">{lang === 'zh' ? '虛構教學設計 · 原截止及預算適用於所有重試 · 節點技術名稱保留英文' : 'Teaching design · retries retain the original deadline and budget · node names match the technical contracts'}</text>
+    <text x="36" y={layout.height - 22} fontSize="11" fill="#536b72">{lang === 'zh' ? '教學設計 · 重試保留剩餘處理預算及計數 · 覆核等待另設絕對期限' : 'Teaching design · retries preserve remaining active budget and counters · review wait has a separate absolute expiry'}</text>
   </svg>;
 }

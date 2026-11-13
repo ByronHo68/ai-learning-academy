@@ -25,13 +25,18 @@ export const financeOverallDiagram: FinanceDiagram = {
     edge('refresh', 'insufficient', 'Only stale news', '只有過期新聞', 'stop'),
     edge('refresh', 'unavailable', 'Refresh failed', '刷新失敗', 'stop'),
     edge('retrieve', 'rerank', 'Admitted hybrid', '已准入混合'),
-    edge('retrieve', 'gate', 'Full-text default', '預設全文搜尋'),
+    edge('retrieve', 'review', 'Full-text default', '預設全文搜尋'),
     edge('retrieve', 'unavailable', 'PostgreSQL unavailable', 'PostgreSQL 中斷', 'stop'),
     edge('retrieve', 'fallback', 'Vector path fails', '向量路徑失敗', 'fallback'),
-    edge('rerank', 'gate', 'Ranked passages', '已排序原文'),
+    edge('rerank', 'review', 'Ranked passages', '已排序原文'),
     edge('rerank', 'fallback', 'Reranker fails', '重排失敗', 'fallback'),
-    edge('fallback', 'gate', 'Sparse works', 'Sparse 可用', 'fallback'),
+    edge('fallback', 'review', 'Sparse works', 'Sparse 可用', 'fallback'),
     edge('fallback', 'unavailable', 'Sparse also fails', 'Sparse 亦失敗', 'stop'),
+    edge('review', 'selection', 'Automatic / submitted review', '自動／已提交覆核'),
+    edge('review', 'review_expired', 'Review window expired', '覆核期已過', 'stop'),
+    edge('selection', 'gate', 'Valid selection revision', '選取版本有效'),
+    edge('selection', 'review_expired', 'Expired before resume', '恢復前已過期', 'stop'),
+    edge('selection', 'unavailable', 'Selection storage failed', '選取儲存失敗', 'stop'),
     edge('gate', 'refine', 'Gap + budget left', '有缺口＋餘額', 'retry'),
     edge('refine', 'retrieve', 'Search 2 of 2', '第 2／2 次搜尋', 'retry'),
     edge('gate', 'insufficient', 'Still insufficient', '仍不足', 'stop'),
@@ -71,9 +76,9 @@ export const financeDiagrams = financeDiagramIds.map(id => id === 'overall' ? fi
 
 export const financeRetryRules = [
   { title: t('n8n retries news providers', 'n8n 重試新聞供應商'), body: t('One logical company refresh per run. n8n owns up to 3 transient provider attempts, with 1s then 2s backoff plus jitter. Clip each 10s attempt to the proposed 25s acquisition budget and the original run deadline. A host timeout triggers receipt reconciliation, not blind resubmission. Daily acquisition uses the same policy with its own job deadline.', '每次任務一次邏輯公司刷新。n8n 最多嘗試供應商 3 次，等待 1 秒、2 秒加 jitter；每次 10 秒受建議 25 秒抓取預算及原任務時限限制。Host 超時先核對紀錄，不盲目再發送；每日抓取同樣有限重試，但使用獨立工作時限。') },
-  { title: t('Refine a weak search', '補查不足證據'), body: t('At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and deadline. If evidence is still weak, return insufficient evidence.', '最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及時限；仍不足就回傳證據不足。') },
+  { title: t('Refine a weak search', '補查不足證據'), body: t('At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and remaining active budget. If evidence is still weak, return insufficient evidence.', '最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及剩餘處理預算；仍不足就回傳證據不足。') },
   { title: t('Fall back after a component failure', '元件失敗時回退'), body: t('Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.', '向量／重排路徑失敗時用仍可用的 sparse，維持原預算。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。') },
-  { title: t('Resume an interrupted run', '恢復中斷任務'), body: t('Authenticate the owner, reload the checkpoint and continue at the next unfinished node. Reuse completed results and idempotency keys. Keep counters and the original deadline; expiry needs a new request.', '驗證擁有者、載入 checkpoint，從下一個未完成節點繼續。重用已完成結果及冪等鍵；保留計數及原時限，過期後須新請求。') },
+  { title: t('Resume an interrupted run', '恢復中斷任務'), body: t('Authenticate the owner and resume the same PostgreSQL checkpoint. Completed retrieval stays completed; an interrupted review node restarts at its beginning. Only explicit review wait pauses the 60s active budget. Persist the remainder and all counters; edits and refinement never extend the first-pause 15-minute review expiry. Crash recovery and network waits still consume active time.', '驗證擁有者並恢復同一 PostgreSQL checkpoint。已完成檢索不重做；中斷覆核節點從頭重跑。只有刻意覆核等待暫停 60 秒處理預算；保存餘額及全部計數，編輯或補查不延長首次暫停起 15 分鐘期限。故障恢復及網絡等待仍計處理時間。') },
   { title: t('Stop when a retry would be misleading', '不能靠重試解決就停止'), body: t('Irrelevant prompts, failed authorization and invalid citations do not trigger automatic retries. There is one news refresh per new accepted prompt, and no automatic draft-repair loop in this design.', '不相關問題、授權失敗及無效引用不會自動重試。每個新接納問題只刷新新聞一次；此設計沒有自動修補草稿迴圈。') },
 ];
 

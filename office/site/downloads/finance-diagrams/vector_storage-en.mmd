@@ -1,0 +1,16 @@
+flowchart TD
+  n0["YFINANCE / ALPHA VANTAGE / PROFILE"]
+  n1["CHUNK + CONTENT HASH"]
+  n2["PYTHON: MULTILINGUAL E5 CANDIDATE"]
+  n3["POSTGRESQL TEXT + FTS + METADATA"]
+  n4["pgvector vector(384) + MODEL KEY"]
+  n5["SNAPSHOT + VECTOR READINESS"]
+  n6["PENDING / FAILURE → FULL-TEXT"]
+  n0 -- "Validate + deduplicate" --> n1
+  n1 -- "Commit source versions" --> n3
+  n3 -- "Committed chunks needing vectors" --> n2
+  n2 -- "Validate 384D + provenance" --> n4
+  n2 -- "Embedding unavailable" --> n6
+  n3 -- "Eligible text versions" --> n5
+  n4 -- "Compatible ready vectors" --> n5
+  n3 -- "Sparse remains available" --> n6

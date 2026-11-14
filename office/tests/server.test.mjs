@@ -32,6 +32,9 @@ test('office package serves every exported page and asset on Node without depend
   assert(exported.includes('finance-project/proposal.html'));
   assert(exported.includes('finance-project/demo.html'));
   assert(exported.includes('finance-project/n8n.html'));
+  assert(exported.includes('finance-project/vector-db.html'));
+  assert(exported.includes('downloads/stock-research-vector-demo.py'));
+  assert(exported.includes('downloads/finance-diagrams/vector_storage-en.svg'));
   assert(exported.includes('downloads/stock-research-project.md'));
   assert(exported.includes('downloads/financial-report-development-proposal.md'));
   for (const path of exported) {
@@ -41,7 +44,7 @@ test('office package serves every exported page and asset on Node without depend
     if (path.endsWith('.md')) assert.equal(response.headers.get('content-type'), 'text/markdown; charset=utf-8', path);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(join(site, path)), path);
   }
-  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/finance-project/proposal', '/finance-project/proposal/', '/finance-project/n8n', '/finance-project/n8n/', '/finance-project/checkpoints', '/finance-project/checkpoints/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
+  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/finance-project/proposal', '/finance-project/proposal/', '/finance-project/n8n', '/finance-project/n8n/', '/finance-project/checkpoints', '/finance-project/checkpoints/', '/finance-project/vector-db', '/finance-project/vector-db/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
     const response = await fetch(base + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type'), /text\/html/);

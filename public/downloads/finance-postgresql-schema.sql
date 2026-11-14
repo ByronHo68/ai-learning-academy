@@ -22,7 +22,7 @@ CREATE TABLE research.evidence_chunks (
   permitted boolean NOT NULL DEFAULT false,
   search_text tsvector GENERATED ALWAYS AS
     (to_tsvector('english'::regconfig, excerpt)) STORED,
-  embedding vector(384), -- illustrative dimension; pin model + dimension before ingestion
+  embedding vector(384), -- 384D multilingual-e5-small candidate; pin revision/config; evaluation required
   embedding_model text,
   PRIMARY KEY (snapshot_id, chunk_id),
   FOREIGN KEY (snapshot_id, company) REFERENCES research.snapshots (snapshot_id, company),

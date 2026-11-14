@@ -10,6 +10,7 @@ import './finance-demo.css';
 import './finance-mcp.css';
 import './finance-n8n.css';
 import './finance-checkpoints.css';
+import './finance-vector.css';
 import './finance-diagram.css';
 
 const siteOrigin = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://ai-learning-academy.byronho680.chatgpt.site';

@@ -1,0 +1,20 @@
+flowchart TD
+  n0["PYTHON API + OWNER / RUN"]
+  n1["LANGGRAPH RESEARCH GRAPH"]
+  n2["HOST refresh: n8n RECEIPT"]
+  n3["SNAPSHOT → SEARCH → RANK"]
+  n4["REVIEW interrupt()"]
+  n5["EVIDENCE GATE → LLM → REPORT"]
+  n6["AsyncPostgresSaver"]
+  n7["POSTGRESQL research_checkpoints"]
+  n0 -- "Authorized thread config" --> n1
+  n1 -- "Accepted request" --> n2
+  n2 -- "Committed receipt" --> n3
+  n3 -- "Ranked evidence" --> n4
+  n4 -- "Validated selection" --> n5
+  n1 -- "Initial state / step boundaries" --> n6
+  n2 -- "Receipt reference" --> n6
+  n3 -- "Snapshot + IDs + counters" --> n6
+  n4 -- "Pending interrupt + state" --> n6
+  n5 -- "Report reference + status" --> n6
+  n6 -- "Persist / load via async I/O" --> n7

@@ -54,6 +54,7 @@ export function FinanceReviewContent({ lang }: { lang: Lang }) {
     </div>
     <div className="fr-scope-grid fr-evidence-grid">{financeReviewGuide.map(item => <article key={item.title.en}><h3>{pick(item.title, lang)}</h3><p>{pick(item.body, lang)}</p></article>)}</div>
     <details className="proposal-workflow"><summary>{lang === 'zh' ? '選取紀錄及 LangGraph 暫停／恢復接線示例' : 'Selection record and LangGraph pause/resume sketch'}</summary><pre className="fr-tree"><code>{financeReviewExample}</code></pre><pre className="fr-tree"><code>{financeReviewSketch}</code></pre><p><a href="https://docs.langchain.com/oss/python/langgraph/interrupts" target="_blank" rel="noreferrer">LangGraph interrupts documentation</a> · <a href="https://arxiv.org/abs/2307.03172" target="_blank" rel="noreferrer">Lost in the Middle: evidence-position effects</a></p></details>
+    <p><a href="/finance-project/checkpoints">{lang === 'zh' ? '學習 checkpoint 及覆核暫停／恢復' : 'Learn checkpoints and review pause/resume'}</a></p>
     <p><a href="/finance-project/workflows#project-diagram">{lang === 'zh' ? '在整體動畫選「重排後標記重點」或「排除導致支持不足」' : 'Play “Highlight after reranking” or “Exclusion removes required support” in the overall workflow'}</a></p>
     <p><a href="/downloads/stock-research-evidence-review.md" download>{lang === 'zh' ? '下載雙語覆核設計指南' : 'Download the bilingual evidence-review guide'}</a> · <a href="/downloads/finance-diagrams/retrieval-en.svg" download>{lang === 'zh' ? '下載檢索及覆核 SVG' : 'Download retrieval and review SVG'}</a></p>
   </section>;

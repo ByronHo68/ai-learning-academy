@@ -8,7 +8,7 @@ flowchart TD
   n6["PENDING / FAILURE → FULL-TEXT"]
   n0 -- "Validate + deduplicate" --> n1
   n1 -- "Commit source versions" --> n3
-  n1 -- "New text / configuration" --> n2
+  n3 -- "Committed chunks needing vectors" --> n2
   n2 -- "Validate 384D + provenance" --> n4
   n2 -- "Embedding unavailable" --> n6
   n3 -- "Eligible text versions" --> n5

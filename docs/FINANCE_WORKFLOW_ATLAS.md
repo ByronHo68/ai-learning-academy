@@ -1033,7 +1033,7 @@ flowchart TD
   n6["PENDING / FAILURE → FULL-TEXT"]
   n0 -- "Validate + deduplicate" --> n1
   n1 -- "Commit source versions" --> n3
-  n1 -- "New text / configuration" --> n2
+  n3 -- "Committed chunks needing vectors" --> n2
   n2 -- "Validate 384D + provenance" --> n4
   n2 -- "Embedding unavailable" --> n6
   n3 -- "Eligible text versions" --> n5
@@ -1049,9 +1049,9 @@ flowchart TD
   Commit source versions
   提交來源版本
 
-- **chunks → model** — New text / configuration / 新文字／設定
-  New text / configuration
-  新文字／設定
+- **text → model** — Committed chunks needing vectors / 已提交且待建向量段落
+  Committed chunks needing vectors
+  已提交且待建向量段落
 
 - **model → vector** — Validate 384D + provenance / 核對 384 維＋來源
   Validate 384D + provenance

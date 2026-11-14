@@ -141,6 +141,7 @@ export default function FinanceN8nContent({ lang }: { lang: Lang }) {
     </section>
 
 
+    <p><Link href="/finance-project/checkpoints">{lang === 'zh' ? '為何 checkpoint 與 n8n 收據要分開？試重啟及恢復動畫 →' : 'Why keep checkpoints separate from n8n receipts? Try restart and recovery →'}</Link></p>
     <section className="finance-section" id="n8n-start">
       <p className="eyebrow">03 · OPEN N8N ITSELF</p>
       <h2>{lang === 'zh' ? '第一次點打開 n8n' : 'How to open n8n the first time'}</h2>

@@ -5,7 +5,7 @@ import { financeGraphScenarios, financeScenarioPath } from '../lib/finance-graph
 import { financeFunctionRoutes } from '../lib/finance-workflows';
 
 test('all eleven function graphs use the complete documented routes and reach an exit', () => {
-  assert.equal(financeDiagrams.length, 14);
+  assert.equal(financeDiagrams.length, 16);
   for (const [id, routes] of Object.entries(financeFunctionRoutes)) {
     const diagram = financeDiagrams.find(item => item.id === id);
     assert.ok(diagram, id);

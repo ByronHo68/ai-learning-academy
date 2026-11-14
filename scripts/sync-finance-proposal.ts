@@ -1,3 +1,5 @@
+import { checkpointApplications, checkpointConcepts, checkpointDemoScenarios, checkpointReferences } from '../lib/finance-checkpoints';
+import { checkpointExampleCommands, checkpointPythonExample } from '../lib/finance-checkpoint-code';
 import { alphaVantageDailyGuide, alphaVantageRequestExample, alphaVantageReference } from '../lib/finance-alpha-vantage';
 import { financeEmbeddingGuide } from '../lib/finance-embeddings';
 import { n8nStart, n8nRoles, n8nLimits, n8nScenarios, n8nIntegrationGuide, n8nReceiptExample, n8nDatabaseEnvironment, n8nReferences } from '../lib/finance-n8n';
@@ -62,6 +64,18 @@ const evidenceReview = [
   '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
   '[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)',
 ].join('\n\n') + '\n';
+const checkpointGuide = [
+  '# LangGraph checkpoints and AsyncPostgresSaver / LangGraph checkpoints 及 AsyncPostgresSaver',
+  'Open `/finance-project/checkpoints` for the bilingual mind map, stateful restart/recovery demo and two workflow diagrams. The browser demo makes zero external calls. Python syntax is checked; live PostgreSQL execution for this tutorial is NOT RUN.',
+  '打開 `/finance-project/checkpoints` 看雙語心智圖、可操作重啟／恢復示範及兩份流程圖。瀏覽器沒有外部呼叫；Python 已檢查語法，真實 PostgreSQL 教學執行為 NOT RUN。',
+  ...checkpointConcepts.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  ...checkpointApplications.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Try the scenarios / 試情境', ...checkpointDemoScenarios.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.instruction)}`),
+  '## Diagrams / 圖解\n\n[Architecture SVG](finance-diagrams/checkpoint_architecture-en.svg) · [Recovery SVG](finance-diagrams/checkpoint_recovery-en.svg)',
+  '## Standalone Python tutorial / 獨立 Python 教學\n\n```sh\n' + checkpointExampleCommands + '\n```',
+  '```python\n' + checkpointPythonExample + '\n```',
+  '## References / 參考', ...checkpointReferences.map(item => `- [${item.title}](${item.url})`),
+].join('\n\n') + '\n';
 const alphaVantageGuide = [
   '# Alpha Vantage daily-news design / Alpha Vantage 每日新聞設計',
   'Proposed n8n configuration. Live Alpha Vantage execution and coverage evaluation are NOT RUN.',
@@ -94,6 +108,7 @@ const n8nGuide = [
 const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
+  'Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSaver tutorial, restart/recovery simulation and downloadable Python example.',
   'See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.',
   financeDatabase.flow.join(' → '),
   '### YFinance MCP integration / YFinance MCP 整合',
@@ -170,6 +185,9 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_CHECKPOINTS_GUIDE.md', checkpointGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-checkpoints-guide.md', checkpointGuide],
+  ['public/downloads/stock-research-checkpoint-demo.py', checkpointPythonExample],
   ['docs/FINANCE_ALPHA_VANTAGE_GUIDE.md', alphaVantageGuide],
   ['public/downloads/stock-research-alpha-vantage-guide.md', alphaVantageGuide],
   ['docs/FINANCE_EMBEDDING_GUIDE.md', embeddingGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
@@ -193,8 +211,8 @@ const outputs: Array<[string, string]> = [
 ];
 const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
-  'Open `/finance-project/workflows` for the interactive mind map and fourteen connected diagrams, including Alpha Vantage daily news and document/query embeddings. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
-  '開啟 `/finance-project/workflows` 查看互動心智圖及十四張連線圖，包含 Alpha Vantage 每日新聞及文件／問題 embedding。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
   `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),
   ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),

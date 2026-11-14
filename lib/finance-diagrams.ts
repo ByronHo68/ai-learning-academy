@@ -3,6 +3,7 @@ import { financeGraphNodes } from './finance-graph';
 import { financePreparationNodes } from './finance-evidence';
 import { financeN8nDailyDiagram } from './finance-n8n';
 import { financeEmbeddingDiagram } from './finance-embeddings';
+import { checkpointArchitectureDiagram, checkpointRecoveryDiagram } from './finance-checkpoints';
 import { financeFunctions, financeEngineeringWorkflows } from './finance-project';
 import { financeFunctionRoutes, type FinanceFunctionId, type FinanceRouteKind } from './finance-workflows';
 
@@ -73,8 +74,12 @@ export function financeFunctionDiagram(id: FinanceFunctionId): FinanceDiagram {
   };
 }
 
-export const financeDiagramIds: Array<'overall' | 'n8n_daily' | 'embeddings' | FinanceFunctionId> = ['overall', ...financeFunctions.map(item => item.id), ...financeEngineeringWorkflows.map(item => item.id), 'n8n_daily', 'embeddings'];
-export const financeDiagrams = financeDiagramIds.map(id => id === 'overall' ? financeOverallDiagram : id === 'n8n_daily' ? financeN8nDailyDiagram : id === 'embeddings' ? financeEmbeddingDiagram : financeFunctionDiagram(id));
+export const financeDiagrams: FinanceDiagram[] = [
+  financeOverallDiagram,
+  ...[...financeFunctions, ...financeEngineeringWorkflows].map(guide => financeFunctionDiagram(guide.id)),
+  financeN8nDailyDiagram, financeEmbeddingDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
+];
+export const financeDiagramIds = financeDiagrams.map(diagram => diagram.id);
 
 export const financeRetryRules = [
   { title: t('n8n retries news providers', 'n8n 重試新聞供應商'), body: t('One logical company refresh per run. n8n owns up to 3 transient provider attempts, with 1s then 2s backoff plus jitter. Clip each 10s attempt to the proposed 25s acquisition budget and the original run deadline. A host timeout triggers receipt reconciliation, not blind resubmission. Daily acquisition uses the same policy with its own job deadline.', '每次任務一次邏輯公司刷新。n8n 最多嘗試供應商 3 次，等待 1 秒、2 秒加 jitter；每次 10 秒受建議 25 秒抓取預算及原任務時限限制。Host 超時先核對紀錄，不盲目再發送；每日抓取同樣有限重試，但使用獨立工作時限。') },

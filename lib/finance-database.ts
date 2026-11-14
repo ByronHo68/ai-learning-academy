@@ -143,7 +143,9 @@ app = FastAPI(lifespan=lifespan)
 # After authenticating the owner and validating the request:
 # config = {"configurable": {"thread_id": str(server_owned_run_id)}}
 # result = await app.state.research_graph.ainvoke(initial_state, config)
-# Resume the SAME authorized run with ainvoke(None, config).
+# Failure continuation: await graph.ainvoke(None, config).
+# Pending evidence-review interrupt: await graph.ainvoke(Command(resume=validated_selection), config).
+# Import Command from langgraph.types. Do not use None as a review decision.
 # Preserve counters and active-time remainder; only explicit review wait pauses time.
 # Review expiry is absolute. Deduplicate external writes by run_id.
 `;

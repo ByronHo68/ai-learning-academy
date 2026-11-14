@@ -8,7 +8,7 @@ flowchart TD
   n6["PENDING / FAILURE → FULL-TEXT"]
   n0 -- "驗證＋去重" --> n1
   n1 -- "提交來源版本" --> n3
-  n1 -- "新文字／設定" --> n2
+  n3 -- "已提交且待建向量段落" --> n2
   n2 -- "核對 384 維＋來源" --> n4
   n2 -- "Embedding 不可用" --> n6
   n3 -- "合資格文字版本" --> n5

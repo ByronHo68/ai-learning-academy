@@ -1,3 +1,5 @@
+import { vectorConcepts, vectorModelChoices, vectorProjectApplications, vectorLessonReferences, vectorAnimationStages } from '../lib/finance-vector-lesson';
+import { vectorExampleCommands, vectorPythonExample, vectorTutorialSchema, vectorTutorialQuery } from '../lib/finance-vector-code';
 import { checkpointApplications, checkpointConcepts, checkpointDemoScenarios, checkpointReferences } from '../lib/finance-checkpoints';
 import { checkpointExampleCommands, checkpointPythonExample } from '../lib/finance-checkpoint-code';
 import { alphaVantageDailyGuide, alphaVantageRequestExample, alphaVantageReference } from '../lib/finance-alpha-vantage';
@@ -64,6 +66,22 @@ const evidenceReview = [
   '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
   '[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)',
 ].join('\n\n') + '\n';
+const vectorGuide = [
+  '# Vector databases and embeddings / 向量資料庫及 Embedding',
+  'Open `/finance-project/vector-db` for the bilingual mind map, animated search and model examples. Offline browser calls: zero. Its 2D coordinates are handmade, not E5 outputs or a measured projection. Real-model inference and PostgreSQL execution are NOT RUN; Python syntax is checked. Sparse remains the default until measured hybrid admission.',
+  '開啟 `/finance-project/vector-db` 看雙語心智圖、搜尋動畫及模型例子。瀏覽器外部呼叫為零，二維座標是人手指定，不是 E5 輸出或實測投影。真實模型及 PostgreSQL 執行為 NOT RUN；Python 已檢查語法。混合檢索量度准入前維持全文預設。',
+  ...vectorConcepts.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Model candidates / 模型候選',
+  ...vectorModelChoices.map(item => `### [${item.id}](${item.url})\n\n${item.dimensions} dimensions · ${item.tokens} tokens\n\n${both(item.label)}\n\n${both(item.why)}`),
+  ...vectorProjectApplications.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Animation / 動畫\n\nTry costs, rates, missing evidence, incompatible model and out-of-scope prompts. Adjust top-k and the toy-only threshold. Disabling metadata filters is an unsafe comparison and blocks context; production must enforce them. The demo computes cosine, does not execute a real reranker, and uses pre-labelled fictional support facets.',
+  ...vectorAnimationStages.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Diagrams / 圖解\n\n[Embedding workflow SVG](finance-diagrams/embeddings-en.svg) · [PostgreSQL storage SVG](finance-diagrams/vector_storage-en.svg)',
+  '## Standalone tutorial / 獨立教學\n\n```sh\n' + vectorExampleCommands + '\n```',
+  '```python\n' + vectorPythonExample + '\n```',
+  '```sql\n' + vectorTutorialSchema + '\n' + vectorTutorialQuery + '\n```',
+  '## References / 參考', ...vectorLessonReferences.map(item => `- [${item.title}](${item.url})`),
+].join('\n\n') + '\n';
 const checkpointGuide = [
   '# LangGraph checkpoints and AsyncPostgresSaver / LangGraph checkpoints 及 AsyncPostgresSaver',
   'Open `/finance-project/checkpoints` for the bilingual mind map, stateful restart/recovery demo and two workflow diagrams. The browser demo makes zero external calls. Python syntax is checked; live PostgreSQL execution for this tutorial is NOT RUN.',
@@ -108,6 +126,7 @@ const n8nGuide = [
 const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
+  'Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。',
   'Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSaver tutorial, restart/recovery simulation and downloadable Python example.',
   'See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.',
   financeDatabase.flow.join(' → '),
@@ -185,6 +204,11 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_VECTOR_GUIDE.md', vectorGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-vector-guide.md', vectorGuide],
+  ['public/downloads/stock-research-vector-demo.py', vectorPythonExample],
+  ['public/downloads/vector-tutorial-schema.sql', vectorTutorialSchema],
+  ['public/downloads/vector-tutorial-query.sql', vectorTutorialQuery],
   ['docs/FINANCE_CHECKPOINTS_GUIDE.md', checkpointGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-checkpoints-guide.md', checkpointGuide],
   ['public/downloads/stock-research-checkpoint-demo.py', checkpointPythonExample],

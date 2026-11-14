@@ -11,7 +11,7 @@ import { FinanceEvidenceContent } from './finance-evidence-content';
 import { FinanceReviewContent } from './finance-review-content';
 
 const groups = [
-  { en: 'Get the right evidence', zh: '取得合適證據', ids: ['company', 'sources', 'n8n_daily', 'embeddings', 'retrieval'] },
+  { en: 'Get the right evidence', zh: '取得合適證據', ids: ['company', 'sources', 'n8n_daily', 'embeddings', 'vector_storage', 'retrieval'] },
   { en: 'Produce a checked answer', zh: '產生已核對答案', ids: ['research', 'report', 'validation', 'export'] },
   { en: 'Recover, measure and deliver', zh: '恢復、量度及交付', ids: ['recovery', 'checkpoint_architecture', 'checkpoint_recovery', 'evaluation', 'observability', 'deployment'] },
 ];
@@ -19,7 +19,7 @@ const groups = [
 export default function FinanceWorkflowsContent({ lang }: { lang: Lang }) {
   const [selected, setSelected] = useState('overall');
   const diagram = financeDiagrams.find(item => item.id === selected) ?? financeOverallDiagram;
-  const guideHref = diagram.id === 'overall' ? null : diagram.id.startsWith('checkpoint_') ? '/finance-project/checkpoints' : diagram.id === 'n8n_daily' ? '/finance-project/n8n' : diagram.id === 'embeddings' ? '/finance-project#finance-embeddings' : `/finance-project#finance-function-${diagram.id}`;
+  const guideHref = diagram.id === 'overall' ? null : diagram.id.startsWith('checkpoint_') ? '/finance-project/checkpoints' : diagram.id === 'n8n_daily' ? '/finance-project/n8n' : (diagram.id === 'embeddings' || diagram.id === 'vector_storage') ? '/finance-project/vector-db' : `/finance-project#finance-function-${diagram.id}`;
   return <main className="utility-page finance-page fd-page">
     <Link href="/finance-project" className="fr-inline-link"><ArrowLeft size={16}/>{lang === 'zh' ? '返回股票研究項目' : 'Back to the stock research project'}</Link>
     <header className="utility-hero"><p className="eyebrow">WORKFLOW ATLAS · 1 PROJECT + FUNCTIONS + TECHNIQUE MAPS</p><h1>{lang === 'zh' ? '一眼睇全局，沿箭嘴睇細節' : 'See the project. Follow every decision.'}</h1><p>{lang === 'zh' ? '先用心智圖選功能，再看它的工作流程。菱形是條件判斷；回圈標明何時補查、如何回退，以及幾時必須停止。' : 'Use the mind map to choose a function, then follow its workflow. Diamonds mark decisions. Loops show when to refine, how to fall back and when to stop.'}</p><div className="fr-hero-actions"><a className="primary-action" href="#project-diagram" onClick={() => setSelected('overall')}><GitBranch size={18}/>{lang === 'zh' ? '睇整體工作流程' : 'Explore the overall workflow'}</a><a className="secondary-action" href="#finance-evidence-review">{lang === 'zh' ? '試用證據覆核' : 'Try evidence review'}</a><a className="secondary-action" href="/downloads/stock-research-workflow-atlas.md" download><Download size={16}/>{lang === 'zh' ? '下載全部圖解' : 'Download the atlas'}</a></div></header>

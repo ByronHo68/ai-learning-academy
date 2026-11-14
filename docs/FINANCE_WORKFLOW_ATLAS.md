@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 16 connected diagrams, including Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 17 connected diagrams, including Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及16 張連線圖，包含每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及17 張連線圖，包含每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -1017,6 +1017,61 @@ flowchart TD
 - **review → gate** — Validated selection revision / 已驗證選取版本
   Validated selection revision
   已驗證選取版本
+
+## What PostgreSQL stores for vector retrieval / PostgreSQL 為向量檢索存甚麼
+
+[English SVG](../public/downloads/finance-diagrams/vector_storage-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/vector_storage-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["YFINANCE / ALPHA VANTAGE / PROFILE"]
+  n1["CHUNK + CONTENT HASH"]
+  n2["PYTHON: MULTILINGUAL E5 CANDIDATE"]
+  n3["POSTGRESQL TEXT + FTS + METADATA"]
+  n4["pgvector vector(384) + MODEL KEY"]
+  n5["SNAPSHOT + VECTOR READINESS"]
+  n6["PENDING / FAILURE → FULL-TEXT"]
+  n0 -- "Validate + deduplicate" --> n1
+  n1 -- "Commit source versions" --> n3
+  n1 -- "New text / configuration" --> n2
+  n2 -- "Validate 384D + provenance" --> n4
+  n2 -- "Embedding unavailable" --> n6
+  n3 -- "Eligible text versions" --> n5
+  n4 -- "Compatible ready vectors" --> n5
+  n3 -- "Sparse remains available" --> n6
+```
+
+- **sources → chunks** — Validate + deduplicate / 驗證＋去重
+  Validate + deduplicate
+  驗證＋去重
+
+- **chunks → text** — Commit source versions / 提交來源版本
+  Commit source versions
+  提交來源版本
+
+- **chunks → model** — New text / configuration / 新文字／設定
+  New text / configuration
+  新文字／設定
+
+- **model → vector** — Validate 384D + provenance / 核對 384 維＋來源
+  Validate 384D + provenance
+  核對 384 維＋來源
+
+- **model → fallback** — Embedding unavailable / Embedding 不可用
+  Embedding unavailable
+  Embedding 不可用
+
+- **text → ready** — Eligible text versions / 合資格文字版本
+  Eligible text versions
+  合資格文字版本
+
+- **vector → ready** — Compatible ready vectors / 相容就緒向量
+  Compatible ready vectors
+  相容就緒向量
+
+- **text → fallback** — Sparse remains available / Sparse 仍可用
+  Sparse remains available
+  Sparse 仍可用
 
 ## Where AsyncPostgresSaver fits in your project / AsyncPostgresSaver 在項目的位置
 

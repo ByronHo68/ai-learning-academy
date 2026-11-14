@@ -1,0 +1,16 @@
+flowchart TD
+  n0["YFINANCE / ALPHA VANTAGE / PROFILE"]
+  n1["CHUNK + CONTENT HASH"]
+  n2["PYTHON: MULTILINGUAL E5 CANDIDATE"]
+  n3["POSTGRESQL TEXT + FTS + METADATA"]
+  n4["pgvector vector(384) + MODEL KEY"]
+  n5["SNAPSHOT + VECTOR READINESS"]
+  n6["PENDING / FAILURE → FULL-TEXT"]
+  n0 -- "驗證＋去重" --> n1
+  n1 -- "提交來源版本" --> n3
+  n1 -- "新文字／設定" --> n2
+  n2 -- "核對 384 維＋來源" --> n4
+  n2 -- "Embedding 不可用" --> n6
+  n3 -- "合資格文字版本" --> n5
+  n4 -- "相容就緒向量" --> n5
+  n3 -- "Sparse 仍可用" --> n6

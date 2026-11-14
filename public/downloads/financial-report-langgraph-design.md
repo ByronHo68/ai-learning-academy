@@ -19,6 +19,8 @@ One PostgreSQL service holds evidence, full-text indexes, optional pgvector embe
 
 一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
+
 Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSaver tutorial, restart/recovery simulation and downloadable Python example.
 
 See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.
@@ -364,7 +366,7 @@ CREATE TABLE research.evidence_chunks (
   permitted boolean NOT NULL DEFAULT false,
   search_text tsvector GENERATED ALWAYS AS
     (to_tsvector('english'::regconfig, excerpt)) STORED,
-  embedding vector(384), -- illustrative dimension; pin model + dimension before ingestion
+  embedding vector(384), -- 384D multilingual-e5-small candidate; pin revision/config; evaluation required
   embedding_model text,
   PRIMARY KEY (snapshot_id, chunk_id),
   FOREIGN KEY (snapshot_id, company) REFERENCES research.snapshots (snapshot_id, company),

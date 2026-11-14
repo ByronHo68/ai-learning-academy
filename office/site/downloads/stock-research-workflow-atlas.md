@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and fourteen connected diagrams, including Alpha Vantage daily news and document/query embeddings. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 16 connected diagrams, including Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及十四張連線圖，包含 Alpha Vantage 每日新聞及文件／問題 embedding。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及16 張連線圖，包含每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -1017,3 +1017,146 @@ flowchart TD
 - **review → gate** — Validated selection revision / 已驗證選取版本
   Validated selection revision
   已驗證選取版本
+
+## Where AsyncPostgresSaver fits in your project / AsyncPostgresSaver 在項目的位置
+
+[English SVG](finance-diagrams/checkpoint_architecture-en.svg) · [繁體中文 SVG](finance-diagrams/checkpoint_architecture-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["PYTHON API + OWNER / RUN"]
+  n1["LANGGRAPH RESEARCH GRAPH"]
+  n2["HOST refresh: n8n RECEIPT"]
+  n3["SNAPSHOT → SEARCH → RANK"]
+  n4["REVIEW interrupt()"]
+  n5["EVIDENCE GATE → LLM → REPORT"]
+  n6["AsyncPostgresSaver"]
+  n7["POSTGRESQL research_checkpoints"]
+  n0 -- "Authorized thread config" --> n1
+  n1 -- "Accepted request" --> n2
+  n2 -- "Committed receipt" --> n3
+  n3 -- "Ranked evidence" --> n4
+  n4 -- "Validated selection" --> n5
+  n1 -- "Initial state / step boundaries" --> n6
+  n2 -- "Receipt reference" --> n6
+  n3 -- "Snapshot + IDs + counters" --> n6
+  n4 -- "Pending interrupt + state" --> n6
+  n5 -- "Report reference + status" --> n6
+  n6 -- "Persist / load via async I/O" --> n7
+```
+
+- **api → graph** — Authorized thread config / 已授權 thread 設定
+  Authorized thread config
+  已授權 thread 設定
+
+- **graph → n8n** — Accepted request / 已接納請求
+  Accepted request
+  已接納請求
+
+- **n8n → rank** — Committed receipt / 已提交收據
+  Committed receipt
+  已提交收據
+
+- **rank → review** — Ranked evidence / 已排序證據
+  Ranked evidence
+  已排序證據
+
+- **review → report** — Validated selection / 已驗證選取
+  Validated selection
+  已驗證選取
+
+- **graph → saver** — Initial state / step boundaries / 初始狀態／step 邊界
+  Initial state / step boundaries
+  初始狀態／step 邊界
+
+- **n8n → saver** — Receipt reference / 收據引用
+  Receipt reference
+  收據引用
+
+- **rank → saver** — Snapshot + IDs + counters / 快照＋ID＋次數
+  Snapshot + IDs + counters
+  快照＋ID＋次數
+
+- **review → saver** — Pending interrupt + state / 等待中斷＋狀態
+  Pending interrupt + state
+  等待中斷＋狀態
+
+- **report → saver** — Report reference + status / 報告引用＋狀態
+  Report reference + status
+  報告引用＋狀態
+
+- **saver → checkpoint_db** — Persist / load via async I/O / Async I/O 保存／載入
+  Persist / load via async I/O
+  Async I/O 保存／載入
+
+## Recover a failed run or resume a review / 恢復失敗任務或繼續覆核
+
+[English SVG](finance-diagrams/checkpoint_recovery-en.svg) · [繁體中文 SVG](finance-diagrams/checkpoint_recovery-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["API: AUTHENTICATE OWNER"]
+  n1["LOAD LATEST AUTHORIZED CHECKPOINT"]
+  n2["STATUS + BUDGET + EXPIRY"]
+  n3["PENDING REVIEW: Command(resume=...)"]
+  n4["FAILED NODE: ainvoke(None, config)"]
+  n5["ALREADY COMPLETE → RETURN REPORT"]
+  n6["REUSE COMPLETED WORK"]
+  n7["NEW CHECKPOINT / NEXT STEP"]
+  n8["REJECT / EXPIRED / MISSING → END"]
+  n0 -- "Owner / thread verified" --> n1
+  n0 -- "Unauthorized" --> n8
+  n1 -- "Checkpoint found" --> n2
+  n1 -- "Missing / storage unavailable" --> n8
+  n2 -- "Invalid / expired" --> n8
+  n2 -- "Waiting for selection" --> n3
+  n2 -- "Recoverable failure" --> n4
+  n2 -- "Saved report exists" --> n5
+  n3 -- "Validated resume payload" --> n6
+  n4 -- "Safe continuation" --> n6
+  n6 -- "Within original limits" --> n7
+```
+
+- **request → load** — Owner / thread verified / 擁有者／thread 已核對
+  Owner / thread verified
+  擁有者／thread 已核對
+
+- **request → stop** — Unauthorized / 未獲授權
+  Unauthorized
+  未獲授權
+
+- **load → check** — Checkpoint found / 找到 checkpoint
+  Checkpoint found
+  找到 checkpoint
+
+- **load → stop** — Missing / storage unavailable / 缺少／儲存不可用
+  Missing / storage unavailable
+  缺少／儲存不可用
+
+- **check → stop** — Invalid / expired / 無效／過期
+  Invalid / expired
+  無效／過期
+
+- **check → review** — Waiting for selection / 等候選取
+  Waiting for selection
+  等候選取
+
+- **check → failed** — Recoverable failure / 可恢復失敗
+  Recoverable failure
+  可恢復失敗
+
+- **check → done** — Saved report exists / 已有報告
+  Saved report exists
+  已有報告
+
+- **review → continue** — Validated resume payload / 已驗證恢復內容
+  Validated resume payload
+  已驗證恢復內容
+
+- **failed → continue** — Safe continuation / 安全繼續
+  Safe continuation
+  安全繼續
+
+- **continue → save** — Within original limits / 原上限內
+  Within original limits
+  原上限內

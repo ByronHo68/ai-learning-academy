@@ -1,26 +1,26 @@
 1:"$Sreact.fragment"
-2:I[6127,[],""]
-3:I[51,[],""]
-c:"static/chunks/618-42f2bfdd2de9c452.js"
-d:"static/chunks/800-f51d4975f28bdd61.js"
-e:"static/chunks/app/learn/%5Bslug%5D/page-409b6cf2ba0e631d.js"
-f:I[9345,["618","$c","800","$d","309","$e"],"default"]
-10:I[8390,[],"OutletBoundary"]
+2:I[3307,[],""]
+3:I[9943,[],""]
+c:"static/chunks/347-3d1ed59a01f4d205.js"
+d:"static/chunks/10-426b82e621e1fd5f.js"
+e:"static/chunks/app/learn/%5Bslug%5D/page-ecc09bc9b01a28a2.js"
+f:I[1274,["347","$c","10","$d","309","$e"],"default"]
+10:I[7218,[],"OutletBoundary"]
 11:"$Sreact.suspense"
 14:"ViewportBoundary"
-15:I[8390,[],"$14"]
+15:I[7218,[],"$14"]
 16:"MetadataBoundary"
-17:I[8390,[],"$16"]
+17:I[7218,[],"$16"]
 :HL["/_next/static/css/b86b764b626f0b8c.css","style"]
 :HL["/_next/static/css/d3d2d9b9e7a373b0.css","style"]
-:HL["/_next/static/css/dc7b45456b583f72.css","style"]
+:HL["/_next/static/css/d9008133716eb3df.css","style"]
 5:X
 8:X
 8:C
 b:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$1","c",{"children":[["$","$Lf",null,{"view":"lesson","topicId":"t8"}],null,["$","$L10",null,{"children":["$","$11",null,{"name":"Next.MetadataOutlet","children":"$@12"}]}]]}],"p":"$@13","v":null,"s":"$5"}}]]
 9:[["children",{"s":{"n":"slug","t":"d","k":"commerce-multimodal-data","s":[]},"h":65632,"d":{"r":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"p":"$@a","v":"$8","s":"$5"},"c":"$Qb"}]]
 6:[["children",{"s":"learn","h":131168,"d":{"r":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"p":"$@7","v":"$8","s":"$5"},"c":"$Q9"}]]
-0:{"t":{"t":{"s":"","h":131152,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/b86b764b626f0b8c.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/css/d3d2d9b9e7a373b0.css","precedence":"next"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/css/dc7b45456b583f72.css","precedence":"next"}]],["$","html",null,{"lang":"zh-Hant","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}],"notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]]}]}]}]]}],"p":"$@4","v":null,"s":"$5"},"c":"$Q6"},"h":{"r":["$","$1","h",{"children":[null,["$","$L15",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","$L17",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$11",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"數據、素材與電商 AI | AI 學習院"}],["$","meta","1",{"name":"description","content":"由原始 SKU 到獲批發佈 — 電商 AI 由可追溯 catalog、media rights、tenant filters、評測同人類批核串成受控 pipeline。"}],["$","link","2",{"rel":"canonical","href":"https://ai-learning-academy.byronho680.chatgpt.site"}],["$","meta","3",{"property":"og:title","content":"數據、素材與電商 AI | AI 學習院"}],["$","meta","4",{"property":"og:description","content":"電商 AI 由可追溯 catalog、media rights、tenant filters、評測同人類批核串成受控 pipeline。"}],["$","meta","5",{"name":"twitter:card","content":"summary"}],["$","meta","6",{"name":"twitter:title","content":"數據、素材與電商 AI | AI 學習院"}],["$","meta","7",{"name":"twitter:description","content":"電商 AI 由可追溯 catalog、media rights、tenant filters、評測同人類批核串成受控 pipeline。"}]]}]}],null]}],null]}],"p":"$@18","v":null,"s":"$5"}},"a":"$@19","u":"$@1a","b":"iGWXVOBBdE3NxI6we8Ism"}
+0:{"t":{"t":{"s":"","h":131152,"d":{"r":["$","$1","c",{"children":[[["$","link","0",{"rel":"stylesheet","href":"/_next/static/css/b86b764b626f0b8c.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/css/d3d2d9b9e7a373b0.css","precedence":"next"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/css/d9008133716eb3df.css","precedence":"next"}]],["$","html",null,{"lang":"zh-Hant","children":["$","body",null,{"children":["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}],"notFound":[[["$","title",null,{"children":"404: This page could not be found."}],["$","div",null,{"style":{"fontFamily":"system-ui,\"Segoe UI\",Roboto,Helvetica,Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\"","height":"100vh","textAlign":"center","display":"flex","flexDirection":"column","alignItems":"center","justifyContent":"center"},"children":["$","div",null,{"children":[["$","style",null,{"dangerouslySetInnerHTML":{"__html":"body{color:#000;background:#fff;margin:0}.next-error-h1{border-right:1px solid rgba(0,0,0,.3)}@media (prefers-color-scheme:dark){body{color:#fff;background:#000}.next-error-h1{border-right:1px solid rgba(255,255,255,.3)}}"}}],["$","h1",null,{"className":"next-error-h1","style":{"display":"inline-block","margin":"0 20px 0 0","padding":"0 23px 0 0","fontSize":24,"fontWeight":500,"verticalAlign":"top","lineHeight":"49px"},"children":404}],["$","div",null,{"style":{"display":"inline-block"},"children":["$","h2",null,{"style":{"fontSize":14,"fontWeight":400,"lineHeight":"49px","margin":0},"children":"This page could not be found."}]}]]}]}]],[]]}]}]}]]}],"p":"$@4","v":null,"s":"$5"},"c":"$Q6"},"h":{"r":["$","$1","h",{"children":[null,["$","$L15",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","$L17",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$11",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"數據、素材與電商 AI | AI 學習院"}],["$","meta","1",{"name":"description","content":"由原始 SKU 到獲批發佈 — 電商 AI 由可追溯 catalog、media rights、tenant filters、評測同人類批核串成受控 pipeline。"}],["$","link","2",{"rel":"canonical","href":"https://ai-learning-academy.byronho680.chatgpt.site"}],["$","meta","3",{"property":"og:title","content":"數據、素材與電商 AI | AI 學習院"}],["$","meta","4",{"property":"og:description","content":"電商 AI 由可追溯 catalog、media rights、tenant filters、評測同人類批核串成受控 pipeline。"}],["$","meta","5",{"name":"twitter:card","content":"summary"}],["$","meta","6",{"name":"twitter:title","content":"數據、素材與電商 AI | AI 學習院"}],["$","meta","7",{"name":"twitter:description","content":"電商 AI 由可追溯 catalog、media rights、tenant filters、評測同人類批核串成受控 pipeline。"}]]}]}],null]}],null]}],"p":"$@18","v":null,"s":"$5"}},"a":"$@19","u":"$@1a","b":"AftkJarem_N8-Z6jhTq98"}
 12:null
 5:300
 1a:true

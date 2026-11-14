@@ -1,0 +1,20 @@
+flowchart TD
+  n0["PYTHON API + OWNER / RUN"]
+  n1["LANGGRAPH RESEARCH GRAPH"]
+  n2["HOST refresh: n8n RECEIPT"]
+  n3["SNAPSHOT → SEARCH → RANK"]
+  n4["REVIEW interrupt()"]
+  n5["EVIDENCE GATE → LLM → REPORT"]
+  n6["AsyncPostgresSaver"]
+  n7["POSTGRESQL research_checkpoints"]
+  n0 -- "已授權 thread 設定" --> n1
+  n1 -- "已接納請求" --> n2
+  n2 -- "已提交收據" --> n3
+  n3 -- "已排序證據" --> n4
+  n4 -- "已驗證選取" --> n5
+  n1 -- "初始狀態／step 邊界" --> n6
+  n2 -- "收據引用" --> n6
+  n3 -- "快照＋ID＋次數" --> n6
+  n4 -- "等待中斷＋狀態" --> n6
+  n5 -- "報告引用＋狀態" --> n6
+  n6 -- "Async I/O 保存／載入" --> n7

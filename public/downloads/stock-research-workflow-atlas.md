@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 18 connected diagrams, including PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 19 connected diagrams, including HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及18 張連線圖，包含 PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及19 張連線圖，包含 HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -1165,6 +1165,95 @@ flowchart TD
 - **text → fallback** — Sparse remains available / Sparse 仍可用
   Sparse remains available
   Sparse 仍可用
+
+## Embedding → exact/HNSW → fusion → rerank / Embedding → exact／HNSW → 融合 → 重排
+
+[English SVG](finance-diagrams/rerank_hnsw-en.svg) · [繁體中文 SVG](finance-diagrams/rerank_hnsw-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["SANITIZED COMMITTED CHUNKS"]
+  n1["E5 DOCUMENT VECTORS + MODEL KEY"]
+  n2["OPTIONAL HNSW COSINE INDEX"]
+  n3["SCOPE → REFRESH → SNAPSHOT"]
+  n4["QUERY EMBEDDING · HYBRID ONLY"]
+  n5["FILTERED EXACT / HNSW SEARCH"]
+  n6["POSTGRESQL FULL-TEXT"]
+  n7["RRF · FUSE TO 20"]
+  n8["BGE RERANKER CANDIDATE → TOP 10"]
+  n9["REVIEW → GATE → ≤6 EXCERPTS"]
+  n10["SPARSE FALLBACK / EXPLICIT FAILURE"]
+  n0 -- "Index new versions" --> n1
+  n1 -- "Ready compatible vectors" --> n2
+  n2 -- "Stored index access path" --> n5
+  n3 -- "Admitted hybrid" --> n4
+  n3 -- "Default / hybrid branch" --> n6
+  n4 -- "Pinned query vector" --> n5
+  n5 -- "Eligible dense candidates" --> n7
+  n6 -- "Admitted hybrid only" --> n7
+  n6 -- "Default ranking" --> n9
+  n7 -- "Shortlist original text" --> n8
+  n8 -- "Relevance order" --> n9
+  n5 -- "Error / scan shortfall" --> n10
+  n8 -- "Operational error" --> n10
+  n10 -- "Working sparse, same budget" --> n9
+```
+
+- **ingest → embed** — Index new versions / 索引新版本
+  Index new versions
+  索引新版本
+
+- **embed → index** — Ready compatible vectors / 就緒相容向量
+  Ready compatible vectors
+  就緒相容向量
+
+- **index → dense** — Stored index access path / 已存索引路徑
+  Stored index access path
+  已存索引路徑
+
+- **request → query** — Admitted hybrid / 已准入混合
+  Admitted hybrid
+  已准入混合
+
+- **request → sparse** — Default / hybrid branch / 預設／混合分支
+  Default / hybrid branch
+  預設／混合分支
+
+- **query → dense** — Pinned query vector / 固定問題向量
+  Pinned query vector
+  固定問題向量
+
+- **dense → fuse** — Eligible dense candidates / 合資格向量候選
+  Eligible dense candidates
+  合資格向量候選
+
+- **sparse → fuse** — Admitted hybrid only / 只限已准入混合
+  Admitted hybrid only
+  只限已准入混合
+
+- **sparse → review** — Default ranking / 預設排序
+  Default ranking
+  預設排序
+
+- **fuse → rerank** — Shortlist original text / 小集合原文
+  Shortlist original text
+  小集合原文
+
+- **rerank → review** — Relevance order / 相關性次序
+  Relevance order
+  相關性次序
+
+- **dense → fallback** — Error / scan shortfall / 錯誤／掃描不足
+  Error / scan shortfall
+  錯誤／掃描不足
+
+- **rerank → fallback** — Operational error / 運作錯誤
+  Operational error
+  運作錯誤
+
+- **fallback → review** — Working sparse, same budget / Sparse 可用，原預算
+  Working sparse, same budget
+  Sparse 可用，原預算
 
 ## PII protection at every data boundary / 每個資料邊界的 PII 保護
 

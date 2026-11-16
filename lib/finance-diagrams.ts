@@ -3,6 +3,7 @@ import { financeGraphNodes } from './finance-graph';
 import { financePreparationNodes } from './finance-evidence';
 import { financeN8nDailyDiagram } from './finance-n8n';
 import { financeEmbeddingDiagram } from './finance-embeddings';
+import { rerankHnswDiagram } from './finance-rerank';
 import { financePrivacyDiagram } from './finance-privacy';
 import { vectorStorageDiagram } from './finance-vector-lesson';
 import { checkpointArchitectureDiagram, checkpointRecoveryDiagram } from './finance-checkpoints';
@@ -91,7 +92,7 @@ export function financeFunctionDiagram(id: FinanceFunctionId): FinanceDiagram {
 export const financeDiagrams: FinanceDiagram[] = [
   financeOverallDiagram,
   ...[...financeFunctions, ...financeEngineeringWorkflows].map(guide => financeFunctionDiagram(guide.id)),
-  financeN8nDailyDiagram, financeEmbeddingDiagram, vectorStorageDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
+  financeN8nDailyDiagram, financeEmbeddingDiagram, vectorStorageDiagram, rerankHnswDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
 ];
 export const financeDiagramIds = financeDiagrams.map(diagram => diagram.id);
 

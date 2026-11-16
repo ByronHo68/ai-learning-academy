@@ -1,3 +1,5 @@
+import { rerankConcepts, hnswSettings, rerankProjectSteps, rerankReferences } from '../lib/finance-rerank';
+import { rerankExampleCommands, rerankPythonExample, rerankSqlSettings, rerankTutorialQuery, rerankTutorialSchema } from '../lib/finance-rerank-code';
 import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
 import { vectorConcepts, vectorModelChoices, vectorProjectApplications, vectorLessonReferences, vectorAnimationStages } from '../lib/finance-vector-lesson';
 import { vectorExampleCommands, vectorPythonExample, vectorTutorialSchema, vectorTutorialQuery } from '../lib/finance-vector-code';
@@ -66,6 +68,20 @@ const evidenceReview = [
   '```python\n' + financeReviewSketch + '\n```',
   '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
   '[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)',
+].join('\n\n') + '\n';
+const rerankGuide = [
+  '# Reranking and HNSW in the research project / 研究項目的重排及 HNSW',
+  'Open `/finance-project/rerank-hnsw` for the bilingual mind map and animated layered graph / reranking lesson. Browser calls: zero. The graph, 2D vectors and relevance rubric are handmade fictional fixtures, not real HNSW or E5/BGE outputs. Live model inference, SQL, ANN recall and performance are NOT RUN. Full-text remains the default until frozen admission.',
+  '開啟 `/finance-project/rerank-hnsw` 看雙語心智圖、分層圖及重排動畫。瀏覽器外部呼叫為零，人手圖、二維向量及相關 rubric 是虛構 fixture，不是真實 HNSW 或 E5／BGE 輸出。真實推論、SQL、ANN 召回及效能均 NOT RUN；凍結准入前預設全文。',
+  ...rerankConcepts.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Try the animation / 試動畫\n\nStart with 3 toy base expansions, then try 9 or exact. Compare the original cosine order with human-labelled rubric order. Change costs/rates/missing evidence and top-k. Toy expansions are not ef_search; exact-neighbour overlap is not relevance recall@k. Reranking never introduces new source IDs.',
+  ...rerankProjectSteps.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  ...hnswSettings.map(item => `## ${item.name}\n\n${both(item.phase)}\n\n${both(item.body)}`),
+  '[Workflow SVG](finance-diagrams/rerank_hnsw-en.svg) · [繁中 SVG](finance-diagrams/rerank_hnsw-zh.svg)',
+  '## Standalone tutorial / 獨立教學\n\n```sh\n' + rerankExampleCommands + '\n```',
+  '```python\n' + rerankPythonExample + '\n```',
+  '## SQL templates / SQL 模板\n\nQuery placeholders are bound by Psycopg, not runnable unchanged in psql. 查詢參數由 Psycopg 綁定，不能原樣在 psql 執行。\n\n```sql\n' + rerankTutorialSchema + '\n' + rerankTutorialQuery + '\n' + rerankSqlSettings + '\n```',
+  '## References / 參考', ...rerankReferences.map(item => `- [${item.title}](${item.url})`),
 ].join('\n\n') + '\n';
 const vectorGuide = [
   '# Vector databases and embeddings / 向量資料庫及 Embedding',
@@ -137,6 +153,7 @@ const n8nGuide = [
 const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
+  'Open `/finance-project/rerank-hnsw` for the HNSW graph animation, reranking lesson, model choices and Python/SQL examples. 中文：HNSW 及重排動畫、模型候選及程式例子。',
   'Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。',
   'Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSaver tutorial, restart/recovery simulation and downloadable Python example.',
   'See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.',
@@ -215,6 +232,12 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_RERANK_HNSW_GUIDE.md', rerankGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-rerank-hnsw-guide.md', rerankGuide],
+  ['public/downloads/stock-research-rerank-demo.py', rerankPythonExample],
+  ['public/downloads/rerank-hnsw-schema.sql', rerankTutorialSchema],
+  ['public/downloads/rerank-hnsw-query.sql', rerankTutorialQuery],
+  ['public/downloads/rerank-hnsw-settings.sql', rerankSqlSettings],
   ['docs/FINANCE_PRIVACY_GUIDE.md', privacyGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-privacy-guide.md', privacyGuide],
   ['public/downloads/stock-research-pii-middleware.py', financePrivacyMiddlewareExample],
@@ -249,8 +272,8 @@ const outputs: Array<[string, string]> = [
 ];
 const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
-  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
-  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含 PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含 HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
   `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
   '## Privacy configuration / 隱私設定\n\n[Privacy guide](stock-research-privacy-guide.md) · [Python middleware example](stock-research-pii-middleware.py)\n\nAPI redaction precedes graph invocation. Model/tool wrappers sanitize results before state updates. PII filtering does not replace injection defenses. Live integration: NOT RUN.',
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),

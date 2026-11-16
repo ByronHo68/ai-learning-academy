@@ -1,0 +1,26 @@
+flowchart TD
+  n0["SANITIZED COMMITTED CHUNKS"]
+  n1["E5 DOCUMENT VECTORS + MODEL KEY"]
+  n2["OPTIONAL HNSW COSINE INDEX"]
+  n3["SCOPE → REFRESH → SNAPSHOT"]
+  n4["QUERY EMBEDDING · HYBRID ONLY"]
+  n5["FILTERED EXACT / HNSW SEARCH"]
+  n6["POSTGRESQL FULL-TEXT"]
+  n7["RRF · FUSE TO 20"]
+  n8["BGE RERANKER CANDIDATE → TOP 10"]
+  n9["REVIEW → GATE → ≤6 EXCERPTS"]
+  n10["SPARSE FALLBACK / EXPLICIT FAILURE"]
+  n0 -- "索引新版本" --> n1
+  n1 -- "就緒相容向量" --> n2
+  n2 -- "已存索引路徑" --> n5
+  n3 -- "已准入混合" --> n4
+  n3 -- "預設／混合分支" --> n6
+  n4 -- "固定問題向量" --> n5
+  n5 -- "合資格向量候選" --> n7
+  n6 -- "只限已准入混合" --> n7
+  n6 -- "預設排序" --> n9
+  n7 -- "小集合原文" --> n8
+  n8 -- "相關性次序" --> n9
+  n5 -- "錯誤／掃描不足" --> n10
+  n8 -- "運作錯誤" --> n10
+  n10 -- "Sparse 可用，原預算" --> n9

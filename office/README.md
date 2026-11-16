@@ -63,6 +63,8 @@ Open `/finance-project/vector-db` for the vector-database/embedding mind map, an
 
 Open `/finance-project/workflows#finance-privacy` for PII boundaries, full email/card redaction, fixed synthetic examples, failure paths and the Python middleware configuration. The atlas includes the privacy graph. This teaches proposed integration; it does not install a live financial privacy service.
 
+Open `/finance-project/rerank-hnsw` for a bilingual mind map, layered neighbour-search animation, candidate/reranking comparison, model roles and PostgreSQL HNSW examples. The browser uses handmade vectors and a human-labelled relevance rubric. Real E5/BGE inference, PostgreSQL execution and ANN performance measurements are NOT RUN. Download the separate Python/SQL tutorial to prepare a controlled experiment; HNSW is optional and full-text remains the finance default.
+
 Open `/finance-project/demo` for fictional sourced-news reports, insufficient evidence, ignored article instructions and recovery from an in-session checkpoint. Exports retain fictional-data labels. Open `/finance-project/proposal` for the 120–180-hour, 8–12-week local-first plan, proposed folder hierarchy and Docker/EC2 design. The bundled Markdown downloads are generated from the same typed catalog as the website.
 
 The agent lab pages are included, but running agents and evaluations requires the separate Python and Java services and the Next.js proxy in `codex/rich-animated-ts`. This office server returns an explanation when those pages request the lab API. It does not run those services.

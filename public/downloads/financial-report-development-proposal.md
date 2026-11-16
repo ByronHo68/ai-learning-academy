@@ -27,9 +27,9 @@ Each new prompt must refresh news through n8n MCP and pin its permitted evidence
 
 ## PostgreSQL database design / PostgreSQL 資料庫設計
 
-One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
+Only sanitized research text enters storage. Keep privacy_policy_version on runs and evidence chunks; AsyncPostgresSaver does not sanitize state. One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
 
-一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
+只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
 
@@ -37,7 +37,7 @@ Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSa
 
 See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.
 
-n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → LLM → validate → PostgreSQL report
+API PII filter before graph → n8n → sanitized PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → Buffered LLM → redact → validate → final privacy → PostgreSQL report
 
 ### YFinance MCP integration / YFinance MCP 整合
 
@@ -204,9 +204,9 @@ def review_node(state):
 
 ### Document embeddings: during indexing / 文件 embedding：建立索引時
 
-After company/daily news is validated, deduplicated and committed, split permitted text into versioned chunks. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
+After company/daily news is validated and deduplicated, sanitize email/card data in permitted excerpts BEFORE committing searchable evidence. Then chunk and embed the committed sanitized version. Keep the redaction policy version with the text hash; replacing unsafe historical text also invalidates its old vectors. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
 
-公司／每日新聞驗證、去重及提交後，將允許文字切成有版本段落。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
+公司／每日新聞驗證及去重後，提交可搜尋證據前先清理允許節錄的電郵／卡號，然後才把已提交清理版本切段及 embedding。文字 hash 附遮蔽政策版本；替換舊不安全文字時，舊向量亦失效。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
 
 ### Question embeddings: just before vector retrieval / 問題 embedding：向量檢索之前
 
@@ -374,7 +374,8 @@ CREATE TABLE research.evidence_chunks (
   published_at timestamptz NOT NULL,
   first_seen_at timestamptz NOT NULL,
   content_hash text NOT NULL,
-  excerpt text NOT NULL,
+  excerpt text NOT NULL, -- Sanitized permitted text only.
+  privacy_policy_version text NOT NULL,
   permitted boolean NOT NULL DEFAULT false,
   search_text tsvector GENERATED ALWAYS AS
     (to_tsvector('english'::regconfig, excerpt)) STORED,
@@ -390,7 +391,8 @@ CREATE INDEX evidence_text_gin ON research.evidence_chunks USING gin(search_text
 CREATE TABLE research.runs (
   run_id uuid PRIMARY KEY,
   owner_id text NOT NULL,
-  question text NOT NULL,
+  question text NOT NULL, -- Sanitized before graph invocation.
+  privacy_policy_version text NOT NULL,
   horizon text NOT NULL,
   snapshot_id uuid REFERENCES research.snapshots,
   deadline timestamptz NOT NULL, -- Active segment deadline, clipped to saved remainder.
@@ -492,7 +494,17 @@ app = FastAPI(lifespan=lifespan)
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Context → conditional forecast + citations → Validate → feedback + trace URL
+API PII redaction before graph/state/logs → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → buffered LLM + output redaction → Citations + final privacy → save + sanitized trace URL
+
+### PII filtering before persistence and external calls / 持久儲存及外部呼叫前清理 PII
+
+Redact email and credit_card at API entry before graph invocation, scope, n8n dispatch, checkpointing and raw payload capture. Sanitize ingestion before storage/embedding; sanitize every model/tool result before returning state. Buffered output passes citation and final privacy checks before report storage. Privacy failure stops the affected path without raw fallback. PIIMiddleware belongs to create_agent; custom StateGraph nodes need explicit wrappers.
+
+API 入口在 graph 執行、scope、n8n、checkpoint 及原 payload 擷取前 redact email／credit_card；匯入在儲存／embedding 前清理，模型／工具結果在回傳 state 前清理。緩衝輸出通過引用及最終隱私檢查後才存報告；失敗停止該路徑，不回退原文。PIIMiddleware 屬 create_agent，自訂 StateGraph 節點須明確 wrapper。
+
+Keep prices, tickers, dates and verified citation URLs. Record safe counts/types and policy version, never matches or raw exceptions. Disable raw n8n execution history and SDK payload export; allowlist attributes before the redacting Collector sends spans to Langfuse/LangSmith. Detection is incomplete and does not replace prompt-injection defenses. Live privacy integration remains NOT RUN.
+
+保留價格、ticker、日期及已驗證引用 URL；只記安全類型／計數及政策版本，不帶匹配值或原 exception。停用 n8n 原執行歷史及 SDK payload 匯出，遮蔽 Collector 分送 Langfuse／LangSmith 前先核准 attributes。偵測並非完整，也不取代注入防護；真實隱私整合為 NOT RUN。
 
 ### Fresh news for every prompt / 每個提示都取得新聞
 
@@ -888,16 +900,44 @@ Next.js proxy → GET /companies → [{"id":"MSFT","name":"Microsoft"}, …]
 
 ```mermaid
 flowchart TD
-  n0["Prompt + selection"]
-  n1["Scope gate"]
-  n2["Clarify → END"]
-  n3["Out of scope → END"]
-  n4["News refresh"]
-  n0 -->|"Validate company, horizon and question intent."| n1
-  n1 -->|"Company or intent is ambiguous."| n2
-  n1 -->|"Clearly unrelated or unsupported company."| n3
-  n1 -->|"Supported company research question."| n4
+  n0["API privacy before graph"]
+  n1["Prompt + selection"]
+  n2["Privacy blocked → END"]
+  n3["Scope gate"]
+  n4["Clarify → END"]
+  n5["Out of scope → END"]
+  n6["News refresh"]
+  n0 -->|"Redact email/card before graph invocation, scope, body logs and checkpoints. Keep safe original wording."| n1
+  n0 -->|"Detector fails; do not invoke the graph or fetch news."| n2
+  n1 -->|"Validate company, horizon and question intent."| n3
+  n3 -->|"Company or intent is ambiguous."| n4
+  n3 -->|"Clearly unrelated or unsupported company."| n5
+  n3 -->|"Supported company research question."| n6
 ```
+
+**API privacy before graph → Prompt + selection**
+
+Redact email/card before graph invocation, scope, body logs and checkpoints. Keep safe original wording.
+
+Graph 執行、scope、body log 及 checkpoint 前清理電郵／卡號，保留安全研究原意。
+
+Handoff / 交接資料:
+
+Sanitized request + privacy policy version
+
+清理請求＋隱私政策版本
+
+**API privacy before graph → Privacy blocked → END**
+
+Detector fails; do not invoke the graph or fetch news.
+
+偵測失敗，不執行 graph 或抓新聞。
+
+Handoff / 交接資料:
+
+Safe error category; no raw fallback
+
+安全錯誤類別，不回退原文
 
 **Prompt + selection → Scope gate**
 
@@ -947,7 +987,29 @@ Validated ResearchRequest; unknown coverage may be refreshed
 
 已驗證 ResearchRequest；未知覆蓋可刷新
 
-### 1. SELECT
+### 1. PII BEFORE STATE
+
+Sanitize request text before invoking research.
+
+研究執行前清理請求文字。
+
+Tools: API privacy wrapper · email/card redaction
+
+**How / 如何應用**
+
+Redact before scope, graph invocation, checkpoint writes or raw body logging. Apply the same policy to review comments. Store only sanitized original_question and privacy policy version. A detector error stops the request. Custom StateGraph nodes do not inherit create_agent middleware.
+
+Scope、graph、checkpoint 及原 body log 前先清理；覆核留言沿用政策。只存清理 original_question 及政策版本，偵測錯誤停止請求；自訂 StateGraph 不繼承 create_agent middleware。
+
+**Why / 為何使用**
+
+A model-only filter cannot remove a prompt already captured in a checkpoint or trace.
+
+只在模型前清理，無法移除已入 checkpoint 或 trace 的提示。
+
+Proposed files / 建議檔案: `services/research/app/privacy.py`, `services/research/app/main.py`
+
+### 2. SELECT
 
 Show three supported identities in a selector.
 
@@ -969,7 +1031,7 @@ A fixed universe avoids ambiguous names and unsupported global coverage.
 
 Proposed files / 建議檔案: `apps/web/app/page.tsx`, `services/research/app/companies.py`
 
-### 2. VALIDATE
+### 3. VALIDATE
 
 Validate the selected company on the API boundary.
 
@@ -991,7 +1053,7 @@ Browser controls do not prevent a caller from sending a forged request.
 
 Proposed files / 建議檔案: `services/research/app/main.py`, `services/research/app/schemas.py`
 
-### 3. CONFIRM
+### 4. CONFIRM
 
 Display identity and coverage before starting.
 
@@ -1117,7 +1179,7 @@ flowchart TD
   n9 -->|"Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After."| n10
   n10 -->|"The bounded wait completes before the original deadline."| n6
   n9 -->|"Permanent failure, exhausted attempts or insufficient remaining time."| n2
-  n8 -->|"Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text."| n11
+  n8 -->|"Validate source identity, dates and permissions; deduplicate stories and sanitize permitted excerpts BEFORE committing research evidence. Chunk/embed sanitized versions; disable raw n8n payload history."| n11
   n8 -->|"Provider payload is malformed or violates the evidence contract."| n7
   n11 -->|"Evidence and receipt are durably committed with an idempotency key."| n4
   n11 -->|"Storage failed or commit outcome needs reconciliation."| n2
@@ -1272,9 +1334,9 @@ Provider unavailable; host does not blindly retry MCP
 
 **Normalize + validate records → Commit PostgreSQL evidence**
 
-Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text.
+Validate source identity, dates and permissions; deduplicate stories and sanitize permitted excerpts BEFORE committing research evidence. Chunk/embed sanitized versions; disable raw n8n payload history.
 
-核對身份、日期及權限，轉載去重並切分允許原文。
+核對身份、日期及權限，轉載去重；提交研究證據前清理允許節錄，以清理版本切段／embedding，停用 n8n 原 payload 歷史。
 
 Handoff / 交接資料:
 
@@ -2174,18 +2236,18 @@ flowchart TD
   n3["Validation"]
   n4["Blocked → END"]
   n5["Display + report rating"]
-  n0 -->|"Deduplicate, read original excerpts and enforce token budget."| n1
+  n0 -->|"Deduplicate, read sanitized excerpt versions and enforce the token budget; privacy removal/trimming must retain required support."| n1
   n1 -->|"System policy and user question stay separate from untrusted excerpts."| n2
-  n2 -->|"Require claim support; a reranker score is not confidence."| n3
+  n2 -->|"The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence."| n3
   n3 -->|"Unknown citation or unsupported factual claim."| n4
-  n3 -->|"Persist before exposing the final answer."| n5
+  n3 -->|"Run citation validation and the final privacy check, then persist the sanitized report before exposing it."| n5
 ```
 
 **Selected passages → Context envelope**
 
-Deduplicate, read original excerpts and enforce token budget.
+Deduplicate, read sanitized excerpt versions and enforce the token budget; privacy removal/trimming must retain required support.
 
-去重、讀原文並限制 token。
+去重、讀清理節錄並限制 token，隱私移除／裁剪後仍須保留所需支持。
 
 Handoff / 交接資料:
 
@@ -2207,9 +2269,9 @@ Direct answer + observed facts + conditional scenarios + citation IDs
 
 **Draft → Validation**
 
-Require claim support; a reranker score is not confidence.
+The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence.
 
-要求主張支持；重排分數不是信心。
+模型 wrapper 回傳 state 前已清理輸出，原串流停用。要求主張支持，重排分數不是信心。
 
 Handoff / 交接資料:
 
@@ -2231,9 +2293,9 @@ Do not release draft
 
 **Validation → Display + report rating**
 
-Persist before exposing the final answer.
+Run citation validation and the final privacy check, then persist the sanitized report before exposing it.
 
-先保存，再顯示最終答案。
+引用及最終隱私檢查後先保存清理報告，再顯示最終答案。
 
 Handoff / 交接資料:
 
@@ -2386,10 +2448,14 @@ flowchart TD
   n0["Draft + evidence"]
   n1["Validation checks"]
   n2["Blocked → END"]
-  n3["Persist report"]
+  n3["Final privacy check"]
+  n4["Persist report"]
+  n5["Privacy blocked → END"]
   n0 -->|"Ignore embedded instructions; check IDs, dates, company, coverage and factual support."| n1
   n1 -->|"A required validation fails."| n2
   n1 -->|"Every material factual claim has excerpt support."| n3
+  n3 -->|"Already sanitized report passes final privacy/schema checks."| n4
+  n3 -->|"Privacy check fails; never save the raw draft or retry automatically."| n5
 ```
 
 **Draft + evidence → Validation checks**
@@ -2416,7 +2482,7 @@ validation_failed; no draft publication
 
 validation_failed；不發布草稿
 
-**Validation checks → Persist report**
+**Validation checks → Final privacy check**
 
 Every material factual claim has excerpt support.
 
@@ -2427,6 +2493,30 @@ Handoff / 交接資料:
 Validated result and source references
 
 已驗證結果及來源引用
+
+**Final privacy check → Persist report**
+
+Already sanitized report passes final privacy/schema checks.
+
+已清理報告通過最終隱私／格式檢查。
+
+Handoff / 交接資料:
+
+Safe report and citation fields
+
+安全報告及引用欄位
+
+**Final privacy check → Privacy blocked → END**
+
+Privacy check fails; never save the raw draft or retry automatically.
+
+隱私檢查失敗，不存原草稿，不自動重試。
+
+Handoff / 交接資料:
+
+Safe privacy_blocked error
+
+安全 privacy_blocked 錯誤
 
 ### 1. RESTRICT
 
@@ -2828,9 +2918,9 @@ Tools: LangGraph AsyncPostgresSaver · PostgreSQL
 
 **How / 如何應用**
 
-Use AsyncPostgresSaver in the application lifespan; run setup once during migration. Save query, evidence references, tool receipts and remaining budget under the authorized run thread_id in the checkpoint database.
+Only sanitized request/model/tool state may enter AsyncPostgresSaver; the saver is not a PII detector. Use it in the application lifespan; run setup once during migration. Save query, evidence references, tool receipts and remaining budget under the authorized run thread_id in the checkpoint database.
 
-App 生命週期使用 AsyncPostgresSaver，migration 執行一次 setup；查詢、來源、工具紀錄及剩餘預算按已授權任務 thread_id 保存至 checkpoint 資料庫。
+AsyncPostgresSaver 只接收清理後請求／模型／工具 state，它不偵測 PII；App 生命週期使用 saver，migration 執行一次 setup；查詢、來源、工具紀錄及剩餘預算按已授權任務 thread_id 保存至 checkpoint 資料庫。
 
 **Why / 為何使用**
 
@@ -3232,7 +3322,7 @@ flowchart TD
   n3["Mark demo evidence incomplete"]
   n4["Report card"]
   n0 -->|"Propagate context into MCP and provider attempts."| n1
-  n1 -->|"Keep one instrumentation tree; do not double-count tokens."| n2
+  n1 -->|"Disable raw callback payload capture before export. Allowlist safe IDs, policy and counts; the Collector is a second redaction boundary. Keep one instrumentation tree and do not double-count tokens."| n2
   n2 -->|"Trace cannot be flushed or opened by a reviewer."| n3
   n2 -->|"At least 30 completed runs for latency percentiles."| n4
 ```
@@ -3251,9 +3341,9 @@ trace_id、run_id、父 spans、錯誤及實際用量
 
 **Span events → Redact → Collector → Langfuse / LangSmith**
 
-Keep one instrumentation tree; do not double-count tokens.
+Disable raw callback payload capture before export. Allowlist safe IDs, policy and counts; the Collector is a second redaction boundary. Keep one instrumentation tree and do not double-count tokens.
 
-保留一組 instrumentation；不重複計 token。
+匯出前停用原 callback payload 擷取；只允許安全 ID、政策及計數，Collector 作第二清理邊界。保留一組 instrumentation，不重複計 token。
 
 Handoff / 交接資料:
 

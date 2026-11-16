@@ -7,6 +7,8 @@ const route = (from: string, to: string, en: string, zh: string, outputEn: strin
 
 export const financeFunctionRoutes = {
   company: [
+    route('API privacy before graph', 'Prompt + selection', 'Redact email/card before graph invocation, scope, body logs and checkpoints. Keep safe original wording.', 'Graph 執行、scope、body log 及 checkpoint 前清理電郵／卡號，保留安全研究原意。', 'Sanitized request + privacy policy version', '清理請求＋隱私政策版本', t('Sanitized entry', '清理入口')),
+    route('API privacy before graph', 'Privacy blocked → END', 'Detector fails; do not invoke the graph or fetch news.', '偵測失敗，不執行 graph 或抓新聞。', 'Safe error category; no raw fallback', '安全錯誤類別，不回退原文', t('Fail closed', '失敗停止'), 'stop'),
     route('Prompt + selection', 'Scope gate', 'Validate company, horizon and question intent.', '驗證公司、期間及問題意圖。', 'Original question + canonical company + horizon', '原問題＋標準公司＋期間', t('Validate', '驗證')),
     route('Scope gate', 'Clarify → END', 'Company or intent is ambiguous.', '公司或意圖不明確。', 'One clarification question; no news/retrieval calls', '一個澄清問題；不呼叫新聞或檢索', t('Ambiguous', '不明確'), 'stop'),
     route('Scope gate', 'Out of scope → END', 'Clearly unrelated or unsupported company.', '明顯無關或公司未支援。', 'Explain scope and show a supported example prompt', '交代範圍並提供支援問題例子', t('Unrelated', '不相關'), 'stop'),
@@ -25,7 +27,7 @@ export const financeFunctionRoutes = {
     route('n8n retry decision', 'n8n backoff + jitter', 'Transient error, fewer than 3 attempts and enough time for another attempt. Respect Retry-After.', '暫時錯誤、少於 3 次且仍有時間再試；遵守 Retry-After。', 'Wait 1s then 2s plus jitter; clip to job deadline', '等待 1 秒、2 秒加 jitter；受工作時限限制', t('Transient, attempts <3', '暫時錯誤，次數<3'), 'retry'),
     route('n8n backoff + jitter', 'n8n provider attempt', 'The bounded wait completes before the original deadline.', '有限等待在原時限內完成。', 'Same run_id; incremented attempt count', '相同 run_id；增加次數', t('Wait 1s / 2s + jitter', '等待1／2秒＋jitter'), 'retry'),
     route('n8n retry decision', 'Unavailable → END', 'Permanent failure, exhausted attempts or insufficient remaining time.', '永久失敗、次數用完或餘下時間不足。', 'Provider unavailable; host does not blindly retry MCP', '供應商不可用；Host 不盲目重試 MCP', t('Stop fetching', '停止抓取'), 'stop'),
-    route('Normalize + validate records', 'Commit PostgreSQL evidence', 'Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text.', '核對身份、日期及權限，轉載去重並切分允許原文。', 'Versioned company-news records + coverage status', '有版本公司新聞＋覆蓋狀態', t('Valid records', '有效記錄')),
+    route('Normalize + validate records', 'Commit PostgreSQL evidence', 'Validate source identity, dates and permissions; deduplicate stories and sanitize permitted excerpts BEFORE committing research evidence. Chunk/embed sanitized versions; disable raw n8n payload history.', '核對身份、日期及權限，轉載去重；提交研究證據前清理允許節錄，以清理版本切段／embedding，停用 n8n 原 payload 歷史。', 'Versioned company-news records + coverage status', '有版本公司新聞＋覆蓋狀態', t('Valid records', '有效記錄')),
     route('Normalize + validate records', 'Rejected → END', 'Provider payload is malformed or violates the evidence contract.', '供應商內容格式或證據合約無效。', 'Typed validation error', '結構化驗證錯誤', t('Invalid response', '回應無效'), 'stop'),
     route('Commit PostgreSQL evidence', 'Return structured receipt', 'Evidence and receipt are durably committed with an idempotency key.', '證據及紀錄用冪等鍵持久提交。', 'company_news_version_ids + fetched_at + status + execution_id', '公司新聞版本＋擷取時間＋狀態＋執行 ID', t('Commit confirmed', '提交確認')),
     route('Commit PostgreSQL evidence', 'Unavailable → END', 'Storage failed or commit outcome needs reconciliation.', '儲存失敗或須核對提交結果。', 'Storage error; no successful receipt claimed', '儲存錯誤；不聲稱成功', t('Storage failed', '儲存失敗'), 'stop'),
@@ -64,16 +66,18 @@ export const financeFunctionRoutes = {
     route('Context → LLM → validation', 'Unavailable → END', 'Deadline, call limit or dependency failure.', '超時、超額或依賴失敗。', 'Typed error + resumable checkpoint when safe', '結構化錯誤＋安全時可恢復 checkpoint', t('Timeout / error', '超時／錯誤'), 'stop'),
   ],
   report: [
-    route('Selected passages', 'Context envelope', 'Deduplicate, read original excerpts and enforce token budget.', '去重、讀原文並限制 token。', 'Question, horizon, as_of, evidence[], missing_facets[], conflicts[]', '問題、期間、截止、證據、缺失面向及矛盾', t('Read + trim', '讀取＋裁剪')),
+    route('Selected passages', 'Context envelope', 'Deduplicate, read sanitized excerpt versions and enforce the token budget; privacy removal/trimming must retain required support.', '去重、讀清理節錄並限制 token，隱私移除／裁剪後仍須保留所需支持。', 'Question, horizon, as_of, evidence[], missing_facets[], conflicts[]', '問題、期間、截止、證據、缺失面向及矛盾', t('Read + trim', '讀取＋裁剪')),
     route('Context envelope', 'Draft', 'System policy and user question stay separate from untrusted excerpts.', '系統規則及使用者問題與不可信原文分開。', 'Direct answer + observed facts + conditional scenarios + citation IDs', '直接答案＋觀察事實＋條件式情境＋引用 ID', t('Generate draft', '生成草稿')),
-    route('Draft', 'Validation', 'Require claim support; a reranker score is not confidence.', '要求主張支持；重排分數不是信心。', 'Draft only; never stream an unvalidated recommendation', '只產生草稿；不串流未驗證建議', t('Check support', '核對支持')),
+    route('Draft', 'Validation', 'The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence.', '模型 wrapper 回傳 state 前已清理輸出，原串流停用。要求主張支持，重排分數不是信心。', 'Draft only; never stream an unvalidated recommendation', '只產生草稿；不串流未驗證建議', t('Check support', '核對支持')),
     route('Validation', 'Blocked → END', 'Unknown citation or unsupported factual claim.', '未知引用或無支持事實。', 'Do not release draft', '不發布草稿', t('Invalid', '無效'), 'stop'),
-    route('Validation', 'Display + report rating', 'Persist before exposing the final answer.', '先保存，再顯示最終答案。', 'Report ID, trace URL/status; separate feedback linked to run_id', '報告 ID、trace URL／狀態；回饋另存並連結 run_id', t('Valid + saved', '有效＋已存')),
+    route('Validation', 'Display + report rating', 'Run citation validation and the final privacy check, then persist the sanitized report before exposing it.', '引用及最終隱私檢查後先保存清理報告，再顯示最終答案。', 'Report ID, trace URL/status; separate feedback linked to run_id', '報告 ID、trace URL／狀態；回饋另存並連結 run_id', t('Valid + saved', '有效＋已存')),
   ],
   validation: [
     route('Draft + evidence', 'Validation checks', 'Ignore embedded instructions; check IDs, dates, company, coverage and factual support.', '忽略內嵌指令，檢查 ID、日期、公司、覆蓋及事實支持。', 'Validation errors or a validated report', '驗證錯誤或已驗證報告', t('Check claims', '核對主張')),
     route('Validation checks', 'Blocked → END', 'A required validation fails.', '必要驗證失敗。', 'validation_failed; no draft publication', 'validation_failed；不發布草稿', t('Any failure', '任一失敗'), 'stop'),
-    route('Validation checks', 'Persist report', 'Every material factual claim has excerpt support.', '所有重要事實主張有原文支持。', 'Validated result and source references', '已驗證結果及來源引用', t('All pass', '全部通過')),
+    route('Validation checks', 'Final privacy check', 'Every material factual claim has excerpt support.', '所有重要事實主張有原文支持。', 'Validated result and source references', '已驗證結果及來源引用', t('All pass', '全部通過')),
+    route('Final privacy check', 'Persist report', 'Already sanitized report passes final privacy/schema checks.', '已清理報告通過最終隱私／格式檢查。', 'Safe report and citation fields', '安全報告及引用欄位', t('Safe to store', '可安全儲存')),
+    route('Final privacy check', 'Privacy blocked → END', 'Privacy check fails; never save the raw draft or retry automatically.', '隱私檢查失敗，不存原草稿，不自動重試。', 'Safe privacy_blocked error', '安全 privacy_blocked 錯誤', t('Withhold', '不發布'), 'stop'),
   ],
   export: [
     route('Report ID → authorized lookup', 'Saved result', 'Caller owns the report; ID exists.', '呼叫者擁有報告且 ID 存在。', 'Saved question, answer, sources, dates, trace status', '已存問題、答案、來源、日期及 trace 狀態', t('Authorized', '有權限')),
@@ -94,7 +98,7 @@ export const financeFunctionRoutes = {
   ],
   observability: [
     route('Run start → root span', 'Span events', 'Propagate context into MCP and provider attempts.', 'Context 傳入 MCP 及供應商嘗試。', 'trace_id, run_id, parent spans, errors and actual usage', 'trace_id、run_id、父 spans、錯誤及實際用量', t('Record actual work', '記錄實際工作')),
-    route('Span events', 'Redact → Collector → Langfuse / LangSmith', 'Keep one instrumentation tree; do not double-count tokens.', '保留一組 instrumentation；不重複計 token。', 'Sanitized operational traces and experiment feedback', '清理後運行 traces 及實驗回饋', t('Redact + export', '去敏感資料＋匯出')),
+    route('Span events', 'Redact → Collector → Langfuse / LangSmith', 'Disable raw callback payload capture before export. Allowlist safe IDs, policy and counts; the Collector is a second redaction boundary. Keep one instrumentation tree and do not double-count tokens.', '匯出前停用原 callback payload 擷取；只允許安全 ID、政策及計數，Collector 作第二清理邊界。保留一組 instrumentation，不重複計 token。', 'Sanitized operational traces and experiment feedback', '清理後運行 traces 及實驗回饋', t('Redact + export', '去敏感資料＋匯出')),
     route('Redact → Collector → Langfuse / LangSmith', 'Mark demo evidence incomplete', 'Trace cannot be flushed or opened by a reviewer.', 'Trace 不能 flush 或審閱者無法開啟。', 'Preserved answer + unavailable trace status', '保留答案＋trace 不可用狀態', t('Trace unavailable', 'Trace 不可用'), 'stop'),
     route('Redact → Collector → Langfuse / LangSmith', 'Report card', 'At least 30 completed runs for latency percentiles.', '延遲百分位至少需要 30 次已完成任務。', 'One actual URL per demo; cohort p50/p95 with failures', '每 demo 一個實際 URL；樣本 p50／p95 及失敗數', t('Trace verified', 'Trace 已核對')),
   ],

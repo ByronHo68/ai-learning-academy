@@ -1,10 +1,14 @@
 flowchart TD
-  n0["Prompt + selection"]
-  n1["Scope gate"]
-  n2["Clarify → END"]
-  n3["Out of scope → END"]
-  n4["News refresh"]
-  n0 -- "Validate" --> n1
-  n1 -- "Ambiguous" --> n2
-  n1 -- "Unrelated" --> n3
-  n1 -- "Supported" --> n4
+  n0["API privacy before graph"]
+  n1["Prompt + selection"]
+  n2["Privacy blocked → END"]
+  n3["Scope gate"]
+  n4["Clarify → END"]
+  n5["Out of scope → END"]
+  n6["News refresh"]
+  n0 -- "Sanitized entry" --> n1
+  n0 -- "Fail closed" --> n2
+  n1 -- "Validate" --> n3
+  n3 -- "Ambiguous" --> n4
+  n3 -- "Unrelated" --> n5
+  n3 -- "Supported" --> n6

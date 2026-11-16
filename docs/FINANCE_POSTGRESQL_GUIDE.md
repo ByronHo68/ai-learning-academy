@@ -1,8 +1,8 @@
 ## PostgreSQL database design / PostgreSQL 資料庫設計
 
-One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
+Only sanitized research text enters storage. Keep privacy_policy_version on runs and evidence chunks; AsyncPostgresSaver does not sanitize state. One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
 
-一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
+只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
 
@@ -10,7 +10,7 @@ Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSa
 
 See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.
 
-n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → LLM → validate → PostgreSQL report
+API PII filter before graph → n8n → sanitized PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → Buffered LLM → redact → validate → final privacy → PostgreSQL report
 
 ### YFinance MCP integration / YFinance MCP 整合
 
@@ -177,9 +177,9 @@ def review_node(state):
 
 ### Document embeddings: during indexing / 文件 embedding：建立索引時
 
-After company/daily news is validated, deduplicated and committed, split permitted text into versioned chunks. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
+After company/daily news is validated and deduplicated, sanitize email/card data in permitted excerpts BEFORE committing searchable evidence. Then chunk and embed the committed sanitized version. Keep the redaction policy version with the text hash; replacing unsafe historical text also invalidates its old vectors. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
 
-公司／每日新聞驗證、去重及提交後，將允許文字切成有版本段落。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
+公司／每日新聞驗證及去重後，提交可搜尋證據前先清理允許節錄的電郵／卡號，然後才把已提交清理版本切段及 embedding。文字 hash 附遮蔽政策版本；替換舊不安全文字時，舊向量亦失效。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
 
 ### Question embeddings: just before vector retrieval / 問題 embedding：向量檢索之前
 
@@ -347,7 +347,8 @@ CREATE TABLE research.evidence_chunks (
   published_at timestamptz NOT NULL,
   first_seen_at timestamptz NOT NULL,
   content_hash text NOT NULL,
-  excerpt text NOT NULL,
+  excerpt text NOT NULL, -- Sanitized permitted text only.
+  privacy_policy_version text NOT NULL,
   permitted boolean NOT NULL DEFAULT false,
   search_text tsvector GENERATED ALWAYS AS
     (to_tsvector('english'::regconfig, excerpt)) STORED,
@@ -363,7 +364,8 @@ CREATE INDEX evidence_text_gin ON research.evidence_chunks USING gin(search_text
 CREATE TABLE research.runs (
   run_id uuid PRIMARY KEY,
   owner_id text NOT NULL,
-  question text NOT NULL,
+  question text NOT NULL, -- Sanitized before graph invocation.
+  privacy_policy_version text NOT NULL,
   horizon text NOT NULL,
   snapshot_id uuid REFERENCES research.snapshots,
   deadline timestamptz NOT NULL, -- Active segment deadline, clipped to saved remainder.

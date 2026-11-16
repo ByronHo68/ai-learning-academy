@@ -40,6 +40,12 @@ The official concepts here are checkpoint and checkpointer. _checkpoint by itsel
 
 官方概念是 checkpoint 及 checkpointer；單獨 _checkpoint 不是另一個公開 LangGraph 元件，範例可用這名稱作區域／內部變數或 helper。本項目用 checkpointer=saver 及獨立 research_checkpoints 資料庫，資料表 schema 由套件管理，並非必須自建 _checkpoint 表。
 
+## PII filtering happens before saving state / 保存 state 之前先清理 PII
+
+Sanitize prompts and review comments before graph invocation, and model/tool results before returning node updates. AsyncPostgresSaver stores the supplied state; it does not mask emails or cards. A later cleaning node cannot undo an earlier raw checkpoint. Keep privacy policy version and safe counts; disable raw payload tracing.
+
+Graph 執行前清理提示及覆核留言，回傳節點更新前清理模型／工具結果。AsyncPostgresSaver 只存傳入 state，不會遮蔽電郵或卡號；後置清理節點不能撤回較早原 checkpoint。保留隱私政策版本及安全計數，停用原 payload 追蹤。
+
 ## At startup: attach the saver / 啟動時：接上 saver
 
 Initialize the checkpoint tables with await saver.setup() in a controlled migration/setup step. Keep AsyncPostgresSaver open for the Python application lifespan and compile the graph with it. The website and n8n do not instantiate this Python saver.

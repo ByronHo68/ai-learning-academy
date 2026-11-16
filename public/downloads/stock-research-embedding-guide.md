@@ -4,9 +4,9 @@ Proposed indexing and retrieval design, not a live finance service.
 
 ## Document embeddings: during indexing / 文件 embedding：建立索引時
 
-After company/daily news is validated, deduplicated and committed, split permitted text into versioned chunks. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
+After company/daily news is validated and deduplicated, sanitize email/card data in permitted excerpts BEFORE committing searchable evidence. Then chunk and embed the committed sanitized version. Keep the redaction policy version with the text hash; replacing unsafe historical text also invalidates its old vectors. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
 
-公司／每日新聞驗證、去重及提交後，將允許文字切成有版本段落。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
+公司／每日新聞驗證及去重後，提交可搜尋證據前先清理允許節錄的電郵／卡號，然後才把已提交清理版本切段及 embedding。文字 hash 附遮蔽政策版本；替換舊不安全文字時，舊向量亦失效。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
 
 ## Question embeddings: just before vector retrieval / 問題 embedding：向量檢索之前
 

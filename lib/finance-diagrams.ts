@@ -3,6 +3,7 @@ import { financeGraphNodes } from './finance-graph';
 import { financePreparationNodes } from './finance-evidence';
 import { financeN8nDailyDiagram } from './finance-n8n';
 import { financeEmbeddingDiagram } from './finance-embeddings';
+import { financePrivacyDiagram } from './finance-privacy';
 import { vectorStorageDiagram } from './finance-vector-lesson';
 import { checkpointArchitectureDiagram, checkpointRecoveryDiagram } from './finance-checkpoints';
 import { financeFunctions, financeEngineeringWorkflows } from './finance-project';
@@ -19,6 +20,18 @@ export const financeOverallDiagram: FinanceDiagram = {
   id: 'overall', title: t('One question → one evidence-backed report', '一條問題 → 一份有證據報告'),
   nodes: [...Object.entries(financeGraphNodes).map(([id, node]) => ({ id, label: node.label.replace(' → END', ''), detail: node.how })), ...financePreparationNodes],
   edges: [
+    edge('privacy_request', 'scope', 'Sanitized before graph invoke', 'Graph 執行前已清理'),
+    edge('privacy_request', 'privacy_stop', 'Entry check fails', '入口檢查失敗', 'stop'),
+    edge('scope', 'privacy_stop', 'Privacy wrapper fails', '隱私 wrapper 失敗', 'stop'),
+    edge('refresh', 'privacy_stop', 'Privacy wrapper fails', '隱私 wrapper 失敗', 'stop'),
+    edge('retrieve', 'privacy_stop', 'Privacy wrapper fails', '隱私 wrapper 失敗', 'stop'),
+    edge('rerank', 'privacy_stop', 'Privacy wrapper fails', '隱私 wrapper 失敗', 'stop'),
+    edge('fallback', 'privacy_stop', 'Privacy wrapper fails', '隱私 wrapper 失敗', 'stop'),
+    edge('refine', 'privacy_stop', 'Privacy wrapper fails', '隱私 wrapper 失敗', 'stop'),
+    edge('context', 'privacy_stop', 'Context cannot be sanitized', 'Context 無法清理', 'stop'),
+    edge('generate', 'privacy_stop', 'Output wrapper fails', '輸出 wrapper 失敗', 'stop'),
+    edge('privacy_publish', 'save', 'Safe report', '安全報告'),
+    edge('privacy_publish', 'privacy_stop', 'Release check fails', '發布檢查失敗', 'stop'),
     edge('scope', 'refresh', 'Supported', '範圍符合'),
     edge('scope', 'clarify', 'Ambiguous', '不明確', 'stop'),
     edge('scope', 'irrelevant', 'Unrelated', '不相關', 'stop'),
@@ -51,7 +64,7 @@ export const financeOverallDiagram: FinanceDiagram = {
     edge('generate', 'validate', 'Draft ready', '草稿就緒'),
     edge('generate', 'unavailable', 'Model / schema error', '模型／格式錯誤', 'stop'),
     edge('validate', 'blocked', 'Invalid support', '支持無效', 'stop'),
-    edge('validate', 'save', 'All checks pass', '檢查通過'),
+    edge('validate', 'privacy_publish', 'Claims and citations pass', '主張及引用通過'),
     edge('save', 'answer', 'Persisted result', '已保存結果'),
     edge('save', 'unavailable', 'Save failed', '保存失敗', 'stop'),
     { from: 'daily', to: 'global_news', label: t('Daily, configured timezone', '每日，已設定時區'), detail: financePreparationNodes[0].detail, kind: 'flow' },
@@ -78,16 +91,16 @@ export function financeFunctionDiagram(id: FinanceFunctionId): FinanceDiagram {
 export const financeDiagrams: FinanceDiagram[] = [
   financeOverallDiagram,
   ...[...financeFunctions, ...financeEngineeringWorkflows].map(guide => financeFunctionDiagram(guide.id)),
-  financeN8nDailyDiagram, financeEmbeddingDiagram, vectorStorageDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
+  financeN8nDailyDiagram, financeEmbeddingDiagram, vectorStorageDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
 ];
 export const financeDiagramIds = financeDiagrams.map(diagram => diagram.id);
 
 export const financeRetryRules = [
   { title: t('n8n retries news providers', 'n8n 重試新聞供應商'), body: t('One logical company refresh per run. n8n owns up to 3 transient provider attempts, with 1s then 2s backoff plus jitter. Clip each 10s attempt to the proposed 25s acquisition budget and the original run deadline. A host timeout triggers receipt reconciliation, not blind resubmission. Daily acquisition uses the same policy with its own job deadline.', '每次任務一次邏輯公司刷新。n8n 最多嘗試供應商 3 次，等待 1 秒、2 秒加 jitter；每次 10 秒受建議 25 秒抓取預算及原任務時限限制。Host 超時先核對紀錄，不盲目再發送；每日抓取同樣有限重試，但使用獨立工作時限。') },
   { title: t('Refine a weak search', '補查不足證據'), body: t('At most one refined query: two searches total, including failures. Keep the company, original question, snapshot and remaining active budget. If evidence is still weak, return insufficient evidence.', '最多一次修正查詢，包含失敗總共兩次搜尋。保留公司、原問題、快照及剩餘處理預算；仍不足就回傳證據不足。') },
-  { title: t('Fall back after a component failure', '元件失敗時回退'), body: t('Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.', '向量／重排路徑失敗時用仍可用的 sparse，維持原預算。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。') },
+  { title: t('Fall back after a component failure', '元件失敗時回退'), body: t('Use working sparse evidence after an operational vector/reranker failure. Privacy failures stop the affected path and never fall back to raw data. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.', '向量／重排運作失敗可用 sparse，維持原預算；隱私失敗停止該路徑，不能回退原文。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。') },
   { title: t('Resume an interrupted run', '恢復中斷任務'), body: t('Authenticate the owner and resume the same PostgreSQL checkpoint. Completed retrieval stays completed; an interrupted review node restarts at its beginning. Only explicit review wait pauses the 60s active budget. Persist the remainder and all counters; edits and refinement never extend the first-pause 15-minute review expiry. Crash recovery and network waits still consume active time.', '驗證擁有者並恢復同一 PostgreSQL checkpoint。已完成檢索不重做；中斷覆核節點從頭重跑。只有刻意覆核等待暫停 60 秒處理預算；保存餘額及全部計數，編輯或補查不延長首次暫停起 15 分鐘期限。故障恢復及網絡等待仍計處理時間。') },
-  { title: t('Stop when a retry would be misleading', '不能靠重試解決就停止'), body: t('Irrelevant prompts, failed authorization and invalid citations do not trigger automatic retries. There is one news refresh per new accepted prompt, and no automatic draft-repair loop in this design.', '不相關問題、授權失敗及無效引用不會自動重試。每個新接納問題只刷新新聞一次；此設計沒有自動修補草稿迴圈。') },
+  { title: t('Stop when a retry would be misleading', '不能靠重試解決就停止'), body: t('Irrelevant prompts, failed authorization, privacy failures and invalid citations do not trigger automatic retries. There is one news refresh per new accepted prompt, and no automatic draft-repair loop in this design.', '不相關問題、授權失敗、隱私失敗及無效引用不會自動重試。每個新接納問題只刷新新聞一次；此設計沒有自動修補草稿迴圈。') },
 ];
 
 export const diagramPalette = {

@@ -2,7 +2,11 @@ flowchart TD
   n0["Draft + evidence"]
   n1["Validation checks"]
   n2["Blocked → END"]
-  n3["Persist report"]
+  n3["Final privacy check"]
+  n4["Persist report"]
+  n5["Privacy blocked → END"]
   n0 -- "Check claims" --> n1
   n1 -- "Any failure" --> n2
   n1 -- "All pass" --> n3
+  n3 -- "Safe to store" --> n4
+  n3 -- "Withhold" --> n5

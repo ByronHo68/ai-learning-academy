@@ -18,7 +18,8 @@ CREATE TABLE research.evidence_chunks (
   published_at timestamptz NOT NULL,
   first_seen_at timestamptz NOT NULL,
   content_hash text NOT NULL,
-  excerpt text NOT NULL,
+  excerpt text NOT NULL, -- Sanitized permitted text only.
+  privacy_policy_version text NOT NULL,
   permitted boolean NOT NULL DEFAULT false,
   search_text tsvector GENERATED ALWAYS AS
     (to_tsvector('english'::regconfig, excerpt)) STORED,
@@ -34,7 +35,8 @@ CREATE INDEX evidence_text_gin ON research.evidence_chunks USING gin(search_text
 CREATE TABLE research.runs (
   run_id uuid PRIMARY KEY,
   owner_id text NOT NULL,
-  question text NOT NULL,
+  question text NOT NULL, -- Sanitized before graph invocation.
+  privacy_policy_version text NOT NULL,
   horizon text NOT NULL,
   snapshot_id uuid REFERENCES research.snapshots,
   deadline timestamptz NOT NULL, -- Active segment deadline, clipped to saved remainder.

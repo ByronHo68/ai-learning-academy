@@ -34,6 +34,9 @@ test('office package serves every exported page and asset on Node without depend
   assert(exported.includes('finance-project/n8n.html'));
   assert(exported.includes('finance-project/vector-db.html'));
   assert(exported.includes('downloads/stock-research-vector-demo.py'));
+  assert(exported.includes('downloads/stock-research-privacy-guide.md'));
+  assert(exported.includes('downloads/stock-research-pii-middleware.py'));
+  assert(exported.includes('downloads/finance-diagrams/privacy-en.svg'));
   assert(exported.includes('downloads/finance-diagrams/vector_storage-en.svg'));
   assert(exported.includes('downloads/stock-research-project.md'));
   assert(exported.includes('downloads/financial-report-development-proposal.md'));

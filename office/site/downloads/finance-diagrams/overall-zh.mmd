@@ -1,68 +1,83 @@
 flowchart TD
-  n0["SCOPE"]
-  n1["n8n COMPANY NEWS REFRESH"]
-  n2["PIN EVIDENCE SNAPSHOT"]
-  n3["SEARCH + QUERY EMBEDDING"]
-  n4["RERANK RELEVANCE"]
-  n5["SPARSE FALLBACK"]
-  n6["OPTIONAL EVIDENCE REVIEW"]
-  n7["VALIDATE SELECTION"]
-  n8["REVIEW EXPIRED"]
-  n9["EVIDENCE GATE"]
-  n10["REFINE ONCE"]
-  n11["BUILD CONTEXT"]
-  n12["LLM GENERATE"]
-  n13["VALIDATE"]
-  n14["SAVE + TRACE"]
-  n15["ANSWER"]
-  n16["INSUFFICIENT"]
-  n17["OUT OF SCOPE"]
-  n18["CLARIFY"]
-  n19["UNAVAILABLE"]
-  n20["VALIDATION FAILED"]
-  n21["DAILY n8n SCHEDULE"]
-  n22["ALPHA VANTAGE DAILY NEWS"]
-  n23["VERSIONED COMPANY PROFILES"]
-  n24["POSTGRESQL TEXT + OPTIONAL VECTORS"]
-  n25["DAILY FETCH FAILURE"]
-  n0 -- "範圍符合" --> n1
-  n0 -- "不明確" --> n18
-  n0 -- "不相關" --> n17
-  n1 -- "n8n 紀錄就緒" --> n2
-  n2 -- "證據版本已固定" --> n3
-  n2 -- "缺少所需背景" --> n16
-  n2 -- "快照儲存失敗" --> n19
-  n1 -- "只有過期新聞" --> n16
-  n1 -- "刷新失敗" --> n19
-  n3 -- "已准入混合" --> n4
-  n3 -- "預設全文搜尋" --> n6
-  n3 -- "PostgreSQL 中斷" --> n19
-  n3 -- "向量路徑失敗" --> n5
-  n4 -- "已排序原文" --> n6
-  n4 -- "重排失敗" --> n5
-  n5 -- "Sparse 可用" --> n6
-  n5 -- "Sparse 亦失敗" --> n19
-  n6 -- "自動／已提交覆核" --> n7
-  n6 -- "覆核期已過" --> n8
-  n7 -- "選取版本有效" --> n9
-  n7 -- "恢復前已過期" --> n8
-  n7 -- "選取儲存失敗" --> n19
-  n9 -. "有缺口＋餘額" .-> n10
-  n10 -. "第 2／2 次搜尋" .-> n3
-  n9 -- "仍不足" --> n16
-  n9 -- "支持足夠" --> n11
-  n11 -- "裁剪後支持不足" --> n16
-  n11 -- "上下文就緒" --> n12
-  n11 -- "到達時限" --> n19
-  n12 -- "草稿就緒" --> n13
-  n12 -- "模型／格式錯誤" --> n19
-  n13 -- "支持無效" --> n20
-  n13 -- "檢查通過" --> n14
-  n14 -- "已保存結果" --> n15
-  n14 -- "保存失敗" --> n19
-  n21 -- "每日，已設定時區" --> n22
-  n22 -- "提交完整批次" --> n24
-  n22 -- "n8n 重試已用完" --> n25
-  n25 -- "舊批次＋失敗狀態" --> n24
-  n23 -- "附來源背景版本" --> n24
-  n24 -- "讀取合資格版本" --> n2
+  n0["API PRIVACY BEFORE GRAPH"]
+  n1["PRIVACY BLOCKED"]
+  n2["FINAL PRIVACY CHECK"]
+  n3["SCOPE"]
+  n4["n8n COMPANY NEWS REFRESH"]
+  n5["PIN EVIDENCE SNAPSHOT"]
+  n6["SEARCH + QUERY EMBEDDING"]
+  n7["RERANK RELEVANCE"]
+  n8["SPARSE FALLBACK"]
+  n9["OPTIONAL EVIDENCE REVIEW"]
+  n10["VALIDATE SELECTION"]
+  n11["REVIEW EXPIRED"]
+  n12["EVIDENCE GATE"]
+  n13["REFINE ONCE"]
+  n14["BUILD SANITIZED CONTEXT"]
+  n15["LLM + OUTPUT PRIVACY"]
+  n16["VALIDATE"]
+  n17["SAVE + TRACE"]
+  n18["ANSWER"]
+  n19["INSUFFICIENT"]
+  n20["OUT OF SCOPE"]
+  n21["CLARIFY"]
+  n22["UNAVAILABLE"]
+  n23["VALIDATION FAILED"]
+  n24["DAILY n8n SCHEDULE"]
+  n25["ALPHA VANTAGE DAILY NEWS"]
+  n26["VERSIONED COMPANY PROFILES"]
+  n27["POSTGRESQL TEXT + OPTIONAL VECTORS"]
+  n28["DAILY FETCH FAILURE"]
+  n0 -- "Graph 執行前已清理" --> n3
+  n0 -- "入口檢查失敗" --> n1
+  n3 -- "隱私 wrapper 失敗" --> n1
+  n4 -- "隱私 wrapper 失敗" --> n1
+  n6 -- "隱私 wrapper 失敗" --> n1
+  n7 -- "隱私 wrapper 失敗" --> n1
+  n8 -- "隱私 wrapper 失敗" --> n1
+  n13 -- "隱私 wrapper 失敗" --> n1
+  n14 -- "Context 無法清理" --> n1
+  n15 -- "輸出 wrapper 失敗" --> n1
+  n2 -- "安全報告" --> n17
+  n2 -- "發布檢查失敗" --> n1
+  n3 -- "範圍符合" --> n4
+  n3 -- "不明確" --> n21
+  n3 -- "不相關" --> n20
+  n4 -- "n8n 紀錄就緒" --> n5
+  n5 -- "證據版本已固定" --> n6
+  n5 -- "缺少所需背景" --> n19
+  n5 -- "快照儲存失敗" --> n22
+  n4 -- "只有過期新聞" --> n19
+  n4 -- "刷新失敗" --> n22
+  n6 -- "已准入混合" --> n7
+  n6 -- "預設全文搜尋" --> n9
+  n6 -- "PostgreSQL 中斷" --> n22
+  n6 -- "向量路徑失敗" --> n8
+  n7 -- "已排序原文" --> n9
+  n7 -- "重排失敗" --> n8
+  n8 -- "Sparse 可用" --> n9
+  n8 -- "Sparse 亦失敗" --> n22
+  n9 -- "自動／已提交覆核" --> n10
+  n9 -- "覆核期已過" --> n11
+  n10 -- "選取版本有效" --> n12
+  n10 -- "恢復前已過期" --> n11
+  n10 -- "選取儲存失敗" --> n22
+  n12 -. "有缺口＋餘額" .-> n13
+  n13 -. "第 2／2 次搜尋" .-> n6
+  n12 -- "仍不足" --> n19
+  n12 -- "支持足夠" --> n14
+  n14 -- "裁剪後支持不足" --> n19
+  n14 -- "上下文就緒" --> n15
+  n14 -- "到達時限" --> n22
+  n15 -- "草稿就緒" --> n16
+  n15 -- "模型／格式錯誤" --> n22
+  n16 -- "支持無效" --> n23
+  n16 -- "主張及引用通過" --> n2
+  n17 -- "已保存結果" --> n18
+  n17 -- "保存失敗" --> n22
+  n24 -- "每日，已設定時區" --> n25
+  n25 -- "提交完整批次" --> n27
+  n25 -- "n8n 重試已用完" --> n28
+  n28 -- "舊批次＋失敗狀態" --> n27
+  n26 -- "附來源背景版本" --> n27
+  n27 -- "讀取合資格版本" --> n5

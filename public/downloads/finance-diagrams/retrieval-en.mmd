@@ -8,7 +8,7 @@ flowchart TD
   n6["Validate selection revision"]
   n7["Review expired → END"]
   n8["Evidence gate"]
-  n9["Refine query once"]
+  n9["OpenRouter refine query once"]
   n10["Insufficient → END"]
   n11["Build context"]
   n0 -- "Database unavailable" --> n1
@@ -24,6 +24,7 @@ flowchart TD
   n6 -- "Recheck after exclusion" --> n8
   n5 -- "No working path" --> n1
   n8 -. "Gap after search 1" .-> n9
+  n9 -- "Refinement API failure" --> n1
   n9 -. "Search 2 of 2" .-> n0
   n8 -- "Still insufficient" --> n10
   n8 -- "Enough support" --> n11

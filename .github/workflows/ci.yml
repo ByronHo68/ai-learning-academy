@@ -105,5 +105,9 @@ jobs:
       - run: integrations/yfinance/.venv/bin/pip install -r integrations/yfinance/requirements-test.txt
       - run: integrations/yfinance/.venv/bin/python -m integrations.yfinance.export_schemas --check
       - run: integrations/yfinance/.venv/bin/python -m unittest discover -s integrations/yfinance/tests -p 'test_*.py'
+      - run: python3 -m venv integrations/finance_openrouter/.venv
+      - run: integrations/finance_openrouter/.venv/bin/pip install -r integrations/finance_openrouter/requirements.txt
+      - run: integrations/finance_openrouter/.venv/bin/python -m unittest discover -s integrations/finance_openrouter/tests -v
+      - run: integrations/finance_openrouter/.venv/bin/python -m integrations.finance_openrouter.demo
       - run: npm run check
       - run: npm run build

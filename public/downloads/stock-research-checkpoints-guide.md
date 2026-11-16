@@ -40,6 +40,12 @@ The official concepts here are checkpoint and checkpointer. _checkpoint by itsel
 
 官方概念是 checkpoint 及 checkpointer；單獨 _checkpoint 不是另一個公開 LangGraph 元件，範例可用這名稱作區域／內部變數或 helper。本項目用 checkpointer=saver 及獨立 research_checkpoints 資料庫，資料表 schema 由套件管理，並非必須自建 _checkpoint 表。
 
+## OpenRouter reservations survive resume / 恢復保留 OpenRouter 預留
+
+Save sanitized scope/refine/report results and safe usage references. A separate host ledger reserves authenticated run/role attempts and configuration before paid work. Reuse completed results; do not repeat an ambiguous paid attempt after a checkpoint gap. The offline recovery simulator makes no OpenRouter call.
+
+保存清理後 scope／refine／report 結果及安全用量引用；獨立 host ledger 在付費工作前預留已驗證 run／角色嘗試及設定。重用已完成結果，checkpoint 缺口後不能重複結果不明的付費嘗試；離線恢復模擬不呼叫 OpenRouter。
+
 ## PII filtering happens before saving state / 保存 state 之前先清理 PII
 
 Sanitize prompts and review comments before graph invocation, and model/tool results before returning node updates. AsyncPostgresSaver stores the supplied state; it does not mask emails or cards. A later cleaning node cannot undo an earlier raw checkpoint. Keep privacy policy version and safe counts; disable raw payload tracing.

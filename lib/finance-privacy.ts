@@ -28,7 +28,10 @@ def build_research_agent(model, tools):
         ],
     )
 
-# This list belongs to create_agent, not StateGraph(...).
+# This optional list belongs to create_agent, not StateGraph(...).
+# The finance scope/refine/report path uses OpenRouterGateway + a host sanitizer.
+# If adopting create_agent later, pass a configured ChatOpenRouter with max_retries=0,
+# and reserve EACH attempted model call durably. Never add an unbudgeted agent loop.
 # The host must sanitize BEFORE invoking a graph with a checkpointer.
 # Direct LLM calls in scope/refine/generate need explicit boundary wrappers.
 # Filter tool arguments BEFORE dispatch, not just tool results afterwards.

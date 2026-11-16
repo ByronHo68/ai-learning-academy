@@ -1,3 +1,4 @@
+import { openRouterCalls, openRouterGuide, openRouterReferences } from '../lib/finance-openrouter';
 import { rerankConcepts, hnswSettings, rerankProjectSteps, rerankReferences } from '../lib/finance-rerank';
 import { rerankExampleCommands, rerankPythonExample, rerankSqlSettings, rerankTutorialQuery, rerankTutorialSchema } from '../lib/finance-rerank-code';
 import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
@@ -26,6 +27,10 @@ import { financeCompanies, financeDeferred, financeEngineeringWorkflows, finance
 import { financeComposeDesign, financeDeploymentNotes, financeInterviewCases, financeLocalCommands, financePlan, financeRuntimeLimits } from '../lib/finance-proposal';
 
 const root = new URL('../', import.meta.url);
+const openRouterReadme = await readFile(new URL('integrations/finance_openrouter/README.md', root), 'utf8');
+const openRouterClient = await readFile(new URL('integrations/finance_openrouter/client.py', root), 'utf8');
+const openRouterNodes = await readFile(new URL('integrations/finance_openrouter/nodes.py', root), 'utf8');
+const openRouterEnvironment = await readFile(new URL('integrations/finance_openrouter/.env.example', root), 'utf8');
 const both = (value: Copy) => `${value.en}\n\n${value.zh}`;
 const allFunctions = [...financeFunctions, ...financeEngineeringWorkflows];
 if (new Set(allFunctions.map(item => item.id)).size !== allFunctions.length) throw new Error('Function IDs must be unique.');
@@ -69,8 +74,20 @@ const evidenceReview = [
   '[LangGraph interrupts documentation](https://docs.langchain.com/oss/python/langgraph/interrupts)',
   '[Lost in the Middle: evidence-position effects in studied models](https://arxiv.org/abs/2307.03172)',
 ].join('\n\n') + '\n';
+const openRouterMarkdown = [
+  '# OpenRouter for every research LLM call / 每個研究 LLM 呼叫使用 OpenRouter',
+  'Open `/finance-project/openrouter` for the bilingual call map, scenarios and setup. The repo has a real Python HTTP adapter and offline fixture tests. Live API, durable reservation and finance-backend integration are NOT RUN. Browser external calls: zero.',
+  '開啟 `/finance-project/openrouter` 看雙語呼叫地圖、情境及設定。Repo 有 Python HTTP adapter 及離線 fixture 測試；真實 API、持久預留及金融後端整合為 NOT RUN；瀏覽器外部呼叫為零。',
+  ...openRouterCalls.map(call => `## ${call.title.en} / ${call.title.zh}\n\n${both(call.when)}\n\nInput: ${both(call.input)}\n\nOutput: ${call.output}\n\nModel override: ${call.modelEnv}; max ${call.tokens} output tokens / ${call.seconds}s, clipped to remaining run budget.`),
+  ...openRouterGuide.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '[OpenRouter workflow SVG](finance-diagrams/openrouter-en.svg) · [繁中 SVG](finance-diagrams/openrouter-zh.svg)',
+  '## Server configuration / 伺服器設定\n\n```dotenv\n' + openRouterEnvironment + '\n```',
+  openRouterReadme.replace(/^#/gm, '##'),
+  '## References / 參考', ...openRouterReferences.map(item => `- [${item.title}](${item.url})`),
+].join('\n\n') + '\n';
 const rerankGuide = [
   '# Reranking and HNSW in the research project / 研究項目的重排及 HNSW',
+  'Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。',
   'Open `/finance-project/rerank-hnsw` for the bilingual mind map and animated layered graph / reranking lesson. Browser calls: zero. The graph, 2D vectors and relevance rubric are handmade fictional fixtures, not real HNSW or E5/BGE outputs. Live model inference, SQL, ANN recall and performance are NOT RUN. Full-text remains the default until frozen admission.',
   '開啟 `/finance-project/rerank-hnsw` 看雙語心智圖、分層圖及重排動畫。瀏覽器外部呼叫為零，人手圖、二維向量及相關 rubric 是虛構 fixture，不是真實 HNSW 或 E5／BGE 輸出。真實推論、SQL、ANN 召回及效能均 NOT RUN；凍結准入前預設全文。',
   ...rerankConcepts.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
@@ -153,6 +170,7 @@ const n8nGuide = [
 const databaseOverview = [
   '## PostgreSQL database design / PostgreSQL 資料庫設計',
   both(financeDatabase.introduction),
+  'Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。',
   'Open `/finance-project/rerank-hnsw` for the HNSW graph animation, reranking lesson, model choices and Python/SQL examples. 中文：HNSW 及重排動畫、模型候選及程式例子。',
   'Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。',
   'Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSaver tutorial, restart/recovery simulation and downloadable Python example.',
@@ -232,6 +250,11 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_OPENROUTER_GUIDE.md', openRouterMarkdown.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-openrouter-guide.md', openRouterMarkdown],
+  ['public/downloads/finance-openrouter-client.py', openRouterClient],
+  ['public/downloads/finance-openrouter-nodes.py', openRouterNodes],
+  ['public/downloads/finance-openrouter.env.example', openRouterEnvironment],
   ['docs/FINANCE_RERANK_HNSW_GUIDE.md', rerankGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-rerank-hnsw-guide.md', rerankGuide],
   ['public/downloads/stock-research-rerank-demo.py', rerankPythonExample],
@@ -272,8 +295,8 @@ const outputs: Array<[string, string]> = [
 ];
 const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
-  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
-  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含 HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
   `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
   '## Privacy configuration / 隱私設定\n\n[Privacy guide](stock-research-privacy-guide.md) · [Python middleware example](stock-research-pii-middleware.py)\n\nAPI redaction precedes graph invocation. Model/tool wrappers sanitize results before state updates. PII filtering does not replace injection defenses. Live integration: NOT RUN.',
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),

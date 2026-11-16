@@ -122,6 +122,7 @@ export default function FinanceN8nContent({ lang }: { lang: Lang }) {
     </section>
 
     <p><Link href="/finance-project/workflows#finance-privacy">{lang === 'zh' ? '查看匯入前 PII 清理及 n8n 執行資料保留政策 →' : 'See PII ingestion filtering and n8n execution-data retention →'}</Link></p>
+    <p><Link href="/finance-project/openrouter">{lang === 'zh' ? 'Scope、補查及報告的 OpenRouter 呼叫由 Python host 執行，與 n8n 新聞 API 分開 →' : 'Scope, refinement and report OpenRouter calls run in the Python host, separately from n8n news APIs →'}</Link></p>
     <FinanceAlphaVantageContent lang={lang}/>
     <N8nAnimation lang={lang}/>
     <section className="finance-section" id="n8n-connected-workflow">

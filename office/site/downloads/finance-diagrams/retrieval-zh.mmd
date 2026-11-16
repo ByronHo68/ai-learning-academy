@@ -8,7 +8,7 @@ flowchart TD
   n6["Validate selection revision"]
   n7["Review expired → END"]
   n8["Evidence gate"]
-  n9["Refine query once"]
+  n9["OpenRouter refine query once"]
   n10["Insufficient → END"]
   n11["Build context"]
   n0 -- "資料庫不可用" --> n1
@@ -24,6 +24,7 @@ flowchart TD
   n6 -- "排除後重查" --> n8
   n5 -- "沒有可用路徑" --> n1
   n8 -. "首次搜尋有缺口" .-> n9
+  n9 -- "補查 API 失敗" --> n1
   n9 -. "第 2／2 次搜尋" .-> n0
   n8 -- "仍不足" --> n10
   n8 -- "支持足夠" --> n11

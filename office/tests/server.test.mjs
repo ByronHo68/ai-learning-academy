@@ -34,6 +34,10 @@ test('office package serves every exported page and asset on Node without depend
   assert(exported.includes('finance-project/n8n.html'));
   assert(exported.includes('finance-project/vector-db.html'));
   assert(exported.includes('finance-project/rerank-hnsw.html'));
+  assert(exported.includes('finance-project/openrouter.html'));
+  assert(exported.includes('downloads/finance-openrouter-client.py'));
+  assert(exported.includes('downloads/finance-openrouter.env.example'));
+  assert(exported.includes('downloads/finance-diagrams/openrouter-en.svg'));
   assert(exported.includes('downloads/stock-research-rerank-demo.py'));
   assert(exported.includes('downloads/finance-diagrams/rerank_hnsw-en.svg'));
   assert(exported.includes('downloads/stock-research-vector-demo.py'));
@@ -50,7 +54,7 @@ test('office package serves every exported page and asset on Node without depend
     if (path.endsWith('.md')) assert.equal(response.headers.get('content-type'), 'text/markdown; charset=utf-8', path);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), await readFile(join(site, path)), path);
   }
-  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/finance-project/proposal', '/finance-project/proposal/', '/finance-project/n8n', '/finance-project/n8n/', '/finance-project/checkpoints', '/finance-project/checkpoints/', '/finance-project/vector-db', '/finance-project/vector-db/', '/finance-project/rerank-hnsw', '/finance-project/rerank-hnsw/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
+  for (const path of ['/', '/junior-path', '/junior-path/', '/hiring-readiness', '/finance-project', '/finance-project/', '/finance-project/proposal', '/finance-project/proposal/', '/finance-project/n8n', '/finance-project/n8n/', '/finance-project/checkpoints', '/finance-project/checkpoints/', '/finance-project/vector-db', '/finance-project/vector-db/', '/finance-project/rerank-hnsw', '/finance-project/rerank-hnsw/', '/finance-project/openrouter', '/finance-project/openrouter/', '/learn/rag-graphrag', '/settings', '/agent-lab/evals']) {
     const response = await fetch(base + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type'), /text\/html/);

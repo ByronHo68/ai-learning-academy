@@ -31,6 +31,8 @@ Only sanitized research text enters storage. Keep privacy_policy_version on runs
 
 只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。
+
 Open `/finance-project/rerank-hnsw` for the HNSW graph animation, reranking lesson, model choices and Python/SQL examples. 中文：HNSW 及重排動畫、模型候選及程式例子。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
@@ -293,6 +295,12 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
 }
 ```
 
+### model_call_reservations (host extension, NOT RUN)
+
+Before each paid OpenRouter attempt, atomically reserve authenticated run_id + role and configuration hash; at most scope/refine/report once each, three total. Persist time/counters independently of a later graph checkpoint. Restore reservations on resume, reject changed model/provider/schema/prompt configuration and never retry an ambiguous spent attempt. The SQL subset below does not implement this ledger; the host must supply it to the adapter.
+
+每次付費 OpenRouter 嘗試前原子預留已驗證 run_id＋角色及設定 hash；scope／refine／report 各最多一次，總共三次。時間／計數須獨立於後續 graph checkpoint 先存；恢復時載入預留、拒絕模型／provider／schema／提示改動，結果不明但已花費的嘗試不重試。下方 SQL 子集未實作此 ledger，host 須提供予 adapter。
+
 ### evidence_selection_revisions (proposed extension)
 
 Append a selection revision bound to the authenticated owner, run/thread, snapshot and candidate revision. Save selected/highlighted/excluded IDs, system ranks, validated user order, timestamps and selection limitations; the final report references that revision. Validate snapshot membership and permissions, require highlights to be selected and exclusions to be disjoint, and atomically check the expected revision. These records never modify stored news. Persist remaining active time and an absolute review expiry alongside checkpoints; do not hold a database transaction while awaiting the user.
@@ -496,7 +504,17 @@ app = FastAPI(lifespan=lifespan)
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-API PII redaction before graph/state/logs → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → buffered LLM + output redaction → Citations + final privacy → save + sanitized trace URL
+API PII redaction → OpenRouter scope → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → OpenRouter report + output redaction → Citations + final privacy → save + sanitized trace URL
+
+### OpenRouter for all generative calls / 所有生成呼叫使用 OpenRouter
+
+One shared server-side gateway serves scope, optional refinement and report generation. Reserve at most one attempt per role and three per run in a durable host ledger before dispatch. Use exact model/provider settings, strict validated schemas, clipped timeouts and no hidden retries/fallbacks. Missing usage stays null; no raw payload telemetry.
+
+共用伺服器 gateway 處理 scope、可選補查及報告；發出前在持久 host ledger 預留每角色最多一次、每任務三次。固定模型／provider 設定、嚴格驗證 schema、限制時限，不暗中重試／回退；缺用量保留 null，不記原 payload。
+
+The Python adapter and offline HTTP-fixture tests exist. Live OpenRouter, durable reservation and research-API integration remain NOT RUN. Keep E5/BGE, PostgreSQL and n8n on their separate paths. Never expose OPENROUTER_API_KEY through the browser.
+
+Python adapter 及離線 HTTP fixture 測試已有；真實 OpenRouter、持久預留及研究 API 整合仍 NOT RUN。E5／BGE、PostgreSQL 及 n8n 保持各自路徑，不能在瀏覽器暴露 OPENROUTER_API_KEY。
 
 ### PII filtering before persistence and external calls / 持久儲存及外部呼叫前清理 PII
 
@@ -730,7 +748,7 @@ Langfuse stack and configured LangSmith project. These are not provisioned by th
 ```sh
 # Proposed application repository, after its scaffold exists.
 # These commands do not start finance services in this academy repository.
-# Configure private n8n MCP and approved news-provider credentials first.
+# Configure private n8n MCP, news credentials and server-only OpenRouter settings first.
 # Start PostgreSQL 18 with pgvector (candidate retrieval), OTel Collector and the official Langfuse stack
 # separately; configure LangSmith server credentials. Dependencies may use Docker.
 # Keep retrieval_mode=sparse until real-news evaluation and safety gates pass.
@@ -740,7 +758,9 @@ cd services/research
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-# Copy .env.example to .env.local; set the chosen provider key locally.
+# Copy .env.example to .env.local; set OPENROUTER_API_KEY, OPENROUTER_MODEL
+# and OPENROUTER_PROVIDER. Optional role overrides use OPENROUTER_SCOPE/REFINE/REPORT_MODEL.
+# All scope/refine/report calls share the OpenRouter gateway; embeddings/reranking stay separate.
 # Set DATABASE_URL and CHECKPOINT_DATABASE_URL for separate research/checkpoint DBs.
 # Keep .env.local out of Git. The scaffold must load it server-side.
 # Apply versioned SQL migrations and AsyncPostgresSaver.setup() before ingestion.
@@ -811,7 +831,7 @@ One backend reduces integration work while demonstrating the Python skills relev
 
 ### Agent
 
-LangGraph · one LLM
+LangGraph · OpenRouter LLM API
 
 **How / 如何應用**
 
@@ -906,15 +926,17 @@ flowchart TD
   n1["Prompt + selection"]
   n2["Privacy blocked → END"]
   n3["Scope gate"]
-  n4["Clarify → END"]
-  n5["Out of scope → END"]
-  n6["News refresh"]
+  n4["Unavailable → END"]
+  n5["Clarify → END"]
+  n6["Out of scope → END"]
+  n7["News refresh"]
   n0 -->|"Redact email/card before graph invocation, scope, body logs and checkpoints. Keep safe original wording."| n1
   n0 -->|"Detector fails; do not invoke the graph or fetch news."| n2
-  n1 -->|"Validate company, horizon and question intent."| n3
-  n3 -->|"Company or intent is ambiguous."| n4
-  n3 -->|"Clearly unrelated or unsupported company."| n5
-  n3 -->|"Supported company research question."| n6
+  n1 -->|"Validate local schema/privacy, then call the shared OpenRouter scope role once for typed intent."| n3
+  n3 -->|"OpenRouter times out, refuses or returns invalid output. The attempt remains spent."| n4
+  n3 -->|"Company or intent is ambiguous."| n5
+  n3 -->|"Clearly unrelated or unsupported company."| n6
+  n3 -->|"Supported company research question."| n7
 ```
 
 **API privacy before graph → Prompt + selection**
@@ -943,15 +965,27 @@ Safe error category; no raw fallback
 
 **Prompt + selection → Scope gate**
 
-Validate company, horizon and question intent.
+Validate local schema/privacy, then call the shared OpenRouter scope role once for typed intent.
 
-驗證公司、期間及問題意圖。
+本機 schema／隱私驗證後，共用 OpenRouter scope 角色呼叫一次作結構化意圖分類。
 
 Handoff / 交接資料:
 
 Original question + canonical company + horizon
 
 原問題＋標準公司＋期間
+
+**Scope gate → Unavailable → END**
+
+OpenRouter times out, refuses or returns invalid output. The attempt remains spent.
+
+OpenRouter 超時、拒答或輸出無效，嘗試仍計數。
+
+Handoff / 交接資料:
+
+Safe error; no news or report call
+
+安全錯誤，不呼叫新聞或報告
 
 **Scope gate → Clarify → END**
 
@@ -1570,7 +1604,7 @@ flowchart TD
   n6["Validate selection revision"]
   n7["Review expired → END"]
   n8["Evidence gate"]
-  n9["Refine query once"]
+  n9["OpenRouter refine query once"]
   n10["Insufficient → END"]
   n11["Build context"]
   n0 -->|"The shared PostgreSQL service is unavailable; neither retrieval path can run."| n1
@@ -1586,6 +1620,7 @@ flowchart TD
   n6 -->|"Owner, run, thread, snapshot, revision, permitted IDs and expiry pass API and graph checks."| n8
   n5 -->|"Sparse also fails or the deadline expires."| n1
   n8 -->|"First search lacks coverage and the original budget remains."| n9
+  n9 -->|"The shared OpenRouter refinement call fails. Its attempt remains spent; do not run another model or search."| n1
   n9 -->|"Search again with a narrower query; at most two searches total, including failed attempts."| n0
   n8 -->|"The second search still lacks support, or no refinement budget remains."| n10
   n8 -->|"Relevant, current passages cover the question."| n11
@@ -1735,7 +1770,7 @@ Dependency error, not an empty evidence claim
 
 依賴錯誤，不聲稱沒有證據
 
-**Evidence gate → Refine query once**
+**Evidence gate → OpenRouter refine query once**
 
 First search lacks coverage and the original budget remains.
 
@@ -1747,7 +1782,19 @@ Missing facets; preserve company, cutoff and snapshot
 
 缺失面向；保留公司、截止及快照
 
-**Refine query once → PostgreSQL → full-text / pgvector**
+**OpenRouter refine query once → Unavailable → END**
+
+The shared OpenRouter refinement call fails. Its attempt remains spent; do not run another model or search.
+
+共用 OpenRouter 補查呼叫失敗，嘗試仍計數，不另跑模型或搜尋。
+
+Handoff / 交接資料:
+
+Safe provider error; same run limits
+
+安全供應商錯誤，原任務上限
+
+**OpenRouter refine query once → PostgreSQL → full-text / pgvector**
 
 Search again with a narrower query; at most two searches total, including failed attempts.
 
@@ -1954,7 +2001,7 @@ flowchart TD
   n3["Review expired → END"]
   n4["Refine → retrieve"]
   n5["Insufficient → END"]
-  n6["Context → LLM → validation"]
+  n6["Context → OpenRouter report → validation"]
   n7["Save → answer"]
   n8["Blocked → END"]
   n9["Unavailable → END"]
@@ -2042,7 +2089,7 @@ Supported facts + missing facets; no forecast
 
 有支持事實＋缺失面向；不作預測
 
-**Evidence gate → Context → LLM → validation**
+**Evidence gate → Context → OpenRouter report → validation**
 
 All required facets have support; conflicts are retained.
 
@@ -2054,7 +2101,7 @@ Prompt-specific draft with citations and conditional scenarios
 
 針對提示的草稿、引用及條件式情境
 
-**Context → LLM → validation → Save → answer**
+**Context → OpenRouter report → validation → Save → answer**
 
 Validation passes within the budget.
 
@@ -2066,7 +2113,7 @@ Validated cited answer
 
 已驗證引用答案
 
-**Context → LLM → validation → Blocked → END**
+**Context → OpenRouter report → validation → Blocked → END**
 
 Citation or support validation fails.
 
@@ -2078,7 +2125,7 @@ Withheld draft and validation errors
 
 不發布草稿及驗證錯誤
 
-**Context → LLM → validation → Unavailable → END**
+**Context → OpenRouter report → validation → Unavailable → END**
 
 Deadline, call limit or dependency failure.
 
@@ -2096,13 +2143,13 @@ Create typed state, screen the prompt and route accepted research.
 
 建立型別狀態、檢查提示範圍，路由已接納研究。
 
-Tools: LangGraph · one tool-capable LLM
+Tools: LangGraph · shared OpenRouter gateway
 
 **How / 如何應用**
 
-Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/ranking, optional evidence review, selection validation, evidence gate and context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
+Call the shared OpenRouter scope role once before news; refuse/clarify typed intent, with no SDK retry. The optional missing-facet query uses the same gateway refine role once, inside the three-call cap. Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/ranking, optional evidence review, selection validation, evidence gate and context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
 
-新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／排序、可選覆核、驗證選取、證據檢查及組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
+新聞前共用 OpenRouter scope 角色呼叫一次，以結構化意圖拒絕／澄清，不做 SDK 重試；缺少面向時可用同 gateway refine 角色一次，受三次總上限限制。新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／排序、可選覆核、驗證選取、證據檢查及組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
 
 **Why / 為何使用**
 
@@ -2234,15 +2281,17 @@ draft_report(question, horizon, as_of, evidence, optional_rule_result) → Resea
 flowchart TD
   n0["Selected passages"]
   n1["Context envelope"]
-  n2["Draft"]
-  n3["Validation"]
-  n4["Blocked → END"]
-  n5["Display + report rating"]
+  n2["Unavailable → END"]
+  n3["Draft"]
+  n4["Validation"]
+  n5["Blocked → END"]
+  n6["Display + report rating"]
   n0 -->|"Deduplicate, read sanitized excerpt versions and enforce the token budget; privacy removal/trimming must retain required support."| n1
-  n1 -->|"System policy and user question stay separate from untrusted excerpts."| n2
-  n2 -->|"The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence."| n3
-  n3 -->|"Unknown citation or unsupported factual claim."| n4
-  n3 -->|"Run citation validation and the final privacy check, then persist the sanitized report before exposing it."| n5
+  n1 -->|"OpenRouter report call times out, refuses or returns invalid schema; do not publish a fallback draft."| n2
+  n1 -->|"Call shared OpenRouter role report after evidence gates, with strict schema and the saved reservation. System policy and user question stay separate from untrusted excerpts."| n3
+  n3 -->|"The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence."| n4
+  n4 -->|"Unknown citation or unsupported factual claim."| n5
+  n4 -->|"Run citation validation and the final privacy check, then persist the sanitized report before exposing it."| n6
 ```
 
 **Selected passages → Context envelope**
@@ -2257,11 +2306,23 @@ Question, horizon, as_of, evidence[], missing_facets[], conflicts[]
 
 問題、期間、截止、證據、缺失面向及矛盾
 
+**Context envelope → Unavailable → END**
+
+OpenRouter report call times out, refuses or returns invalid schema; do not publish a fallback draft.
+
+OpenRouter 報告呼叫超時、拒答或 schema 無效，不發布回退草稿。
+
+Handoff / 交接資料:
+
+Safe error and spent attempt
+
+安全錯誤及已計嘗試
+
 **Context envelope → Draft**
 
-System policy and user question stay separate from untrusted excerpts.
+Call shared OpenRouter role report after evidence gates, with strict schema and the saved reservation. System policy and user question stay separate from untrusted excerpts.
 
-系統規則及使用者問題與不可信原文分開。
+證據關卡後，以嚴格 schema 及已存預留呼叫共用 OpenRouter report 角色；系統規則及使用者問題與不可信原文分開。
 
 Handoff / 交接資料:
 
@@ -2333,13 +2394,13 @@ Ask one LLM to explain the evidence and possible effects.
 
 由一個 LLM 解釋證據及可能影響。
 
-Tools: One LLM · prompt template · Pydantic schema
+Tools: OpenRouterGateway report role · prompt template · Pydantic schema
 
 **How / 如何應用**
 
-Provide the original question, horizon, refreshed excerpts and optional teaching-rule result. Separate observed facts from conditional forecasts; include base/upside/downside scenarios, assumptions, source IDs and what would invalidate each view.
+Use shared OpenRouter role report with an explicit evaluated model/provider, strict JSON schema and saved attempt reservation. Buffer and sanitize output before state updates; no hidden fallback or repair call. Provide the original question, horizon, refreshed excerpts and optional teaching-rule result. Separate observed facts from conditional forecasts; include base/upside/downside scenarios, assumptions, source IDs and what would invalidate each view.
 
-提供原問題、期間、刷新節錄及可選教學規則結果；分清事實與條件式預測，列基本／上行／下行情境、假設、來源及失效訊號。
+共用 OpenRouter report 角色使用明確已評估模型／provider、嚴格 JSON schema 及已存嘗試預留；state 更新前緩衝清理，不暗中回退或修補。提供原問題、期間、刷新節錄及可選教學規則結果；分清事實與條件式預測，列基本／上行／下行情境、假設、來源及失效訊號。
 
 **Why / 為何使用**
 

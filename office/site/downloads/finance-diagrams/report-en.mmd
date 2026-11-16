@@ -1,12 +1,14 @@
 flowchart TD
   n0["Selected passages"]
   n1["Context envelope"]
-  n2["Draft"]
-  n3["Validation"]
-  n4["Blocked → END"]
-  n5["Display + report rating"]
+  n2["Unavailable → END"]
+  n3["Draft"]
+  n4["Validation"]
+  n5["Blocked → END"]
+  n6["Display + report rating"]
   n0 -- "Read + trim" --> n1
-  n1 -- "Generate draft" --> n2
-  n2 -- "Check support" --> n3
-  n3 -- "Invalid" --> n4
-  n3 -- "Valid + saved" --> n5
+  n1 -- "Report API failure" --> n2
+  n1 -- "Generate draft" --> n3
+  n3 -- "Check support" --> n4
+  n4 -- "Invalid" --> n5
+  n4 -- "Valid + saved" --> n6

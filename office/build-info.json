@@ -1,5 +1,5 @@
 {
-  "sourceCommit": "46ce9beef21c5c85aa89a6c52da93ca3900deb97",
+  "sourceCommit": "ab029b15dd3941e7c1ef0981a9c6f218b2b82622",
   "buildNode": "v22.22.2",
   "runtime": "Node.js >=18.18.0; no npm dependencies",
   "agentLab": "The static office edition does not run the Python/Java agent services."

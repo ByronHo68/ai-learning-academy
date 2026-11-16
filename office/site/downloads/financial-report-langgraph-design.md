@@ -19,6 +19,8 @@ Only sanitized research text enters storage. Keep privacy_policy_version on runs
 
 只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。
+
 Open `/finance-project/rerank-hnsw` for the HNSW graph animation, reranking lesson, model choices and Python/SQL examples. 中文：HNSW 及重排動畫、模型候選及程式例子。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
@@ -280,6 +282,12 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
   }
 }
 ```
+
+### model_call_reservations (host extension, NOT RUN)
+
+Before each paid OpenRouter attempt, atomically reserve authenticated run_id + role and configuration hash; at most scope/refine/report once each, three total. Persist time/counters independently of a later graph checkpoint. Restore reservations on resume, reject changed model/provider/schema/prompt configuration and never retry an ambiguous spent attempt. The SQL subset below does not implement this ledger; the host must supply it to the adapter.
+
+每次付費 OpenRouter 嘗試前原子預留已驗證 run_id＋角色及設定 hash；scope／refine／report 各最多一次，總共三次。時間／計數須獨立於後續 graph checkpoint 先存；恢復時載入預留、拒絕模型／provider／schema／提示改動，結果不明但已花費的嘗試不重試。下方 SQL 子集未實作此 ledger，host 須提供予 adapter。
 
 ### evidence_selection_revisions (proposed extension)
 
@@ -545,7 +553,10 @@ def build_research_agent(model, tools):
         ],
     )
 
-# This list belongs to create_agent, not StateGraph(...).
+# This optional list belongs to create_agent, not StateGraph(...).
+# The finance scope/refine/report path uses OpenRouterGateway + a host sanitizer.
+# If adopting create_agent later, pass a configured ChatOpenRouter with max_retries=0,
+# and reserve EACH attempted model call durably. Never add an unbudgeted agent loop.
 # The host must sanitize BEFORE invoking a graph with a checkpointer.
 # Direct LLM calls in scope/refine/generate need explicit boundary wrappers.
 # Filter tool arguments BEFORE dispatch, not just tool results afterwards.
@@ -607,15 +618,15 @@ Check release/export fields before saving. Model and tool wrappers already sanit
 
 儲存前檢查發布／下載欄位。模型及工具 wrapper 在回傳 state 更新前已清理，checkpoint 不依靠此後置節點移除原文；保留引用 ID、日期及已驗證公開連結。
 
-### SCOPE (`scope`)
+### OPENROUTER SCOPE (`scope`)
 
 Reads: question + company + horizon
 
 Writes / handoff: scope: accepted | irrelevant | ambiguous
 
-Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.
+Call the shared OpenRouter gateway role scope once after privacy and before any news call. Strict schema, approved model/provider, saved call reservation and no hidden retries apply. API/refusal/schema failure returns unavailable, not irrelevant. Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.
 
-新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。
+隱私檢查後、新聞前，共用 OpenRouter gateway 的 scope 角色只呼叫一次；用嚴格 schema、核准模型／provider、已存呼叫預留，不暗中重試。API／拒答／schema 失敗回 unavailable，不是 irrelevant。新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。
 
 ### n8n COMPANY NEWS REFRESH (`refresh`)
 
@@ -707,15 +718,15 @@ Recheck relevance, freshness, attribution and coverage after exclusions. Highlig
 
 排除後重查相關性、新鮮度、來源及覆蓋；標記不能免除所需支持。保留反方證據及選取限制；缺少必要面向時預算內補查一次，否則回證據不足，context 裁剪後再次核對。
 
-### REFINE ONCE (`refine`)
+### OPENROUTER REFINE ONCE (`refine`)
 
 Reads: missing facets + original question
 
 Writes / handoff: refined query; same snapshot and cutoff
 
-Target the missing facet without changing the company or question. Retrieval increments attempts, including failed attempts; allow only two search rounds total.
+Call shared OpenRouter role refine at most once for the missing facet, with strict query schema and the saved run reservation. Preserve company, question and cutoff. API failure stops as unavailable. Target the missing facet without changing the company or question. Retrieval increments attempts, including failed attempts; allow only two search rounds total.
 
-針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
+共用 OpenRouter refine 角色最多一次，按嚴格 query schema 及已存任務預留處理缺少面向；保留公司、問題及截止。API 失敗回 unavailable。針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
 
 ### BUILD SANITIZED CONTEXT (`context`)
 
@@ -727,15 +738,15 @@ Read sanitized excerpt versions and recheck PII before external reranking or gen
 
 讀清理節錄版本，外部重排／生成前再查 PII，回傳任何 state 更新前先清理。按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
 
-### LLM + OUTPUT PRIVACY (`generate`)
+### OPENROUTER REPORT + PRIVACY (`generate`)
 
 Reads: policy + user question + evidence envelope
 
 Writes / handoff: structured draft with claim → source IDs
 
-Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
+Call shared OpenRouter role report only after evidence/context checks, using an explicit evaluated model/provider and a durable reservation. No provider fallback, repair call or SDK retry. Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
 
-邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
+證據／context 檢查後才呼叫共用 OpenRouter report 角色，以明確已評估模型／provider 及持久預留執行，不做 provider 回退、修補呼叫或 SDK 重試。邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
 
 ### VALIDATE (`validate`)
 
@@ -826,7 +837,7 @@ Synthetic: research MSFT costs; contact analyst@example.com.
 合成：研究 MSFT 成本，聯絡 analyst@example.com。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Only the sanitized question enters scope, n8n, checkpoints and model calls. Normal evidence and release checks still apply.
@@ -854,12 +865,26 @@ Synthetic model response cannot pass output sanitization.
 合成模型回應未能通過輸出清理。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → PRIVACY BLOCKED → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → PRIVACY BLOCKED → END
 ```
 
 Generate returns only privacy_blocked state. No raw draft is checkpointed, streamed or saved as a report.
 
 Generate 只回 privacy_blocked state；原草稿不入 checkpoint、串流或報告。
+
+### OpenRouter scope unavailable / OpenRouter scope 不可用
+
+Research MSFT while the scope API times out or returns invalid schema.
+
+Scope API 超時或回無效 schema 時研究 MSFT。
+
+```text
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → UNAVAILABLE → END
+```
+
+The attempt remains spent. Return unavailable before news/retrieval; do not reclassify an API error as irrelevant or retry invisibly.
+
+嘗試仍計數，在新聞／檢索前回 unavailable，不能把 API 錯誤當無關或暗中重試。
 
 ### Sufficient evidence / 證據充足
 
@@ -868,7 +893,7 @@ How could MSFT costs affect the next 1–3 months?
 MSFT 成本可能如何影響未來 1–3 個月？
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Default PostgreSQL full-text search supplies the evidence for a validated report.
@@ -882,7 +907,7 @@ Highlight the cost evidence before generating the MSFT report.
 生成 MSFT 報告前標記成本證據。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Pause, validate the selection, recheck coverage and emphasize supported cost discussion. Confidence is unchanged.
@@ -896,7 +921,7 @@ Exclude the only earnings-outlook passage from this report.
 在這份報告排除唯一盈利展望原文。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → OPENROUTER REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 Recheck after exclusion; one refinement still lacks permitted support, so return insufficient without a forecast.
@@ -910,7 +935,7 @@ Resume after the review window has expired.
 覆核期過後才恢復。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → REVIEW EXPIRED → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → REVIEW EXPIRED → END
 ```
 
 Stop before generation. Start a new request for refreshed evidence; counters and the original snapshot are preserved.
@@ -924,7 +949,7 @@ What is the latest MSFT earnings outlook?
 MSFT 最新盈利展望如何？
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → OPENROUTER REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 No outlook passage after two searches: explain the gap and abstain from forecasting.
@@ -938,7 +963,7 @@ Write a birthday poem for my friend.
 幫朋友寫生日詩。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → OUT OF SCOPE → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → OUT OF SCOPE → END
 ```
 
 Out of scope. Example: ask how recent MSFT news could affect margins.
@@ -952,7 +977,7 @@ Will it do well next quarter?
 佢下季會唔會表現好？
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → CLARIFY → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → CLARIFY → END
 ```
 
 Which company: MSFT, AAPL or NVDA?
@@ -966,7 +991,7 @@ Explain today’s MSFT news.
 解釋今日 MSFT 新聞。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → INSUFFICIENT → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → INSUFFICIENT → END
 ```
 
 Current coverage unavailable; label older facts and withhold a current forecast.
@@ -980,7 +1005,7 @@ Why do MSFT reports disagree about demand?
 為何 MSFT 報道對需求有不同說法？
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Preserve both sources and explain competing scenarios; do not invent a consensus.
@@ -994,7 +1019,7 @@ Summarize MSFT news; one retrieved article contains an instruction attack.
 摘要 MSFT 新聞，其中一篇含指令攻擊。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Treat article instructions as data; keep code-enforced permissions and legitimate evidence.
@@ -1008,7 +1033,7 @@ Research MSFT costs while the reranker is offline.
 重排服務離線時研究 MSFT 成本。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → SPARSE FALLBACK → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → SPARSE FALLBACK → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Use sparse fallback and identify the actual mode in the report.
@@ -1022,7 +1047,7 @@ Research MSFT when PostgreSQL goes offline after news refresh.
 新聞刷新後 PostgreSQL 中斷時研究 MSFT。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → UNAVAILABLE → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → UNAVAILABLE → END
 ```
 
 Return an operational error, not an insufficient-news claim.
@@ -1036,7 +1061,7 @@ A draft cites a source that does not support its claim.
 草稿引用不能支持主張的來源。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → VALIDATION FAILED → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → OPENROUTER REPORT + PRIVACY → VALIDATE → VALIDATION FAILED → END
 ```
 
 Withhold the draft and surface validation_failed.
@@ -1050,7 +1075,7 @@ The live run exceeds its deadline before generation.
 真實任務在生成前已超時。
 
 ```text
-API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → UNAVAILABLE → END
+API PRIVACY BEFORE GRAPH → OPENROUTER SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → UNAVAILABLE → END
 ```
 
 Stop without calling the model; keep the checkpoint and original limits.
@@ -1151,7 +1176,10 @@ Proposed wiring only. Supply real typed nodes, enforced budgets, provider adapte
 # Disable raw body/callback capture; sanitize before any graph invocation.
 # Each model/tool wrapper sanitizes results BEFORE returning state updates.
 # Do not checkpoint a raw draft and clean it in a subsequent node.
-# Disable raw token streaming; direct scope/refine LLM calls need wrappers too.
+# All generative calls use integrations.finance_openrouter OpenRouterGateway.
+# nodes.update(build_llm_nodes(gateway)) binds scope/refine/generate before compile.
+# The host supplies a durable per-run reserve callback and tested privacy sanitizer.
+# Disable raw token streaming; direct scope/refine LLM calls use the same gateway.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
 
@@ -1178,7 +1206,7 @@ class ResearchState(TypedDict, total=False):
     user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
-    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked"]
+    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked", "unavailable"]
     snapshot_id: str
     snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
@@ -1195,6 +1223,7 @@ class ResearchState(TypedDict, total=False):
     validation_errors: list[str]
     result: dict
     trace_id: str
+    model_call_records: list[dict]  # Safe OpenRouter usage/config references only.
     route: str  # Set by code-owned node checks, never copied from model output.
 
 def route_evidence(state):
@@ -1213,7 +1242,7 @@ def build_graph(nodes, checkpointer):
         builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
-        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop"})
+        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop", "unavailable": "unavailable"})
     # These nodes set route only to one of their declared successors.
     branches = {
         "refresh": ["snapshot", "insufficient", "unavailable", "privacy_stop"],
@@ -1223,7 +1252,7 @@ def build_graph(nodes, checkpointer):
         "fallback": ["review", "unavailable", "privacy_stop"],
         "review": ["selection", "review_expired"],
         "selection": ["gate", "review_expired", "unavailable"],
-        "refine": ["retrieve", "privacy_stop"],
+        "refine": ["retrieve", "privacy_stop", "unavailable"],
         "context": ["generate", "insufficient", "unavailable", "privacy_stop"],
         "generate": ["validate", "unavailable", "privacy_stop"],
         "validate": ["privacy_publish", "blocked"],
@@ -1264,7 +1293,17 @@ Checkpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-API PII redaction before graph/state/logs → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → buffered LLM + output redaction → Citations + final privacy → save + sanitized trace URL
+API PII redaction → OpenRouter scope → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → OpenRouter report + output redaction → Citations + final privacy → save + sanitized trace URL
+
+### OpenRouter for all generative calls / 所有生成呼叫使用 OpenRouter
+
+One shared server-side gateway serves scope, optional refinement and report generation. Reserve at most one attempt per role and three per run in a durable host ledger before dispatch. Use exact model/provider settings, strict validated schemas, clipped timeouts and no hidden retries/fallbacks. Missing usage stays null; no raw payload telemetry.
+
+共用伺服器 gateway 處理 scope、可選補查及報告；發出前在持久 host ledger 預留每角色最多一次、每任務三次。固定模型／provider 設定、嚴格驗證 schema、限制時限，不暗中重試／回退；缺用量保留 null，不記原 payload。
+
+The Python adapter and offline HTTP-fixture tests exist. Live OpenRouter, durable reservation and research-API integration remain NOT RUN. Keep E5/BGE, PostgreSQL and n8n on their separate paths. Never expose OPENROUTER_API_KEY through the browser.
+
+Python adapter 及離線 HTTP fixture 測試已有；真實 OpenRouter、持久預留及研究 API 整合仍 NOT RUN。E5／BGE、PostgreSQL 及 n8n 保持各自路徑，不能在瀏覽器暴露 OPENROUTER_API_KEY。
 
 ### PII filtering before persistence and external calls / 持久儲存及外部呼叫前清理 PII
 
@@ -1378,7 +1417,7 @@ flowchart TD
   n3["Review expired → END"]
   n4["Refine → retrieve"]
   n5["Insufficient → END"]
-  n6["Context → LLM → validation"]
+  n6["Context → OpenRouter report → validation"]
   n7["Save → answer"]
   n8["Blocked → END"]
   n9["Unavailable → END"]
@@ -1466,7 +1505,7 @@ Supported facts + missing facets; no forecast
 
 有支持事實＋缺失面向；不作預測
 
-**Evidence gate → Context → LLM → validation**
+**Evidence gate → Context → OpenRouter report → validation**
 
 All required facets have support; conflicts are retained.
 
@@ -1478,7 +1517,7 @@ Prompt-specific draft with citations and conditional scenarios
 
 針對提示的草稿、引用及條件式情境
 
-**Context → LLM → validation → Save → answer**
+**Context → OpenRouter report → validation → Save → answer**
 
 Validation passes within the budget.
 
@@ -1490,7 +1529,7 @@ Validated cited answer
 
 已驗證引用答案
 
-**Context → LLM → validation → Blocked → END**
+**Context → OpenRouter report → validation → Blocked → END**
 
 Citation or support validation fails.
 
@@ -1502,7 +1541,7 @@ Withheld draft and validation errors
 
 不發布草稿及驗證錯誤
 
-**Context → LLM → validation → Unavailable → END**
+**Context → OpenRouter report → validation → Unavailable → END**
 
 Deadline, call limit or dependency failure.
 
@@ -1520,13 +1559,13 @@ Create typed state, screen the prompt and route accepted research.
 
 建立型別狀態、檢查提示範圍，路由已接納研究。
 
-Tools: LangGraph · one tool-capable LLM
+Tools: LangGraph · shared OpenRouter gateway
 
 **How / 如何應用**
 
-Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/ranking, optional evidence review, selection validation, evidence gate and context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
+Call the shared OpenRouter scope role once before news; refuse/clarify typed intent, with no SDK retry. The optional missing-facet query uses the same gateway refine role once, inside the three-call cap. Reject irrelevant intent or clarify ambiguous company before news access. For accepted prompts require n8n refresh, then code-owned retrieval/ranking, optional evidence review, selection validation, evidence gate and context nodes. Track original question, snapshot, facets, attempts, deadline and trace ID.
 
-新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／排序、可選覆核、驗證選取、證據檢查及組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
+新聞前共用 OpenRouter scope 角色呼叫一次，以結構化意圖拒絕／澄清，不做 SDK 重試；缺少面向時可用同 gateway refine 角色一次，受三次總上限限制。新聞存取前拒絕無關意圖或澄清公司。接納提示須先 n8n 刷新，再由程式節點檢索／排序、可選覆核、驗證選取、證據檢查及組合 context；追蹤原問題、快照、面向、次數、時限及 trace ID。
 
 **Why / 為何使用**
 

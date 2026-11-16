@@ -2,7 +2,7 @@ flowchart TD
   n0["API PRIVACY BEFORE GRAPH"]
   n1["PRIVACY BLOCKED"]
   n2["FINAL PRIVACY CHECK"]
-  n3["SCOPE"]
+  n3["OPENROUTER SCOPE"]
   n4["n8n COMPANY NEWS REFRESH"]
   n5["PIN EVIDENCE SNAPSHOT"]
   n6["SEARCH + QUERY EMBEDDING"]
@@ -12,9 +12,9 @@ flowchart TD
   n10["VALIDATE SELECTION"]
   n11["REVIEW EXPIRED"]
   n12["EVIDENCE GATE"]
-  n13["REFINE ONCE"]
+  n13["OPENROUTER REFINE ONCE"]
   n14["BUILD SANITIZED CONTEXT"]
-  n15["LLM + OUTPUT PRIVACY"]
+  n15["OPENROUTER REPORT + PRIVACY"]
   n16["VALIDATE"]
   n17["SAVE + TRACE"]
   n18["ANSWER"]
@@ -40,6 +40,8 @@ flowchart TD
   n15 -- "輸出 wrapper 失敗" --> n1
   n2 -- "安全報告" --> n17
   n2 -- "發布檢查失敗" --> n1
+  n3 -- "OpenRouter 錯誤／拒答／schema" --> n22
+  n13 -- "OpenRouter 補查失敗" --> n22
   n3 -- "範圍符合" --> n4
   n3 -- "不明確" --> n21
   n3 -- "不相關" --> n20

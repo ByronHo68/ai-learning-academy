@@ -5,7 +5,10 @@
 # Disable raw body/callback capture; sanitize before any graph invocation.
 # Each model/tool wrapper sanitizes results BEFORE returning state updates.
 # Do not checkpoint a raw draft and clean it in a subsequent node.
-# Disable raw token streaming; direct scope/refine LLM calls need wrappers too.
+# All generative calls use integrations.finance_openrouter OpenRouterGateway.
+# nodes.update(build_llm_nodes(gateway)) binds scope/refine/generate before compile.
+# The host supplies a durable per-run reserve callback and tested privacy sanitizer.
+# Disable raw token streaming; direct scope/refine LLM calls use the same gateway.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
 
@@ -32,7 +35,7 @@ class ResearchState(TypedDict, total=False):
     user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
-    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked"]
+    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked", "unavailable"]
     snapshot_id: str
     snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
@@ -49,6 +52,7 @@ class ResearchState(TypedDict, total=False):
     validation_errors: list[str]
     result: dict
     trace_id: str
+    model_call_records: list[dict]  # Safe OpenRouter usage/config references only.
     route: str  # Set by code-owned node checks, never copied from model output.
 
 def route_evidence(state):
@@ -67,7 +71,7 @@ def build_graph(nodes, checkpointer):
         builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
-        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop"})
+        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop", "unavailable": "unavailable"})
     # These nodes set route only to one of their declared successors.
     branches = {
         "refresh": ["snapshot", "insufficient", "unavailable", "privacy_stop"],
@@ -77,7 +81,7 @@ def build_graph(nodes, checkpointer):
         "fallback": ["review", "unavailable", "privacy_stop"],
         "review": ["selection", "review_expired"],
         "selection": ["gate", "review_expired", "unavailable"],
-        "refine": ["retrieve", "privacy_stop"],
+        "refine": ["retrieve", "privacy_stop", "unavailable"],
         "context": ["generate", "insufficient", "unavailable", "privacy_stop"],
         "generate": ["validate", "unavailable", "privacy_stop"],
         "validate": ["privacy_publish", "blocked"],

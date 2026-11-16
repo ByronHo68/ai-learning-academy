@@ -15,9 +15,9 @@ Generated from `lib/finance-project.ts` and `lib/finance-proposal.ts`. Run `npm 
 
 ## PostgreSQL database design / PostgreSQL 資料庫設計
 
-One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
+Only sanitized research text enters storage. Keep privacy_policy_version on runs and evidence chunks; AsyncPostgresSaver does not sanitize state. One PostgreSQL service holds evidence, full-text indexes, optional pgvector embeddings, reports and feedback. LangGraph uses PostgreSQL checkpoints in a separate database. The browser simulation still stores only temporary page state.
 
-一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
+只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
 
@@ -25,7 +25,7 @@ Open `/finance-project/checkpoints` for the checkpoint mind map, AsyncPostgresSa
 
 See `/finance-project/n8n` and the [n8n integration guide](/downloads/stock-research-n8n-guide.md) for per-question acquisition, daily batches, PostgreSQL metadata isolation and the handoff to evidence review.
 
-n8n → PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → LLM → validate → PostgreSQL report
+API PII filter before graph → n8n → sanitized PostgreSQL snapshot → Full-text default · pgvector candidate → Admitted hybrid → RRF → reranker → Optional review → selection revision → evidence gate → Buffered LLM → redact → validate → final privacy → PostgreSQL report
 
 ### YFinance MCP integration / YFinance MCP 整合
 
@@ -192,9 +192,9 @@ def review_node(state):
 
 ### Document embeddings: during indexing / 文件 embedding：建立索引時
 
-After company/daily news is validated, deduplicated and committed, split permitted text into versioned chunks. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
+After company/daily news is validated and deduplicated, sanitize email/card data in permitted excerpts BEFORE committing searchable evidence. Then chunk and embed the committed sanitized version. Keep the redaction policy version with the text hash; replacing unsafe historical text also invalidates its old vectors. An indexing worker embeds new or changed chunks, then stores vectors with chunk ID, text hash, model/version and dimension in PostgreSQL pgvector. Company-profile excerpts use the same pipeline. This happens before those chunks can participate in vector search, rather than after reranking.
 
-公司／每日新聞驗證、去重及提交後，將允許文字切成有版本段落。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
+公司／每日新聞驗證及去重後，提交可搜尋證據前先清理允許節錄的電郵／卡號，然後才把已提交清理版本切段及 embedding。文字 hash 附遮蔽政策版本；替換舊不安全文字時，舊向量亦失效。索引 worker 嵌入新增／改動段落，再把向量、chunk ID、文字 hash、模型／版本及維度存 PostgreSQL pgvector。公司背景原文亦經此流程；須先有向量才可向量搜尋，並非重排後才 embedding。
 
 ### Question embeddings: just before vector retrieval / 問題 embedding：向量檢索之前
 
@@ -362,7 +362,8 @@ CREATE TABLE research.evidence_chunks (
   published_at timestamptz NOT NULL,
   first_seen_at timestamptz NOT NULL,
   content_hash text NOT NULL,
-  excerpt text NOT NULL,
+  excerpt text NOT NULL, -- Sanitized permitted text only.
+  privacy_policy_version text NOT NULL,
   permitted boolean NOT NULL DEFAULT false,
   search_text tsvector GENERATED ALWAYS AS
     (to_tsvector('english'::regconfig, excerpt)) STORED,
@@ -378,7 +379,8 @@ CREATE INDEX evidence_text_gin ON research.evidence_chunks USING gin(search_text
 CREATE TABLE research.runs (
   run_id uuid PRIMARY KEY,
   owner_id text NOT NULL,
-  question text NOT NULL,
+  question text NOT NULL, -- Sanitized before graph invocation.
+  privacy_policy_version text NOT NULL,
   horizon text NOT NULL,
   snapshot_id uuid REFERENCES research.snapshots,
   deadline timestamptz NOT NULL, -- Active segment deadline, clipped to saved remainder.
@@ -478,6 +480,89 @@ app = FastAPI(lifespan=lifespan)
 
 ```
 
+# PII protection in the research workflow / 研究流程的 PII 保護
+
+Open `/finance-project/workflows#finance-privacy` for the bilingual workflow and fixed synthetic examples. This is proposed backend wiring. The browser uses a limited regex/Luhn demonstration, not LangChain. Live privacy/model/checkpoint integration is NOT RUN.
+
+開啟 `/finance-project/workflows#finance-privacy` 看雙語流程及固定合成例子。此為建議後端接線，瀏覽器只示範有限 regex／Luhn，不是 LangChain；真實隱私／模型／checkpoint 整合為 NOT RUN。
+
+## Before scope and before graph state / 範圍檢查及 graph state 之前
+
+At API entry, validate size/schema, redact emails and credit-card numbers, then create the sanitized request. Disable request-body capture in proxy/APM instrumentation. Only that request may enter scope, n8n arguments, graph state, checkpoints or prompt traces. Sanitize review comments and other follow-up text through the same entry boundary. Keep the original research intent, but store original_question as the sanitized wording. Do not save the raw prompt for later cleaning.
+
+API 入口先核對大小／格式，遮蔽電郵及信用卡號，再建立清理後請求。關閉 proxy／APM 的 request body 擷取；只有清理後請求可進範圍檢查、n8n 參數、graph state、checkpoint 或提示 trace。覆核留言及其他後續文字同樣經入口。保留研究意圖，但 original_question 存清理後版本，不能先存原提示再清理。
+
+## News ingestion before searchable storage / 可搜尋儲存之前清理新聞
+
+Both company refresh and the daily macro/geopolitical job create sanitized excerpt versions before committing research evidence, chunking or embedding. Keep source IDs, attribution, publication/first-seen times and policy version. Permission to use text is still required. Repeated ingestion remains idempotent; source identity and story deduplication must not depend only on the redacted text. Existing unsafe chunks must be withdrawn and reprocessed before retrieval, including replacement vectors.
+
+公司刷新及每日宏觀／地緣工作都在提交研究證據、切段或 embedding 前建立清理節錄版本。保留來源 ID、出處、發布／首次取得時間及政策版本；仍須文字使用權。重複匯入保持冪等，來源身份／新聞去重不能只靠遮蔽後文字。已有不安全段落須撤出檢索，重新處理並替換向量後才可用。
+
+## Before reranking and every model/tool boundary / 重排及每次模型／工具邊界之前
+
+Recheck the query and retrieved excerpts before external rerankers, embedding providers and the report model. Direct scope/refinement LLM calls need the same wrappers. Validate and sanitize tool arguments before dispatch and tool results before returning a node update. If removal changes required support, return insufficient evidence instead of making a stronger claim. Raw context or draft must not enter a checkpoint between separate cleaning nodes.
+
+外部重排器、embedding 供應商及報告模型前，再查問題及檢索節錄。直接 scope／補查 LLM 呼叫也用相同 wrapper。工具參數在發出前核對清理，工具結果在回傳節點更新前處理。移除內容導致缺少支持則回證據不足，不能加強結論；不能在獨立清理節點之間把原 context／草稿存入 checkpoint。
+
+## Output filtering before state, streaming and release / State、串流及發布前清理輸出
+
+The generate wrapper buffers the response, sanitizes it and only then returns safe state. The initial design disables raw token streaming. Validate claims against the sanitized evidence, then perform a final privacy check before report storage/export. A detector failure stops the affected path with privacy_blocked; return a generic error and safe counts, never the offending value or raw exception. No automatic privacy retry or unsanitized fallback.
+
+Generate wrapper 先緩衝回應，清理後才回傳安全 state；初版停用原始 token 串流。按清理證據核對主張，報告儲存／下載前再作最終隱私檢查。偵測器失敗以 privacy_blocked 停止該路徑，只回一般錯誤及安全計數，不帶觸發值或原 exception；不自動隱私重試，亦不回退原文。
+
+## Traces and n8n execution history / Traces 及 n8n 執行歷史
+
+Disable raw model/tool payload capture before callbacks export it. Record run IDs, policy version, match counts/types, status, tokens and timings. Apply an attribute allowlist and a redacting OTel Collector before Langfuse/LangSmith fan-out. A Collector cannot undo an earlier raw export. Configure n8n execution-data retention and error logs so raw provider payloads are not retained. AsyncPostgresSaver stores supplied state; it does not detect PII.
+
+Callbacks 匯出前關閉原始模型／工具 payload 擷取。只記任務 ID、政策版本、匹配類型／計數、狀態、token 及時間；用 attribute allowlist，再經遮蔽 OTel Collector 分送 Langfuse／LangSmith。Collector 無法撤回先前原文匯出。設定 n8n 執行資料保留及錯誤 log，避免保留原供應商 payload。AsyncPostgresSaver 只存傳入 state，不偵測 PII。
+
+## Redaction policy and its limits / 遮蔽政策及限制
+
+Use redact for email and credit_card across model input, output and tool results. Mask would retain card digits that this app does not need. Preserve tickers, prices, percentages, dates and citation URLs; do not enable blanket URL redaction. Validate citation URLs separately and reject credentials/private query parameters instead of changing the evidence link. Built-ins do not cover every secret, phone, identity number or obfuscation. Add tested detectors for those needs. PII filtering does not stop prompt injection or replace permissions, scope and citation checks.
+
+模型輸入、輸出及工具結果的 email／credit_card 均用 redact。Mask 保留部分卡號，本 app 不需要。保留 ticker、價格、百分比、日期及引用 URL，不全面遮蔽 URL；引用網址另作驗證，含憑證／私人參數則拒絕，不能改造證據連結。內建偵測不涵蓋全部 secret、電話、身份號碼或變形寫法，按需要增加經測試偵測器。PII 清理不能阻止提示注入，也不取代權限、scope 及引用檢查。
+
+[Privacy workflow SVG](finance-diagrams/privacy-en.svg) · [繁中 SVG](finance-diagrams/privacy-zh.svg)
+
+## LangChain configuration / LangChain 設定
+
+```python
+# Proposed LangChain configuration, not an installed finance backend.
+from langchain.agents import create_agent
+from langchain.agents.middleware import PIIMiddleware
+
+def build_research_agent(model, tools):
+    return create_agent(
+        model=model,
+        tools=tools,
+        middleware=[
+            PIIMiddleware("email", strategy="redact", apply_to_input=True,
+                          apply_to_output=True, apply_to_tool_results=True),
+            PIIMiddleware("credit_card", strategy="redact", apply_to_input=True,
+                          apply_to_output=True, apply_to_tool_results=True),
+        ],
+    )
+
+# This list belongs to create_agent, not StateGraph(...).
+# The host must sanitize BEFORE invoking a graph with a checkpointer.
+# Direct LLM calls in scope/refine/generate need explicit boundary wrappers.
+# Filter tool arguments BEFORE dispatch, not just tool results afterwards.
+# Model/tool callbacks and n8n logs need their own payload-capture policy.
+# Start with buffered output: do not forward raw provider token chunks.
+# Pin/test the installed LangChain version and its stream behavior.
+# Syntax checked; live PIIMiddleware/model/checkpoint integration: NOT RUN.
+
+```
+
+## Verification / 驗證
+
+Use synthetic email/card fixtures across prompts, tools, model output and review comments. Assert no detected values in checkpoint writes, embeddings, callback exports, exceptions, n8n execution history or report downloads. Test detector failure and partial streams; retain financial facts and verified citations. Local teaching tests do not establish complete production PII detection.
+
+- [LangChain PIIMiddleware API](https://reference.langchain.com/python/langchain/agents/middleware/pii/PIIMiddleware)
+
+- [LangChain built-in middleware and PII detection](https://docs.langchain.com/oss/python/langchain/middleware/built-in#pii-detection)
+
+
 ## Vector retrieval → reranking → LLM / 向量檢索 → 重排 → LLM
 
 Assumption: news is already chunked and indexed in PostgreSQL; the live app still refreshes every accepted prompt through n8n and pins the new snapshot. The website only plays deterministic fictional scenarios. No live graph, vector, reranker or model call is made.
@@ -486,9 +571,39 @@ Assumption: news is already chunked and indexed in PostgreSQL; the live app stil
 
 ### State / 狀態
 
-Immutable request: owner_id, run_id, thread_id, original_question, company_id, horizon, as_of and review_mode. Persist remaining_active_ms (60,000 initially), active deadline, first-pause review_expires_at (15 minutes), all call counters, snapshot manifest, candidate revision and append-only selection revisions. Revisions contain selected/highlighted/excluded IDs, immutable system rank, user-ordered IDs and exclusion limitations, not edited article text. Review wait pauses active time only; crashes, network waits and other recovery do not. Resume spends only the saved remainder. Replace candidate/context lists per search, preserve known exclusions and never reset counters. Only sanitized IDs and metadata go to public traces.
+Before graph invocation, the API sanitizes all request/review text and disables raw request tracing. original_question means sanitized wording. Checkpoint only sanitized model/tool updates and record privacy_policy_version. Immutable request: owner_id, run_id, thread_id, original_question, company_id, horizon, as_of and review_mode. Persist remaining_active_ms (60,000 initially), active deadline, first-pause review_expires_at (15 minutes), all call counters, snapshot manifest, candidate revision and append-only selection revisions. Revisions contain selected/highlighted/excluded IDs, immutable system rank, user-ordered IDs and exclusion limitations, not edited article text. Review wait pauses active time only; crashes, network waits and other recovery do not. Resume spends only the saved remainder. Replace candidate/context lists per search, preserve known exclusions and never reset counters. Only sanitized IDs and metadata go to public traces.
 
-不可變請求：擁有者、run_id、thread_id、原問題、公司、期間、截止及覆核模式。保存剩餘處理毫秒（初始 60,000）、處理時限、首次暫停起 15 分鐘覆核期限、所有呼叫計數、快照清單、候選版本及只追加的選取版本。選取存已選／標記／排除 ID、原系統排名、用戶次序及限制，不改文章原文。只有覆核等待暫停處理計時；故障、網絡等待及其他恢復照計。恢復只可用剩餘預算；每輪取代候選／context，保留已知排除，不能重設計數。公開 trace 只用清理後 ID 及 metadata。
+Graph 執行前，API 清理全部請求／覆核文字並停用原請求追蹤；original_question 指清理版本。Checkpoint 只存清理模型／工具更新及 privacy_policy_version。不可變請求：擁有者、run_id、thread_id、原問題、公司、期間、截止及覆核模式。保存剩餘處理毫秒（初始 60,000）、處理時限、首次暫停起 15 分鐘覆核期限、所有呼叫計數、快照清單、候選版本及只追加的選取版本。選取存已選／標記／排除 ID、原系統排名、用戶次序及限制，不改文章原文。只有覆核等待暫停處理計時；故障、網絡等待及其他恢復照計。恢復只可用剩餘預算；每輪取代候選／context，保留已知排除，不能重設計數。公開 trace 只用清理後 ID 及 metadata。
+
+### API PRIVACY BEFORE GRAPH (`privacy_request`)
+
+Reads: incoming request; body capture disabled
+
+Writes / handoff: sanitized request + policy version | privacy_blocked
+
+This boundary runs before graph invocation, checkpoint writes and prompt tracing. Redact email and card data in prompts/review comments, validate safe tool arguments, and keep only sanitized original_question. A detector failure rejects the request without starting LangGraph or fetching news.
+
+此邊界在 graph 執行、checkpoint 及提示追蹤之前。清理提示／覆核留言的電郵及卡號，驗證安全工具參數，original_question 只存清理版本。偵測器失敗拒絕請求，不啟動 LangGraph 或抓新聞。
+
+### PRIVACY BLOCKED → END (`privacy_stop`)
+
+Reads: safe privacy error category only
+
+Writes / handoff: withheld request/result; no raw fallback
+
+Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+
+清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+### FINAL PRIVACY CHECK (`privacy_publish`)
+
+Reads: already sanitized validated report
+
+Writes / handoff: safe report | privacy_blocked
+
+Check release/export fields before saving. Model and tool wrappers already sanitized results BEFORE returning state updates, so checkpoints never rely on this later node to remove raw data. Preserve citation IDs, dates and verified public links.
+
+儲存前檢查發布／下載欄位。模型及工具 wrapper 在回傳 state 更新前已清理，checkpoint 不依靠此後置節點移除原文；保留引用 ID、日期及已驗證公開連結。
 
 ### SCOPE (`scope`)
 
@@ -506,9 +621,9 @@ Reads: accepted request + stable run_id
 
 Writes / handoff: validated receipt + company-news versions + status
 
-Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then commits the evidence before returning a structured receipt. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
+Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then sanitizes permitted excerpts before committing searchable evidence and returning a structured receipt. Disable raw n8n execution payload retention. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
 
-每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重並提交證據後回傳結構化紀錄。Host 超時先核對原執行；每日全球新聞獨立抓取。
+每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重，清理允許節錄後才提交可搜尋證據及回傳結構化紀錄；停用 n8n 原 payload 保留。Host 超時先核對原執行；每日全球新聞獨立抓取。
 
 ### PIN EVIDENCE SNAPSHOT (`snapshot`)
 
@@ -600,25 +715,25 @@ Target the missing facet without changing the company or question. Retrieval inc
 
 針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
 
-### BUILD CONTEXT (`context`)
+### BUILD SANITIZED CONTEXT (`context`)
 
 Reads: supported selection + highlights + limitations + original question
 
 Writes / handoff: ≤6 excerpts in a token-bounded evidence envelope
 
-Fetch original excerpts, deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
+Read sanitized excerpt versions and recheck PII before external reranking or generation. Sanitize before returning any state update. Deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
 
-讀原文、按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
+讀清理節錄版本，外部重排／生成前再查 PII，回傳任何 state 更新前先清理。按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
 
-### LLM GENERATE (`generate`)
+### LLM + OUTPUT PRIVACY (`generate`)
 
 Reads: policy + user question + evidence envelope
 
 Writes / handoff: structured draft with claim → source IDs
 
-Supply excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
+Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
 
-節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
+邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
 
 ### VALIDATE (`validate`)
 
@@ -702,6 +817,48 @@ Record why release was blocked. This bounded design does not add an unbudgeted r
 
 ## Scenario routes / 情境路徑
 
+### PII redacted before scope / Scope 前清理 PII
+
+Synthetic: research MSFT costs; contact analyst@example.com.
+
+合成：研究 MSFT 成本，聯絡 analyst@example.com。
+
+```text
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
+```
+
+Only the sanitized question enters scope, n8n, checkpoints and model calls. Normal evidence and release checks still apply.
+
+只有清理後問題進 scope、n8n、checkpoint 及模型；仍須一般證據及發布檢查。
+
+### Entry privacy check fails / 入口隱私檢查失敗
+
+Synthetic request while the privacy detector is unavailable.
+
+合成請求，隱私偵測器不可用。
+
+```text
+API PRIVACY BEFORE GRAPH → PRIVACY BLOCKED → END
+```
+
+Reject before graph invocation or news acquisition. No raw prompt checkpoint or unsanitized fallback.
+
+Graph 執行或新聞抓取前拒絕，不存原提示 checkpoint，不回退原文。
+
+### Output privacy check fails / 輸出隱私檢查失敗
+
+Synthetic model response cannot pass output sanitization.
+
+合成模型回應未能通過輸出清理。
+
+```text
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → PRIVACY BLOCKED → END
+```
+
+Generate returns only privacy_blocked state. No raw draft is checkpointed, streamed or saved as a report.
+
+Generate 只回 privacy_blocked state；原草稿不入 checkpoint、串流或報告。
+
 ### Sufficient evidence / 證據充足
 
 How could MSFT costs affect the next 1–3 months?
@@ -709,7 +866,7 @@ How could MSFT costs affect the next 1–3 months?
 MSFT 成本可能如何影響未來 1–3 個月？
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Default PostgreSQL full-text search supplies the evidence for a validated report.
@@ -723,7 +880,7 @@ Highlight the cost evidence before generating the MSFT report.
 生成 MSFT 報告前標記成本證據。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Pause, validate the selection, recheck coverage and emphasize supported cost discussion. Confidence is unchanged.
@@ -737,7 +894,7 @@ Exclude the only earnings-outlook passage from this report.
 在這份報告排除唯一盈利展望原文。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 Recheck after exclusion; one refinement still lacks permitted support, so return insufficient without a forecast.
@@ -751,7 +908,7 @@ Resume after the review window has expired.
 覆核期過後才恢復。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → REVIEW EXPIRED → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → REVIEW EXPIRED → END
 ```
 
 Stop before generation. Start a new request for refreshed evidence; counters and the original snapshot are preserved.
@@ -765,7 +922,7 @@ What is the latest MSFT earnings outlook?
 MSFT 最新盈利展望如何？
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → REFINE ONCE → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → INSUFFICIENT → END
 ```
 
 No outlook passage after two searches: explain the gap and abstain from forecasting.
@@ -779,7 +936,7 @@ Write a birthday poem for my friend.
 幫朋友寫生日詩。
 
 ```text
-SCOPE → OUT OF SCOPE → END
+API PRIVACY BEFORE GRAPH → SCOPE → OUT OF SCOPE → END
 ```
 
 Out of scope. Example: ask how recent MSFT news could affect margins.
@@ -793,7 +950,7 @@ Will it do well next quarter?
 佢下季會唔會表現好？
 
 ```text
-SCOPE → CLARIFY → END
+API PRIVACY BEFORE GRAPH → SCOPE → CLARIFY → END
 ```
 
 Which company: MSFT, AAPL or NVDA?
@@ -807,7 +964,7 @@ Explain today’s MSFT news.
 解釋今日 MSFT 新聞。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → INSUFFICIENT → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → INSUFFICIENT → END
 ```
 
 Current coverage unavailable; label older facts and withhold a current forecast.
@@ -821,7 +978,7 @@ Why do MSFT reports disagree about demand?
 為何 MSFT 報道對需求有不同說法？
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Preserve both sources and explain competing scenarios; do not invent a consensus.
@@ -835,7 +992,7 @@ Summarize MSFT news; one retrieved article contains an instruction attack.
 摘要 MSFT 新聞，其中一篇含指令攻擊。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Treat article instructions as data; keep code-enforced permissions and legitimate evidence.
@@ -849,7 +1006,7 @@ Research MSFT costs while the reranker is offline.
 重排服務離線時研究 MSFT 成本。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → SPARSE FALLBACK → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → SAVE + TRACE → ANSWER → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → SPARSE FALLBACK → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → FINAL PRIVACY CHECK → SAVE + TRACE → ANSWER → END
 ```
 
 Use sparse fallback and identify the actual mode in the report.
@@ -863,7 +1020,7 @@ Research MSFT when PostgreSQL goes offline after news refresh.
 新聞刷新後 PostgreSQL 中斷時研究 MSFT。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → UNAVAILABLE → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → UNAVAILABLE → END
 ```
 
 Return an operational error, not an insufficient-news claim.
@@ -877,7 +1034,7 @@ A draft cites a source that does not support its claim.
 草稿引用不能支持主張的來源。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → LLM GENERATE → VALIDATE → VALIDATION FAILED → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → LLM + OUTPUT PRIVACY → VALIDATE → VALIDATION FAILED → END
 ```
 
 Withhold the draft and surface validation_failed.
@@ -891,7 +1048,7 @@ The live run exceeds its deadline before generation.
 真實任務在生成前已超時。
 
 ```text
-SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD CONTEXT → UNAVAILABLE → END
+API PRIVACY BEFORE GRAPH → SCOPE → n8n COMPANY NEWS REFRESH → PIN EVIDENCE SNAPSHOT → SEARCH + QUERY EMBEDDING → RERANK RELEVANCE → OPTIONAL EVIDENCE REVIEW → VALIDATE SELECTION → EVIDENCE GATE → BUILD SANITIZED CONTEXT → UNAVAILABLE → END
 ```
 
 Stop without calling the model; keep the checkpoint and original limits.
@@ -988,6 +1145,11 @@ Proposed wiring only. Supply real typed nodes, enforced budgets, provider adapte
 # Wiring sketch only: inject tested nodes and a PostgreSQL AsyncPostgresSaver.
 # See the PostgreSQL guide for lifespan wiring and one-time setup.
 # The academy does not run this graph or connect external services.
+# API PRIVACY BEFORE GRAPH is an outer boundary, not a first graph node.
+# Disable raw body/callback capture; sanitize before any graph invocation.
+# Each model/tool wrapper sanitizes results BEFORE returning state updates.
+# Do not checkpoint a raw draft and clean it in a subsequent node.
+# Disable raw token streaming; direct scope/refine LLM calls need wrappers too.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
 
@@ -999,7 +1161,8 @@ class Evidence(TypedDict):
 
 class ResearchState(TypedDict, total=False):
     run_id: str
-    original_question: str
+    original_question: str  # Sanitized before graph invocation.
+    privacy_policy_version: str
     company_id: str
     horizon: str
     as_of: str
@@ -1013,7 +1176,7 @@ class ResearchState(TypedDict, total=False):
     user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
-    scope: Literal["accepted", "irrelevant", "ambiguous"]
+    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked"]
     snapshot_id: str
     snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
@@ -1043,24 +1206,26 @@ def build_graph(nodes, checkpointer):
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
     for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "review", "selection", "review_expired", "gate",
-                 "refine", "context", "generate", "validate", "save", "answer",
+                 "refine", "context", "generate", "validate", "privacy_publish", "privacy_stop", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
         builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
-        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
+        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop"})
     # These nodes set route only to one of their declared successors.
     branches = {
-        "refresh": ["snapshot", "insufficient", "unavailable"],
+        "refresh": ["snapshot", "insufficient", "unavailable", "privacy_stop"],
         "snapshot": ["retrieve", "insufficient", "unavailable"],
-        "retrieve": ["rerank", "review", "fallback", "unavailable"],
-        "rerank": ["review", "fallback", "unavailable"],
-        "fallback": ["review", "unavailable"],
+        "retrieve": ["rerank", "review", "fallback", "unavailable", "privacy_stop"],
+        "rerank": ["review", "fallback", "unavailable", "privacy_stop"],
+        "fallback": ["review", "unavailable", "privacy_stop"],
         "review": ["selection", "review_expired"],
         "selection": ["gate", "review_expired", "unavailable"],
-        "context": ["generate", "insufficient", "unavailable"],
-        "generate": ["validate", "unavailable"],
-        "validate": ["save", "blocked"],
+        "refine": ["retrieve", "privacy_stop"],
+        "context": ["generate", "insufficient", "unavailable", "privacy_stop"],
+        "generate": ["validate", "unavailable", "privacy_stop"],
+        "validate": ["privacy_publish", "blocked"],
+        "privacy_publish": ["save", "privacy_stop"],
         "save": ["answer", "unavailable"],
     }
     for name, successors in branches.items():
@@ -1068,12 +1233,11 @@ def build_graph(nodes, checkpointer):
                                       {target: target for target in successors})
     builder.add_conditional_edges("gate", route_evidence,
         {name: name for name in ("context", "refine", "insufficient")})
-    builder.add_edge("refine", "retrieve")
-    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired"):
+    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired", "privacy_stop"):
         builder.add_edge(terminal, END)
     return builder.compile(checkpointer=checkpointer)
 
-# graph.invoke(validated_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
+# graph.invoke(sanitized_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
 # Thread ownership must be checked by the API. A recursion limit is only a backstop;
 # node wrappers enforce the actual time/call budget and idempotent MCP refresh.
 # Only a persisted human-review wait pauses active time. Save the remainder before
@@ -1098,7 +1262,17 @@ Checkpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-Prompt + company + horizon → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Context → conditional forecast + citations → Validate → feedback + trace URL
+API PII redaction before graph/state/logs → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → buffered LLM + output redaction → Citations + final privacy → save + sanitized trace URL
+
+### PII filtering before persistence and external calls / 持久儲存及外部呼叫前清理 PII
+
+Redact email and credit_card at API entry before graph invocation, scope, n8n dispatch, checkpointing and raw payload capture. Sanitize ingestion before storage/embedding; sanitize every model/tool result before returning state. Buffered output passes citation and final privacy checks before report storage. Privacy failure stops the affected path without raw fallback. PIIMiddleware belongs to create_agent; custom StateGraph nodes need explicit wrappers.
+
+API 入口在 graph 執行、scope、n8n、checkpoint 及原 payload 擷取前 redact email／credit_card；匯入在儲存／embedding 前清理，模型／工具結果在回傳 state 前清理。緩衝輸出通過引用及最終隱私檢查後才存報告；失敗停止該路徑，不回退原文。PIIMiddleware 屬 create_agent，自訂 StateGraph 節點須明確 wrapper。
+
+Keep prices, tickers, dates and verified citation URLs. Record safe counts/types and policy version, never matches or raw exceptions. Disable raw n8n execution history and SDK payload export; allowlist attributes before the redacting Collector sends spans to Langfuse/LangSmith. Detection is incomplete and does not replace prompt-injection defenses. Live privacy integration remains NOT RUN.
+
+保留價格、ticker、日期及已驗證引用 URL；只記安全類型／計數及政策版本，不帶匹配值或原 exception。停用 n8n 原執行歷史及 SDK payload 匯出，遮蔽 Collector 分送 Langfuse／LangSmith 前先核准 attributes。偵測並非完整，也不取代注入防護；真實隱私整合為 NOT RUN。
 
 ### Fresh news for every prompt / 每個提示都取得新聞
 
@@ -1550,9 +1724,9 @@ Tools: LangGraph AsyncPostgresSaver · PostgreSQL
 
 **How / 如何應用**
 
-Use AsyncPostgresSaver in the application lifespan; run setup once during migration. Save query, evidence references, tool receipts and remaining budget under the authorized run thread_id in the checkpoint database.
+Only sanitized request/model/tool state may enter AsyncPostgresSaver; the saver is not a PII detector. Use it in the application lifespan; run setup once during migration. Save query, evidence references, tool receipts and remaining budget under the authorized run thread_id in the checkpoint database.
 
-App 生命週期使用 AsyncPostgresSaver，migration 執行一次 setup；查詢、來源、工具紀錄及剩餘預算按已授權任務 thread_id 保存至 checkpoint 資料庫。
+AsyncPostgresSaver 只接收清理後請求／模型／工具 state，它不偵測 PII；App 生命週期使用 saver，migration 執行一次 setup；查詢、來源、工具紀錄及剩餘預算按已授權任務 thread_id 保存至 checkpoint 資料庫。
 
 **Why / 為何使用**
 

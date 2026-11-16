@@ -1,0 +1,27 @@
+flowchart TD
+  n0["EMAIL + CARD → REDACT"]
+  n1["API PRIVACY BEFORE GRAPH"]
+  n2["SANITIZED REQUEST → SCOPE"]
+  n3["n8n NEWS → SANITIZED EXCERPTS"]
+  n4["POSTGRESQL + CHUNKS + VECTORS"]
+  n5["RERANK / LLM / TOOL WRAPPERS"]
+  n6["RECHECK SUPPORT + CITATIONS"]
+  n7["INSUFFICIENT EVIDENCE → END"]
+  n8["FINAL PRIVACY CHECK → SAVE"]
+  n9["SAFE ATTRIBUTES → COLLECTOR"]
+  n10["LANGFUSE + LANGSMITH"]
+  n11["PRIVACY BLOCKED / WITHHOLD"]
+  n0 -- "User/review entry" --> n1
+  n1 -- "Sanitized before persistence" --> n2
+  n1 -- "Detector failure" --> n11
+  n0 -- "Independent news ingestion" --> n3
+  n3 -- "Sanitize before indexing" --> n4
+  n3 -- "No safe excerpt" --> n11
+  n0 -- "Every external boundary" --> n5
+  n5 -- "Sanitized state only" --> n6
+  n5 -- "Cannot sanitize result" --> n11
+  n6 -- "Support remains" --> n8
+  n6 -- "Required support lost" --> n7
+  n8 -- "Final check fails" --> n11
+  n0 -- "Before callback/export" --> n9
+  n9 -- "Redacted allowlisted spans" --> n10

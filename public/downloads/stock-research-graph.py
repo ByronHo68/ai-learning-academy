@@ -1,6 +1,11 @@
 # Wiring sketch only: inject tested nodes and a PostgreSQL AsyncPostgresSaver.
 # See the PostgreSQL guide for lifespan wiring and one-time setup.
 # The academy does not run this graph or connect external services.
+# API PRIVACY BEFORE GRAPH is an outer boundary, not a first graph node.
+# Disable raw body/callback capture; sanitize before any graph invocation.
+# Each model/tool wrapper sanitizes results BEFORE returning state updates.
+# Do not checkpoint a raw draft and clean it in a subsequent node.
+# Disable raw token streaming; direct scope/refine LLM calls need wrappers too.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
 
@@ -12,7 +17,8 @@ class Evidence(TypedDict):
 
 class ResearchState(TypedDict, total=False):
     run_id: str
-    original_question: str
+    original_question: str  # Sanitized before graph invocation.
+    privacy_policy_version: str
     company_id: str
     horizon: str
     as_of: str
@@ -26,7 +32,7 @@ class ResearchState(TypedDict, total=False):
     user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
-    scope: Literal["accepted", "irrelevant", "ambiguous"]
+    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked"]
     snapshot_id: str
     snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
@@ -56,24 +62,26 @@ def build_graph(nodes, checkpointer):
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
     for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "review", "selection", "review_expired", "gate",
-                 "refine", "context", "generate", "validate", "save", "answer",
+                 "refine", "context", "generate", "validate", "privacy_publish", "privacy_stop", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
         builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
-        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
+        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop"})
     # These nodes set route only to one of their declared successors.
     branches = {
-        "refresh": ["snapshot", "insufficient", "unavailable"],
+        "refresh": ["snapshot", "insufficient", "unavailable", "privacy_stop"],
         "snapshot": ["retrieve", "insufficient", "unavailable"],
-        "retrieve": ["rerank", "review", "fallback", "unavailable"],
-        "rerank": ["review", "fallback", "unavailable"],
-        "fallback": ["review", "unavailable"],
+        "retrieve": ["rerank", "review", "fallback", "unavailable", "privacy_stop"],
+        "rerank": ["review", "fallback", "unavailable", "privacy_stop"],
+        "fallback": ["review", "unavailable", "privacy_stop"],
         "review": ["selection", "review_expired"],
         "selection": ["gate", "review_expired", "unavailable"],
-        "context": ["generate", "insufficient", "unavailable"],
-        "generate": ["validate", "unavailable"],
-        "validate": ["save", "blocked"],
+        "refine": ["retrieve", "privacy_stop"],
+        "context": ["generate", "insufficient", "unavailable", "privacy_stop"],
+        "generate": ["validate", "unavailable", "privacy_stop"],
+        "validate": ["privacy_publish", "blocked"],
+        "privacy_publish": ["save", "privacy_stop"],
         "save": ["answer", "unavailable"],
     }
     for name, successors in branches.items():
@@ -81,12 +89,11 @@ def build_graph(nodes, checkpointer):
                                       {target: target for target in successors})
     builder.add_conditional_edges("gate", route_evidence,
         {name: name for name in ("context", "refine", "insufficient")})
-    builder.add_edge("refine", "retrieve")
-    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired"):
+    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired", "privacy_stop"):
         builder.add_edge(terminal, END)
     return builder.compile(checkpointer=checkpointer)
 
-# graph.invoke(validated_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
+# graph.invoke(sanitized_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
 # Thread ownership must be checked by the API. A recursion limit is only a backstop;
 # node wrappers enforce the actual time/call budget and idempotent MCP refresh.
 # Only a persisted human-review wait pauses active time. Save the remainder before

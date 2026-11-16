@@ -1,0 +1,27 @@
+flowchart TD
+  n0["EMAIL + CARD → REDACT"]
+  n1["API PRIVACY BEFORE GRAPH"]
+  n2["SANITIZED REQUEST → SCOPE"]
+  n3["n8n NEWS → SANITIZED EXCERPTS"]
+  n4["POSTGRESQL + CHUNKS + VECTORS"]
+  n5["RERANK / LLM / TOOL WRAPPERS"]
+  n6["RECHECK SUPPORT + CITATIONS"]
+  n7["INSUFFICIENT EVIDENCE → END"]
+  n8["FINAL PRIVACY CHECK → SAVE"]
+  n9["SAFE ATTRIBUTES → COLLECTOR"]
+  n10["LANGFUSE + LANGSMITH"]
+  n11["PRIVACY BLOCKED / WITHHOLD"]
+  n0 -- "用戶／覆核入口" --> n1
+  n1 -- "持久儲存前已清理" --> n2
+  n1 -- "偵測失敗" --> n11
+  n0 -- "獨立新聞匯入" --> n3
+  n3 -- "索引前清理" --> n4
+  n3 -- "無安全節錄" --> n11
+  n0 -- "每個外部邊界" --> n5
+  n5 -- "只回安全 state" --> n6
+  n5 -- "結果無法清理" --> n11
+  n6 -- "仍有支持" --> n8
+  n6 -- "必要支持流失" --> n7
+  n8 -- "最終檢查失敗" --> n11
+  n0 -- "Callback／匯出之前" --> n9
+  n9 -- "清理且核准 spans" --> n10

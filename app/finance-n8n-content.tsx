@@ -121,6 +121,7 @@ export default function FinanceN8nContent({ lang }: { lang: Lang }) {
       <p>{lang === 'zh' ? '每個有效問題經 YFinance 刷新公司新聞。獨立每日 Schedule Trigger 向 Alpha Vantage 抓宏觀／財政及廣泛候選，再作地緣標記；完整批次補充報告快照。' : 'Every accepted question refreshes company news through YFinance. A separate daily Schedule Trigger calls Alpha Vantage for macro/fiscal news and broad candidates for geopolitical tagging. It runs independently, and its completed batch supplements the report snapshot.'}</p>
     </section>
 
+    <p><Link href="/finance-project/workflows#finance-privacy">{lang === 'zh' ? '查看匯入前 PII 清理及 n8n 執行資料保留政策 →' : 'See PII ingestion filtering and n8n execution-data retention →'}</Link></p>
     <FinanceAlphaVantageContent lang={lang}/>
     <N8nAnimation lang={lang}/>
     <section className="finance-section" id="n8n-connected-workflow">

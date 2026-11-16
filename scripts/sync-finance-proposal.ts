@@ -1,3 +1,4 @@
+import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
 import { vectorConcepts, vectorModelChoices, vectorProjectApplications, vectorLessonReferences, vectorAnimationStages } from '../lib/finance-vector-lesson';
 import { vectorExampleCommands, vectorPythonExample, vectorTutorialSchema, vectorTutorialQuery } from '../lib/finance-vector-code';
 import { checkpointApplications, checkpointConcepts, checkpointDemoScenarios, checkpointReferences } from '../lib/finance-checkpoints';
@@ -101,6 +102,16 @@ const alphaVantageGuide = [
   '```json\n' + alphaVantageRequestExample + '\n```',
   `[${alphaVantageReference.title}](${alphaVantageReference.url})`,
 ].join('\n\n') + '\n';
+const privacyGuide = [
+  '# PII protection in the research workflow / 研究流程的 PII 保護',
+  'Open `/finance-project/workflows#finance-privacy` for the bilingual workflow and fixed synthetic examples. This is proposed backend wiring. The browser uses a limited regex/Luhn demonstration, not LangChain. Live privacy/model/checkpoint integration is NOT RUN.',
+  '開啟 `/finance-project/workflows#finance-privacy` 看雙語流程及固定合成例子。此為建議後端接線，瀏覽器只示範有限 regex／Luhn，不是 LangChain；真實隱私／模型／checkpoint 整合為 NOT RUN。',
+  ...financePrivacyGuide.map(item => `## ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '[Privacy workflow SVG](finance-diagrams/privacy-en.svg) · [繁中 SVG](finance-diagrams/privacy-zh.svg)',
+  '## LangChain configuration / LangChain 設定\n\n```python\n' + financePrivacyMiddlewareExample + '\n```',
+  '## Verification / 驗證\n\nUse synthetic email/card fixtures across prompts, tools, model output and review comments. Assert no detected values in checkpoint writes, embeddings, callback exports, exceptions, n8n execution history or report downloads. Test detector failure and partial streams; retain financial facts and verified citations. Local teaching tests do not establish complete production PII detection.',
+  ...financePrivacyReferences.map(item => `- [${item.title}](${item.url})`),
+].join('\n\n') + '\n';
 const embeddingGuide = [
   '# Document and query embeddings / 文件及查詢 embedding',
   'Proposed indexing and retrieval design, not a live finance service.',
@@ -164,7 +175,7 @@ const deployment = `## Docker and EC2 / Docker 及 EC2\n\n\`\`\`yaml\n${financeC
 const cases = `## Evaluation and interview evidence / 評估及面試證據\n\n${financeInterviewCases.map(item => `- ${item.en}\n- ${item.zh}`).join('\n\n')}\n\nStart with the frozen 18-case synthetic set and eight injection fixtures. Add a separately reviewed real-news holdout; publish actual results, dataset hashes and rerun commands. Test factual support and failure behavior. A Hold label has no universal correct answer and is not proof of a profitable strategy.\n\n先用凍結 18 個虛構案例及八個注入 fixtures，再加獨立審閱真實新聞保留集；附資料 hash、執行命令及真實結果。評估事實支持度及失敗處理；Hold 標籤沒有普遍標準答案，亦不能證明策略盈利。`;
 const deferred = `## Deferred scope / 後續擴展\n\n${financeDeferred.map(item => `### ${item.name}\n\n${both(item.reason)}`).join('\n\n')}`;
 const references = `## References / 官方參考\n\n${financeReferences.map(item => `- [${item.title}](${item.url})`).join('\n')}`;
-const guide = [intro, estimate, database, assurance, stack, ...financeFunctions.map(functionMarkdown), folders, stages, ...financeEngineeringWorkflows.map(functionMarkdown), deferred, references].join('\n\n') + '\n';
+const guide = [intro, estimate, database, privacyGuide, assurance, stack, ...financeFunctions.map(functionMarkdown), folders, stages, ...financeEngineeringWorkflows.map(functionMarkdown), deferred, references].join('\n\n') + '\n';
 const proposal = [intro, estimate, database, assurance, stages, folders, stack, '## Function contracts and individual workflows / 每項功能及獨立流程', ...financeFunctions.map(functionMarkdown), cases, deployment, ...financeEngineeringWorkflows.map(functionMarkdown), deferred, references].join('\n\n') + '\n';
 const graphWalkthrough = [
   '## Vector retrieval → reranking → LLM / 向量檢索 → 重排 → LLM',
@@ -179,7 +190,7 @@ const graphWalkthrough = [
 const research = financeFunctions.find(item => item.id === 'research');
 const recovery = financeFunctions.find(item => item.id === 'recovery');
 if (!research || !recovery) throw new Error('Research and recovery guides are required.');
-const graph = [intro, database, graphWalkthrough, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. Code-owned nodes call search_company_evidence and read_source in the documented order. A query planner may refine once within the same limits; the model cannot choose a privileged route. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；程式節點其後按文件次序呼叫搜尋及讀取工具；查詢規劃最多修正一次，模型不能自行選取特權路由。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} active-processing seconds per run, plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute absolute window from the first evidence-review pause. Only that human wait pauses active time; counters and the remaining budget survive resume. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
+const graph = [intro, database, privacyGuide, graphWalkthrough, `## Bounded agent design / 有限研究流程\n\nUse one research graph. A mandatory node calls refresh_company_news through n8n MCP for each new prompt before retrieval. Code-owned nodes call search_company_evidence and read_source in the documented order. A query planner may refine once within the same limits; the model cannot choose a privileged route. Keep company identity, dates, source IDs, evidence, attempted searches, validation errors and report status in typed run state.\n\n使用一個研究 graph，每個新提示由固定節點先經 n8n MCP 呼叫 refresh_company_news；程式節點其後按文件次序呼叫搜尋及讀取工具；查詢規劃最多修正一次，模型不能自行選取特權路由。狀態保存公司、日期、來源、證據、搜尋次數、驗證錯誤及報告狀態。\n\nProposed limits: ${financeRuntimeLimits.searchRounds} searches, ${financeRuntimeLimits.sourceReads} source reads, ${financeRuntimeLimits.llmCalls} model calls and ${financeRuntimeLimits.timeoutSeconds} active-processing seconds per run, plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute absolute window from the first evidence-review pause. Only that human wait pauses active time; counters and the remaining budget survive resume. Enforce budgets in code, not in article text.\n\nCheckpoint state is run-scoped memory. Long-term user memory is deferred. Read-only source lookup does not need repeated human approval. Ask for clarification when identity is ambiguous; require explicit approval before any future externally visible action. The first release does not trade, send or publish reports automatically.\n\nCheckpoint 保存單次研究進度，跨任務長期記憶延後。唯讀查詢不用逐次批准；公司不明確時先澄清。將來如有外發動作須先獲批准；首版不自動交易、發送或發布報告。`, assurance, functionMarkdown(research), functionMarkdown(recovery), cases, references].join('\n\n') + '\n';
 const mcpGuide = [
   '# MCP visual guide / MCP 圖解指南',
   'Generated from `lib/finance-mcp.ts`. Open `/finance-project/mcp` for the playable bilingual animation and interactive mind map. Run `npm run proposal:sync` to regenerate this guide.',
@@ -204,6 +215,9 @@ const mcpGuide = [
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_PRIVACY_GUIDE.md', privacyGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-privacy-guide.md', privacyGuide],
+  ['public/downloads/stock-research-pii-middleware.py', financePrivacyMiddlewareExample],
   ['docs/FINANCE_VECTOR_GUIDE.md', vectorGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-vector-guide.md', vectorGuide],
   ['public/downloads/stock-research-vector-demo.py', vectorPythonExample],
@@ -235,9 +249,10 @@ const outputs: Array<[string, string]> = [
 ];
 const atlas = [
   '# Stock research workflow atlas / 股票研究流程圖集',
-  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
-  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
+  'Open `/finance-project/workflows` for the interactive mind map and ' + financeDiagrams.length + ' connected diagrams, including PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.',
+  '開啟 `/finance-project/workflows` 查看互動心智圖及' + financeDiagrams.length + ' 張連線圖，包含 PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。',
   `Per run: ${financeRuntimeLimits.newsRefreshes} news refresh, ${financeRuntimeLimits.searchRounds} searches including failures, ${financeRuntimeLimits.sourceReads} source reads, at most ${financeRuntimeLimits.llmCalls} LLM calls and ${financeRuntimeLimits.timeoutSeconds}s active processing plus a ${financeRuntimeLimits.reviewExpiryMinutes}-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.`,
+  '## Privacy configuration / 隱私設定\n\n[Privacy guide](stock-research-privacy-guide.md) · [Python middleware example](stock-research-pii-middleware.py)\n\nAPI redaction precedes graph invocation. Model/tool wrappers sanitize results before state updates. PII filtering does not replace injection defenses. Live integration: NOT RUN.',
   ...financeRetryRules.map(rule => `## ${rule.title.en} / ${rule.title.zh}\n\n${both(rule.body)}`),
   ...financeDiagrams.map(diagram => `## ${diagram.title.en} / ${diagram.title.zh}\n\n[English SVG](finance-diagrams/${diagram.id}-en.svg) · [繁體中文 SVG](finance-diagrams/${diagram.id}-zh.svg)\n\n\`\`\`mermaid\n${financeDiagramMermaid(diagram, 'en')}\n\`\`\`\n\n${diagram.edges.map(edge => `- **${edge.from} → ${edge.to}** — ${edge.label.en} / ${edge.label.zh}\n  ${edge.detail.en}\n  ${edge.detail.zh}`).join('\n\n')}`),
 ].join('\n\n') + '\n';

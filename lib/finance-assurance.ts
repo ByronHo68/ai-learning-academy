@@ -3,11 +3,12 @@ import type { Copy } from './curriculum';
 const t = (en: string, zh: string): Copy => ({ en, zh });
 
 export const financePromptFlow = [
-  'Prompt + company + horizon → scope gate', 'n8n MCP → refresh_company_news', 'Versioned evidence + time filters',
-  'Sparse / gated hybrid → rank', 'Optional review → validate selection → evidence gate', 'Context → conditional forecast + citations', 'Validate → feedback + trace URL',
+  'API PII redaction before graph/state/logs → scope gate', 'n8n MCP → refresh_company_news', 'Versioned evidence + time filters',
+  'Sparse / gated hybrid → rank', 'Optional review → validate selection → evidence gate', 'Sanitized context → buffered LLM + output redaction', 'Citations + final privacy → save + sanitized trace URL',
 ];
 
 export const financeAssurance = [
+  { id: 'privacy', title: t('PII filtering before persistence and external calls', '持久儲存及外部呼叫前清理 PII'), points: [t('Redact email and credit_card at API entry before graph invocation, scope, n8n dispatch, checkpointing and raw payload capture. Sanitize ingestion before storage/embedding; sanitize every model/tool result before returning state. Buffered output passes citation and final privacy checks before report storage. Privacy failure stops the affected path without raw fallback. PIIMiddleware belongs to create_agent; custom StateGraph nodes need explicit wrappers.', 'API 入口在 graph 執行、scope、n8n、checkpoint 及原 payload 擷取前 redact email／credit_card；匯入在儲存／embedding 前清理，模型／工具結果在回傳 state 前清理。緩衝輸出通過引用及最終隱私檢查後才存報告；失敗停止該路徑，不回退原文。PIIMiddleware 屬 create_agent，自訂 StateGraph 節點須明確 wrapper。'), t('Keep prices, tickers, dates and verified citation URLs. Record safe counts/types and policy version, never matches or raw exceptions. Disable raw n8n execution history and SDK payload export; allowlist attributes before the redacting Collector sends spans to Langfuse/LangSmith. Detection is incomplete and does not replace prompt-injection defenses. Live privacy integration remains NOT RUN.', '保留價格、ticker、日期及已驗證引用 URL；只記安全類型／計數及政策版本，不帶匹配值或原 exception。停用 n8n 原執行歷史及 SDK payload 匯出，遮蔽 Collector 分送 Langfuse／LangSmith 前先核准 attributes。偵測並非完整，也不取代注入防護；真實隱私整合為 NOT RUN。')] },
   {
     id: 'news', title: t('Fresh news for every prompt', '每個提示都取得新聞'),
     points: [

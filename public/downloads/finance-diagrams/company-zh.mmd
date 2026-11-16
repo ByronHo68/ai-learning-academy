@@ -1,10 +1,14 @@
 flowchart TD
-  n0["Prompt + selection"]
-  n1["Scope gate"]
-  n2["Clarify → END"]
-  n3["Out of scope → END"]
-  n4["News refresh"]
-  n0 -- "驗證" --> n1
-  n1 -- "不明確" --> n2
-  n1 -- "不相關" --> n3
-  n1 -- "範圍符合" --> n4
+  n0["API privacy before graph"]
+  n1["Prompt + selection"]
+  n2["Privacy blocked → END"]
+  n3["Scope gate"]
+  n4["Clarify → END"]
+  n5["Out of scope → END"]
+  n6["News refresh"]
+  n0 -- "清理入口" --> n1
+  n0 -- "失敗停止" --> n2
+  n1 -- "驗證" --> n3
+  n3 -- "不明確" --> n4
+  n3 -- "不相關" --> n5
+  n3 -- "範圍符合" --> n6

@@ -4,8 +4,11 @@ import { financeDemoSources } from './finance-demo';
 const t = (en: string, zh: string): Copy => ({ en, zh });
 const node = (label: string, input: string, output: string, en: string, zh: string) => ({ label, input, output, how: t(en, zh) });
 export const financeGraphNodes = {
+  privacy_request: node('API PRIVACY BEFORE GRAPH', 'incoming request; body capture disabled', 'sanitized request + policy version | privacy_blocked', 'This boundary runs before graph invocation, checkpoint writes and prompt tracing. Redact email and card data in prompts/review comments, validate safe tool arguments, and keep only sanitized original_question. A detector failure rejects the request without starting LangGraph or fetching news.', '此邊界在 graph 執行、checkpoint 及提示追蹤之前。清理提示／覆核留言的電郵及卡號，驗證安全工具參數，original_question 只存清理版本。偵測器失敗拒絕請求，不啟動 LangGraph 或抓新聞。'),
+  privacy_stop: node('PRIVACY BLOCKED → END', 'safe privacy error category only', 'withheld request/result; no raw fallback', 'Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.', '清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。'),
+  privacy_publish: node('FINAL PRIVACY CHECK', 'already sanitized validated report', 'safe report | privacy_blocked', 'Check release/export fields before saving. Model and tool wrappers already sanitized results BEFORE returning state updates, so checkpoints never rely on this later node to remove raw data. Preserve citation IDs, dates and verified public links.', '儲存前檢查發布／下載欄位。模型及工具 wrapper 在回傳 state 更新前已清理，checkpoint 不依靠此後置節點移除原文；保留引用 ID、日期及已驗證公開連結。'),
   scope: node('SCOPE', 'question + company + horizon', 'scope: accepted | irrelevant | ambiguous', 'Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.', '新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。'),
-  refresh: node('n8n COMPANY NEWS REFRESH', 'accepted request + stable run_id', 'validated receipt + company-news versions + status', 'Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then commits the evidence before returning a structured receipt. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.', '每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重並提交證據後回傳結構化紀錄。Host 超時先核對原執行；每日全球新聞獨立抓取。'),
+  refresh: node('n8n COMPANY NEWS REFRESH', 'accepted request + stable run_id', 'validated receipt + company-news versions + status', 'Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then sanitizes permitted excerpts before committing searchable evidence and returning a structured receipt. Disable raw n8n execution payload retention. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.', '每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重，清理允許節錄後才提交可搜尋證據及回傳結構化紀錄；停用 n8n 原 payload 保留。Host 超時先核對原執行；每日全球新聞獨立抓取。'),
   snapshot: node('PIN EVIDENCE SNAPSHOT', 'company refresh receipt + completed daily batches + company profile', 'snapshot_id + exact version IDs + cutoff + coverage', 'Pin company news together with eligible completed macro/geopolitical batches and the sourced company-profile version. Preserve publication and first-seen cutoffs. For current research, freeze the evidence cutoff after refresh; an explicit historical cutoff remains fixed. Background ingestion continues independently. Refinement and resume reuse this manifest.', '將公司新聞、合資格完整宏觀／地緣批次及附來源公司背景版本固定成清單。檢查發布與首次取得截止；當前研究刷新後固定截止，指定歷史截止則保持原值。背景匯入獨立繼續；補查及恢復沿用此清單。'),
   retrieve: node('SEARCH + QUERY EMBEDDING', 'query + snapshot + metadata filters', 'sparse candidates | hybrid RRF top 20', 'Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model and frozen vector-readiness view, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.', '預設使用 PostgreSQL 全文搜尋。混合准入後，以快照固定模型及向量就緒視圖轉換查詢，用相同快照／公司／時間／權限條件搜尋 pgvector 及全文，再按名次融合。'),
   rerank: node('RERANK RELEVANCE', 'question + company/global/profile passages', 'top 10 passages by relevance + model version', 'Score how well each passage addresses the question. Company news, macro, geopolitics and dated profile excerpts compete on relevance. Use question expansion from sourced company exposure where needed. Business-impact reasoning comes later in the LLM step; the relevance score does not estimate a stock return.', '評分每段原文與問題相關性；公司、宏觀、地緣及有日期背景按相關性排序。需要時按附來源公司曝險擴展查詢。業務影響推論由後面的 LLM 處理；相關分數不估計股票回報。'),
@@ -15,8 +18,8 @@ export const financeGraphNodes = {
   review_expired: node('REVIEW EXPIRED → END', 'expired review window', 'expired status; no report generation', 'The proposed 15-minute review window starts at the first pause and is not extended by edits or refinement. Preserve the checkpoint for audit; require a new request and fresh evidence to continue.', '建議 15 分鐘覆核期從首次暫停起計，編輯或補查不延長。保留 checkpoint 供核對；繼續須新請求及新證據。'),
   gate: node('EVIDENCE GATE', 'validated selection + required facets + exclusion log', 'enough | gap + missing facets + conflicts', 'Recheck relevance, freshness, attribution and coverage after exclusions. Highlighting cannot waive missing support. Preserve opposing evidence and disclose selection limitations. Excluded counter-evidence must limit the affected conclusion; do not imply consensus. If a required facet is lost, refine once within budget or return insufficient; recheck again after context trimming.', '排除後重查相關性、新鮮度、來源及覆蓋；標記不能免除所需支持。保留反方證據及選取限制；缺少必要面向時預算內補查一次，否則回證據不足，context 裁剪後再次核對。'),
   refine: node('REFINE ONCE', 'missing facets + original question', 'refined query; same snapshot and cutoff', 'Target the missing facet without changing the company or question. Retrieval increments attempts, including failed attempts; allow only two search rounds total.', '針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。'),
-  context: node('BUILD CONTEXT', 'supported selection + highlights + limitations + original question', '≤6 excerpts in a token-bounded evidence envelope', 'Fetch original excerpts, deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.', '讀原文、按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。'),
-  generate: node('LLM GENERATE', 'policy + user question + evidence envelope', 'structured draft with claim → source IDs', 'Supply excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.', '節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。'),
+  context: node('BUILD SANITIZED CONTEXT', 'supported selection + highlights + limitations + original question', '≤6 excerpts in a token-bounded evidence envelope', 'Read sanitized excerpt versions and recheck PII before external reranking or generation. Sanitize before returning any state update. Deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.', '讀清理節錄版本，外部重排／生成前再查 PII，回傳任何 state 更新前先清理。按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。'),
+  generate: node('LLM + OUTPUT PRIVACY', 'policy + user question + evidence envelope', 'structured draft with claim → source IDs', 'Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.', '邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。'),
   validate: node('VALIDATE', 'draft + exact allowed excerpts', 'valid | invalid + reasons', 'Check schema, citation membership, company/time and claim support. No guessed URLs or unsupported factual claims. Invalid output is withheld rather than sent to the reader.', '核對 schema、引用集合、公司／時間及主張支持；不猜 URL 或輸出無根據事實；無效草稿不發布。'),
   save: node('SAVE + TRACE', 'validated report + run_id', 'report_id + verified trace URL or explicit trace failure', 'Commit the exact answer and source links in a PostgreSQL transaction. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.', '以 PostgreSQL transaction 保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。'),
   answer: node('ANSWER → END', 'saved validated report', 'cited conditional answer', 'Return the question-specific answer, uncertainty, sources, dates and trace status. Download reuses this saved result.', '回傳針對問題答案、不確定性、來源、日期及 trace 狀態；下載重用此結果。'),
@@ -27,8 +30,11 @@ export const financeGraphNodes = {
   blocked: node('VALIDATION FAILED → END', 'validation errors', 'withheld draft + error categories', 'Record why release was blocked. This bounded design does not add an unbudgeted repair loop.', '記錄阻擋發布原因；此有上限設計不新增無預算修正迴圈。'),
 };
 export type FinanceGraphNode = keyof typeof financeGraphNodes;
-export type FinanceGraphScenarioId = 'supported' | 'insufficient' | 'irrelevant' | 'ambiguous' | 'stale' | 'conflict' | 'injection' | 'rerank_failure' | 'retrieval_failure' | 'invalid_citation' | 'timeout' | 'review_highlight' | 'review_gap' | 'review_expired';
+export type FinanceGraphScenarioId = 'supported' | 'insufficient' | 'irrelevant' | 'ambiguous' | 'stale' | 'conflict' | 'injection' | 'rerank_failure' | 'retrieval_failure' | 'invalid_citation' | 'timeout' | 'review_highlight' | 'review_gap' | 'review_expired' | 'privacy_redacted' | 'privacy_failure' | 'privacy_output_failure';
 export const financeGraphScenarios: Array<{ id: FinanceGraphScenarioId; title: Copy; prompt: Copy; result: Copy }> = [
+  { id: 'privacy_redacted', title: t('PII redacted before scope', 'Scope 前清理 PII'), prompt: t('Synthetic: research MSFT costs; contact analyst@example.com.', '合成：研究 MSFT 成本，聯絡 analyst@example.com。'), result: t('Only the sanitized question enters scope, n8n, checkpoints and model calls. Normal evidence and release checks still apply.', '只有清理後問題進 scope、n8n、checkpoint 及模型；仍須一般證據及發布檢查。') },
+  { id: 'privacy_failure', title: t('Entry privacy check fails', '入口隱私檢查失敗'), prompt: t('Synthetic request while the privacy detector is unavailable.', '合成請求，隱私偵測器不可用。'), result: t('Reject before graph invocation or news acquisition. No raw prompt checkpoint or unsanitized fallback.', 'Graph 執行或新聞抓取前拒絕，不存原提示 checkpoint，不回退原文。') },
+  { id: 'privacy_output_failure', title: t('Output privacy check fails', '輸出隱私檢查失敗'), prompt: t('Synthetic model response cannot pass output sanitization.', '合成模型回應未能通過輸出清理。'), result: t('Generate returns only privacy_blocked state. No raw draft is checkpointed, streamed or saved as a report.', 'Generate 只回 privacy_blocked state；原草稿不入 checkpoint、串流或報告。') },
   { id: 'supported', title: t('Sufficient evidence', '證據充足'), prompt: t('How could MSFT costs affect the next 1–3 months?', 'MSFT 成本可能如何影響未來 1–3 個月？'), result: t('Default PostgreSQL full-text search supplies the evidence for a validated report.', '預設 PostgreSQL 全文搜尋為已驗證報告提供證據。') },
   { id: 'review_highlight', title: t('Highlight after reranking', '重排後標記重點'), prompt: t('Highlight the cost evidence before generating the MSFT report.', '生成 MSFT 報告前標記成本證據。'), result: t('Pause, validate the selection, recheck coverage and emphasize supported cost discussion. Confidence is unchanged.', '暫停、驗證選取、重查覆蓋，優先討論有支持成本內容；信心不變。') },
   { id: 'review_gap', title: t('Exclusion removes required support', '排除導致支持不足'), prompt: t('Exclude the only earnings-outlook passage from this report.', '在這份報告排除唯一盈利展望原文。'), result: t('Recheck after exclusion; one refinement still lacks permitted support, so return insufficient without a forecast.', '排除後重查；補查一次仍缺少可用支持，回證據不足，不作預測。') },
@@ -47,14 +53,16 @@ export const financeGraphScenarios: Array<{ id: FinanceGraphScenarioId; title: C
 
 // This is a deterministic teaching router, not intent detection or live retrieval.
 export function financeScenarioPath(scenario: FinanceGraphScenarioId): FinanceGraphNode[] {
-  const path: FinanceGraphNode[] = ['scope'];
+  const path: FinanceGraphNode[] = ['privacy_request'];
+  if (scenario === 'privacy_failure') return [...path, 'privacy_stop'];
+  path.push('scope');
   if (scenario === 'irrelevant') return [...path, 'irrelevant'];
   if (scenario === 'ambiguous') return [...path, 'clarify'];
   path.push('refresh');
   if (scenario === 'stale') return [...path, 'insufficient'];
   path.push('snapshot', 'retrieve');
   if (scenario === 'retrieval_failure') return [...path, 'unavailable'];
-  if (scenario !== 'supported') path.push('rerank');
+  if (scenario !== 'supported' && scenario !== 'privacy_redacted') path.push('rerank');
   if (scenario === 'rerank_failure') path.push('fallback');
   path.push('review');
   if (scenario === 'review_expired') return [...path, 'review_expired'];
@@ -62,8 +70,10 @@ export function financeScenarioPath(scenario: FinanceGraphScenarioId): FinanceGr
   if (scenario === 'insufficient' || scenario === 'review_gap') return [...path, 'refine', 'retrieve', 'rerank', 'review', 'selection', 'gate', 'insufficient'];
   path.push('context');
   if (scenario === 'timeout') return [...path, 'unavailable'];
-  path.push('generate', 'validate');
-  return scenario === 'invalid_citation' ? [...path, 'blocked'] : [...path, 'save', 'answer'];
+  path.push('generate');
+  if (scenario === 'privacy_output_failure') return [...path, 'privacy_stop'];
+  path.push('validate');
+  return scenario === 'invalid_citation' ? [...path, 'blocked'] : [...path, 'privacy_publish', 'save', 'answer'];
 }
 
 export const financeContextExample = JSON.stringify({
@@ -79,13 +89,18 @@ export const financeContextExample = JSON.stringify({
 }, null, 2);
 
 export const financeGraphState = t(
-  'Immutable request: owner_id, run_id, thread_id, original_question, company_id, horizon, as_of and review_mode. Persist remaining_active_ms (60,000 initially), active deadline, first-pause review_expires_at (15 minutes), all call counters, snapshot manifest, candidate revision and append-only selection revisions. Revisions contain selected/highlighted/excluded IDs, immutable system rank, user-ordered IDs and exclusion limitations, not edited article text. Review wait pauses active time only; crashes, network waits and other recovery do not. Resume spends only the saved remainder. Replace candidate/context lists per search, preserve known exclusions and never reset counters. Only sanitized IDs and metadata go to public traces.',
-  '不可變請求：擁有者、run_id、thread_id、原問題、公司、期間、截止及覆核模式。保存剩餘處理毫秒（初始 60,000）、處理時限、首次暫停起 15 分鐘覆核期限、所有呼叫計數、快照清單、候選版本及只追加的選取版本。選取存已選／標記／排除 ID、原系統排名、用戶次序及限制，不改文章原文。只有覆核等待暫停處理計時；故障、網絡等待及其他恢復照計。恢復只可用剩餘預算；每輪取代候選／context，保留已知排除，不能重設計數。公開 trace 只用清理後 ID 及 metadata。',
+  'Before graph invocation, the API sanitizes all request/review text and disables raw request tracing. original_question means sanitized wording. Checkpoint only sanitized model/tool updates and record privacy_policy_version. Immutable request: owner_id, run_id, thread_id, original_question, company_id, horizon, as_of and review_mode. Persist remaining_active_ms (60,000 initially), active deadline, first-pause review_expires_at (15 minutes), all call counters, snapshot manifest, candidate revision and append-only selection revisions. Revisions contain selected/highlighted/excluded IDs, immutable system rank, user-ordered IDs and exclusion limitations, not edited article text. Review wait pauses active time only; crashes, network waits and other recovery do not. Resume spends only the saved remainder. Replace candidate/context lists per search, preserve known exclusions and never reset counters. Only sanitized IDs and metadata go to public traces.',
+  'Graph 執行前，API 清理全部請求／覆核文字並停用原請求追蹤；original_question 指清理版本。Checkpoint 只存清理模型／工具更新及 privacy_policy_version。不可變請求：擁有者、run_id、thread_id、原問題、公司、期間、截止及覆核模式。保存剩餘處理毫秒（初始 60,000）、處理時限、首次暫停起 15 分鐘覆核期限、所有呼叫計數、快照清單、候選版本及只追加的選取版本。選取存已選／標記／排除 ID、原系統排名、用戶次序及限制，不改文章原文。只有覆核等待暫停處理計時；故障、網絡等待及其他恢復照計。恢復只可用剩餘預算；每輪取代候選／context，保留已知排除，不能重設計數。公開 trace 只用清理後 ID 及 metadata。',
 );
 
 export const financeGraphWiring = `# Wiring sketch only: inject tested nodes and a PostgreSQL AsyncPostgresSaver.
 # See the PostgreSQL guide for lifespan wiring and one-time setup.
 # The academy does not run this graph or connect external services.
+# API PRIVACY BEFORE GRAPH is an outer boundary, not a first graph node.
+# Disable raw body/callback capture; sanitize before any graph invocation.
+# Each model/tool wrapper sanitizes results BEFORE returning state updates.
+# Do not checkpoint a raw draft and clean it in a subsequent node.
+# Disable raw token streaming; direct scope/refine LLM calls need wrappers too.
 from typing import TypedDict, Literal
 from langgraph.graph import StateGraph, START, END
 
@@ -97,7 +112,8 @@ class Evidence(TypedDict):
 
 class ResearchState(TypedDict, total=False):
     run_id: str
-    original_question: str
+    original_question: str  # Sanitized before graph invocation.
+    privacy_policy_version: str
     company_id: str
     horizon: str
     as_of: str
@@ -111,7 +127,7 @@ class ResearchState(TypedDict, total=False):
     user_ordered_ids: list[str]
     highlighted_ids: list[str]
     excluded_ids: list[str]
-    scope: Literal["accepted", "irrelevant", "ambiguous"]
+    scope: Literal["accepted", "irrelevant", "ambiguous", "privacy_blocked"]
     snapshot_id: str
     snapshot_manifest: dict  # Company-news, daily-batch and profile version IDs + coverage.
     query: str
@@ -141,24 +157,26 @@ def build_graph(nodes, checkpointer):
     # retrieve increments search_attempts BEFORE each attempt.
     builder = StateGraph(ResearchState)
     for name in ("scope", "refresh", "snapshot", "retrieve", "rerank", "fallback", "review", "selection", "review_expired", "gate",
-                 "refine", "context", "generate", "validate", "save", "answer",
+                 "refine", "context", "generate", "validate", "privacy_publish", "privacy_stop", "save", "answer",
                  "insufficient", "irrelevant", "clarify", "unavailable", "blocked"):
         builder.add_node(name, nodes[name])
     builder.add_edge(START, "scope")
     builder.add_conditional_edges("scope", lambda s: s["scope"], {
-        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify"})
+        "accepted": "refresh", "irrelevant": "irrelevant", "ambiguous": "clarify", "privacy_blocked": "privacy_stop"})
     # These nodes set route only to one of their declared successors.
     branches = {
-        "refresh": ["snapshot", "insufficient", "unavailable"],
+        "refresh": ["snapshot", "insufficient", "unavailable", "privacy_stop"],
         "snapshot": ["retrieve", "insufficient", "unavailable"],
-        "retrieve": ["rerank", "review", "fallback", "unavailable"],
-        "rerank": ["review", "fallback", "unavailable"],
-        "fallback": ["review", "unavailable"],
+        "retrieve": ["rerank", "review", "fallback", "unavailable", "privacy_stop"],
+        "rerank": ["review", "fallback", "unavailable", "privacy_stop"],
+        "fallback": ["review", "unavailable", "privacy_stop"],
         "review": ["selection", "review_expired"],
         "selection": ["gate", "review_expired", "unavailable"],
-        "context": ["generate", "insufficient", "unavailable"],
-        "generate": ["validate", "unavailable"],
-        "validate": ["save", "blocked"],
+        "refine": ["retrieve", "privacy_stop"],
+        "context": ["generate", "insufficient", "unavailable", "privacy_stop"],
+        "generate": ["validate", "unavailable", "privacy_stop"],
+        "validate": ["privacy_publish", "blocked"],
+        "privacy_publish": ["save", "privacy_stop"],
         "save": ["answer", "unavailable"],
     }
     for name, successors in branches.items():
@@ -166,12 +184,11 @@ def build_graph(nodes, checkpointer):
                                       {target: target for target in successors})
     builder.add_conditional_edges("gate", route_evidence,
         {name: name for name in ("context", "refine", "insufficient")})
-    builder.add_edge("refine", "retrieve")
-    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired"):
+    for terminal in ("answer", "insufficient", "irrelevant", "clarify", "unavailable", "blocked", "review_expired", "privacy_stop"):
         builder.add_edge(terminal, END)
     return builder.compile(checkpointer=checkpointer)
 
-# graph.invoke(validated_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
+# graph.invoke(sanitized_request, {"configurable": {"thread_id": run_id}, "recursion_limit": 40})
 # Thread ownership must be checked by the API. A recursion limit is only a backstop;
 # node wrappers enforce the actual time/call budget and idempotent MCP refresh.
 # Only a persisted human-review wait pauses active time. Save the remainder before

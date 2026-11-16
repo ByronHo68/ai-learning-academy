@@ -1,10 +1,16 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 17 connected diagrams, including Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 18 connected diagrams, including PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及17 張連線圖，包含每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及18 張連線圖，包含 PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
+
+## Privacy configuration / 隱私設定
+
+[Privacy guide](stock-research-privacy-guide.md) · [Python middleware example](stock-research-pii-middleware.py)
+
+API redaction precedes graph invocation. Model/tool wrappers sanitize results before state updates. PII filtering does not replace injection defenses. Live integration: NOT RUN.
 
 ## n8n retries news providers / n8n 重試新聞供應商
 
@@ -20,9 +26,9 @@ At most one refined query: two searches total, including failures. Keep the comp
 
 ## Fall back after a component failure / 元件失敗時回退
 
-Use working sparse evidence when the vector/reranker path fails. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.
+Use working sparse evidence after an operational vector/reranker failure. Privacy failures stop the affected path and never fall back to raw data. Stay inside the same budget. If PostgreSQL is down, both retrieval paths fail: report unavailable; an outage is not “no news”.
 
-向量／重排路徑失敗時用仍可用的 sparse，維持原預算。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。
+向量／重排運作失敗可用 sparse，維持原預算；隱私失敗停止該路徑，不能回退原文。PostgreSQL 中斷則兩條檢索路徑均失敗，回服務不可用；故障不等於「沒有新聞」。
 
 ## Resume an interrupted run / 恢復中斷任務
 
@@ -32,9 +38,9 @@ Authenticate the owner and resume the same PostgreSQL checkpoint. Completed retr
 
 ## Stop when a retry would be misleading / 不能靠重試解決就停止
 
-Irrelevant prompts, failed authorization and invalid citations do not trigger automatic retries. There is one news refresh per new accepted prompt, and no automatic draft-repair loop in this design.
+Irrelevant prompts, failed authorization, privacy failures and invalid citations do not trigger automatic retries. There is one news refresh per new accepted prompt, and no automatic draft-repair loop in this design.
 
-不相關問題、授權失敗及無效引用不會自動重試。每個新接納問題只刷新新聞一次；此設計沒有自動修補草稿迴圈。
+不相關問題、授權失敗、隱私失敗及無效引用不會自動重試。每個新接納問題只刷新新聞一次；此設計沒有自動修補草稿迴圈。
 
 ## One question → one evidence-backed report / 一條問題 → 一份有證據報告
 
@@ -42,78 +48,141 @@ Irrelevant prompts, failed authorization and invalid citations do not trigger au
 
 ```mermaid
 flowchart TD
-  n0["SCOPE"]
-  n1["n8n COMPANY NEWS REFRESH"]
-  n2["PIN EVIDENCE SNAPSHOT"]
-  n3["SEARCH + QUERY EMBEDDING"]
-  n4["RERANK RELEVANCE"]
-  n5["SPARSE FALLBACK"]
-  n6["OPTIONAL EVIDENCE REVIEW"]
-  n7["VALIDATE SELECTION"]
-  n8["REVIEW EXPIRED"]
-  n9["EVIDENCE GATE"]
-  n10["REFINE ONCE"]
-  n11["BUILD CONTEXT"]
-  n12["LLM GENERATE"]
-  n13["VALIDATE"]
-  n14["SAVE + TRACE"]
-  n15["ANSWER"]
-  n16["INSUFFICIENT"]
-  n17["OUT OF SCOPE"]
-  n18["CLARIFY"]
-  n19["UNAVAILABLE"]
-  n20["VALIDATION FAILED"]
-  n21["DAILY n8n SCHEDULE"]
-  n22["ALPHA VANTAGE DAILY NEWS"]
-  n23["VERSIONED COMPANY PROFILES"]
-  n24["POSTGRESQL TEXT + OPTIONAL VECTORS"]
-  n25["DAILY FETCH FAILURE"]
-  n0 -- "Supported" --> n1
-  n0 -- "Ambiguous" --> n18
-  n0 -- "Unrelated" --> n17
-  n1 -- "n8n receipt ready" --> n2
-  n2 -- "Evidence versions pinned" --> n3
-  n2 -- "Required context missing" --> n16
-  n2 -- "Snapshot storage failed" --> n19
-  n1 -- "Only stale news" --> n16
-  n1 -- "Refresh failed" --> n19
-  n3 -- "Admitted hybrid" --> n4
-  n3 -- "Full-text default" --> n6
-  n3 -- "PostgreSQL unavailable" --> n19
-  n3 -- "Vector path fails" --> n5
-  n4 -- "Ranked passages" --> n6
-  n4 -- "Reranker fails" --> n5
-  n5 -- "Sparse works" --> n6
-  n5 -- "Sparse also fails" --> n19
-  n6 -- "Automatic / submitted review" --> n7
-  n6 -- "Review window expired" --> n8
-  n7 -- "Valid selection revision" --> n9
-  n7 -- "Expired before resume" --> n8
-  n7 -- "Selection storage failed" --> n19
-  n9 -. "Gap + budget left" .-> n10
-  n10 -. "Search 2 of 2" .-> n3
-  n9 -- "Still insufficient" --> n16
-  n9 -- "Enough support" --> n11
-  n11 -- "Trimming loses support" --> n16
-  n11 -- "Context ready" --> n12
-  n11 -- "Deadline reached" --> n19
-  n12 -- "Draft ready" --> n13
-  n12 -- "Model / schema error" --> n19
-  n13 -- "Invalid support" --> n20
-  n13 -- "All checks pass" --> n14
-  n14 -- "Persisted result" --> n15
-  n14 -- "Save failed" --> n19
-  n21 -- "Daily, configured timezone" --> n22
-  n22 -- "Commit completed batches" --> n24
-  n22 -- "n8n retries exhausted" --> n25
-  n25 -- "Prior batch + failure status" --> n24
-  n23 -- "Sourced profile versions" --> n24
-  n24 -- "Read eligible versions" --> n2
+  n0["API PRIVACY BEFORE GRAPH"]
+  n1["PRIVACY BLOCKED"]
+  n2["FINAL PRIVACY CHECK"]
+  n3["SCOPE"]
+  n4["n8n COMPANY NEWS REFRESH"]
+  n5["PIN EVIDENCE SNAPSHOT"]
+  n6["SEARCH + QUERY EMBEDDING"]
+  n7["RERANK RELEVANCE"]
+  n8["SPARSE FALLBACK"]
+  n9["OPTIONAL EVIDENCE REVIEW"]
+  n10["VALIDATE SELECTION"]
+  n11["REVIEW EXPIRED"]
+  n12["EVIDENCE GATE"]
+  n13["REFINE ONCE"]
+  n14["BUILD SANITIZED CONTEXT"]
+  n15["LLM + OUTPUT PRIVACY"]
+  n16["VALIDATE"]
+  n17["SAVE + TRACE"]
+  n18["ANSWER"]
+  n19["INSUFFICIENT"]
+  n20["OUT OF SCOPE"]
+  n21["CLARIFY"]
+  n22["UNAVAILABLE"]
+  n23["VALIDATION FAILED"]
+  n24["DAILY n8n SCHEDULE"]
+  n25["ALPHA VANTAGE DAILY NEWS"]
+  n26["VERSIONED COMPANY PROFILES"]
+  n27["POSTGRESQL TEXT + OPTIONAL VECTORS"]
+  n28["DAILY FETCH FAILURE"]
+  n0 -- "Sanitized before graph invoke" --> n3
+  n0 -- "Entry check fails" --> n1
+  n3 -- "Privacy wrapper fails" --> n1
+  n4 -- "Privacy wrapper fails" --> n1
+  n6 -- "Privacy wrapper fails" --> n1
+  n7 -- "Privacy wrapper fails" --> n1
+  n8 -- "Privacy wrapper fails" --> n1
+  n13 -- "Privacy wrapper fails" --> n1
+  n14 -- "Context cannot be sanitized" --> n1
+  n15 -- "Output wrapper fails" --> n1
+  n2 -- "Safe report" --> n17
+  n2 -- "Release check fails" --> n1
+  n3 -- "Supported" --> n4
+  n3 -- "Ambiguous" --> n21
+  n3 -- "Unrelated" --> n20
+  n4 -- "n8n receipt ready" --> n5
+  n5 -- "Evidence versions pinned" --> n6
+  n5 -- "Required context missing" --> n19
+  n5 -- "Snapshot storage failed" --> n22
+  n4 -- "Only stale news" --> n19
+  n4 -- "Refresh failed" --> n22
+  n6 -- "Admitted hybrid" --> n7
+  n6 -- "Full-text default" --> n9
+  n6 -- "PostgreSQL unavailable" --> n22
+  n6 -- "Vector path fails" --> n8
+  n7 -- "Ranked passages" --> n9
+  n7 -- "Reranker fails" --> n8
+  n8 -- "Sparse works" --> n9
+  n8 -- "Sparse also fails" --> n22
+  n9 -- "Automatic / submitted review" --> n10
+  n9 -- "Review window expired" --> n11
+  n10 -- "Valid selection revision" --> n12
+  n10 -- "Expired before resume" --> n11
+  n10 -- "Selection storage failed" --> n22
+  n12 -. "Gap + budget left" .-> n13
+  n13 -. "Search 2 of 2" .-> n6
+  n12 -- "Still insufficient" --> n19
+  n12 -- "Enough support" --> n14
+  n14 -- "Trimming loses support" --> n19
+  n14 -- "Context ready" --> n15
+  n14 -- "Deadline reached" --> n22
+  n15 -- "Draft ready" --> n16
+  n15 -- "Model / schema error" --> n22
+  n16 -- "Invalid support" --> n23
+  n16 -- "Claims and citations pass" --> n2
+  n17 -- "Persisted result" --> n18
+  n17 -- "Save failed" --> n22
+  n24 -- "Daily, configured timezone" --> n25
+  n25 -- "Commit completed batches" --> n27
+  n25 -- "n8n retries exhausted" --> n28
+  n28 -- "Prior batch + failure status" --> n27
+  n26 -- "Sourced profile versions" --> n27
+  n27 -- "Read eligible versions" --> n5
 ```
 
+- **privacy_request → scope** — Sanitized before graph invoke / Graph 執行前已清理
+  Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.
+  新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。
+
+- **privacy_request → privacy_stop** — Entry check fails / 入口檢查失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **scope → privacy_stop** — Privacy wrapper fails / 隱私 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **refresh → privacy_stop** — Privacy wrapper fails / 隱私 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **retrieve → privacy_stop** — Privacy wrapper fails / 隱私 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **rerank → privacy_stop** — Privacy wrapper fails / 隱私 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **fallback → privacy_stop** — Privacy wrapper fails / 隱私 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **refine → privacy_stop** — Privacy wrapper fails / 隱私 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **context → privacy_stop** — Context cannot be sanitized / Context 無法清理
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **generate → privacy_stop** — Output wrapper fails / 輸出 wrapper 失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **privacy_publish → save** — Safe report / 安全報告
+  Commit the exact answer and source links in a PostgreSQL transaction. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.
+  以 PostgreSQL transaction 保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。
+
+- **privacy_publish → privacy_stop** — Release check fails / 發布檢查失敗
+  Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
+  清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
 - **scope → refresh** — Supported / 範圍符合
-  Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then commits the evidence before returning a structured receipt. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
-  每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重並提交證據後回傳結構化紀錄。Host 超時先核對原執行；每日全球新聞獨立抓取。
+  Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then sanitizes permitted excerpts before committing searchable evidence and returning a structured receipt. Disable raw n8n execution payload retention. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
+  每有效提示經 n8n MCP 邏輯呼叫 refresh_company_news 一次。n8n 控制供應商超時及有限暫時錯誤重試，驗證去重，清理允許節錄後才提交可搜尋證據及回傳結構化紀錄；停用 n8n 原 payload 保留。Host 超時先核對原執行；每日全球新聞獨立抓取。
 
 - **scope → clarify** — Ambiguous / 不明確
   Ask which supported company or horizon the user means. A clarified submission starts a new validated request.
@@ -212,16 +281,16 @@ flowchart TD
   說明缺少哪項證據，展示有支持事實及有用下一題；不能靠模型記憶補預測。
 
 - **gate → context** — Enough support / 支持足夠
-  Fetch original excerpts, deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
-  讀原文、按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
+  Read sanitized excerpt versions and recheck PII before external reranking or generation. Sanitize before returning any state update. Deduplicate by story, preserve dates/IDs and counter-evidence. Carry user discussion order separately from model ranks; it cannot override coverage. Reserve tokens for policy, question and output. Recheck coverage after trimming; if a required facet was removed, return insufficient.
+  讀清理節錄版本，外部重排／生成前再查 PII，回傳任何 state 更新前先清理。按新聞去重、保留日期／ID 及反方證據；用戶討論次序與模型排名分開，不能推翻覆蓋；預留規則、問題及輸出 token。裁剪後重查覆蓋，若刪掉必要面向就回證據不足。
 
 - **context → insufficient** — Trimming loses support / 裁剪後支持不足
   Explain exactly what evidence is missing. Show supported facts and a useful next question; do not generate a forecast from the model’s memory.
   說明缺少哪項證據，展示有支持事實及有用下一題；不能靠模型記憶補預測。
 
 - **context → generate** — Context ready / 上下文就緒
-  Supply excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
-  節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
+  Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
+  邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
 
 - **context → unavailable** — Deadline reached / 到達時限
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
@@ -239,9 +308,9 @@ flowchart TD
   Record why release was blocked. This bounded design does not add an unbudgeted repair loop.
   記錄阻擋發布原因；此有上限設計不新增無預算修正迴圈。
 
-- **validate → save** — All checks pass / 檢查通過
-  Commit the exact answer and source links in a PostgreSQL transaction. Flush sanitized traces to Langfuse/LangSmith; telemetry failure leaves the answer available but fails the observable-demo gate. Feedback is stored separately.
-  以 PostgreSQL transaction 保存完整答案及引用；清理 traces 後送 Langfuse／LangSmith。追蹤失敗保留答案但 demo 驗收不通過；回饋另存。
+- **validate → privacy_publish** — Claims and citations pass / 主張及引用通過
+  Check release/export fields before saving. Model and tool wrappers already sanitized results BEFORE returning state updates, so checkpoints never rely on this later node to remove raw data. Preserve citation IDs, dates and verified public links.
+  儲存前檢查發布／下載欄位。模型及工具 wrapper 在回傳 state 更新前已清理，checkpoint 不依靠此後置節點移除原文；保留引用 ID、日期及已驗證公開連結。
 
 - **save → answer** — Persisted result / 已保存結果
   Return the question-specific answer, uncertainty, sources, dates and trace status. Download reuses this saved result.
@@ -281,16 +350,28 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  n0["Prompt + selection"]
-  n1["Scope gate"]
-  n2["Clarify → END"]
-  n3["Out of scope → END"]
-  n4["News refresh"]
-  n0 -- "Validate" --> n1
-  n1 -- "Ambiguous" --> n2
-  n1 -- "Unrelated" --> n3
-  n1 -- "Supported" --> n4
+  n0["API privacy before graph"]
+  n1["Prompt + selection"]
+  n2["Privacy blocked → END"]
+  n3["Scope gate"]
+  n4["Clarify → END"]
+  n5["Out of scope → END"]
+  n6["News refresh"]
+  n0 -- "Sanitized entry" --> n1
+  n0 -- "Fail closed" --> n2
+  n1 -- "Validate" --> n3
+  n3 -- "Ambiguous" --> n4
+  n3 -- "Unrelated" --> n5
+  n3 -- "Supported" --> n6
 ```
+
+- **API privacy before graph → Prompt + selection** — Sanitized entry / 清理入口
+  Redact email/card before graph invocation, scope, body logs and checkpoints. Keep safe original wording. Handoff: Sanitized request + privacy policy version
+  Graph 執行、scope、body log 及 checkpoint 前清理電郵／卡號，保留安全研究原意。 交接資料：清理請求＋隱私政策版本
+
+- **API privacy before graph → Privacy blocked → END** — Fail closed / 失敗停止
+  Detector fails; do not invoke the graph or fetch news. Handoff: Safe error category; no raw fallback
+  偵測失敗，不執行 graph 或抓新聞。 交接資料：安全錯誤類別，不回退原文
 
 - **Prompt + selection → Scope gate** — Validate / 驗證
   Validate company, horizon and question intent. Handoff: Original question + canonical company + horizon
@@ -399,8 +480,8 @@ flowchart TD
   永久失敗、次數用完或餘下時間不足。 交接資料：供應商不可用；Host 不盲目重試 MCP
 
 - **Normalize + validate records → Commit PostgreSQL evidence** — Valid records / 有效記錄
-  Validate source identity, dates and permissions; deduplicate syndicated stories and chunk permitted text. Handoff: Versioned company-news records + coverage status
-  核對身份、日期及權限，轉載去重並切分允許原文。 交接資料：有版本公司新聞＋覆蓋狀態
+  Validate source identity, dates and permissions; deduplicate stories and sanitize permitted excerpts BEFORE committing research evidence. Chunk/embed sanitized versions; disable raw n8n payload history. Handoff: Versioned company-news records + coverage status
+  核對身份、日期及權限，轉載去重；提交研究證據前清理允許節錄，以清理版本切段／embedding，停用 n8n 原 payload 歷史。 交接資料：有版本公司新聞＋覆蓋狀態
 
 - **Normalize + validate records → Rejected → END** — Invalid response / 回應無效
   Provider payload is malformed or violates the evidence contract. Handoff: Typed validation error
@@ -614,24 +695,24 @@ flowchart TD
 ```
 
 - **Selected passages → Context envelope** — Read + trim / 讀取＋裁剪
-  Deduplicate, read original excerpts and enforce token budget. Handoff: Question, horizon, as_of, evidence[], missing_facets[], conflicts[]
-  去重、讀原文並限制 token。 交接資料：問題、期間、截止、證據、缺失面向及矛盾
+  Deduplicate, read sanitized excerpt versions and enforce the token budget; privacy removal/trimming must retain required support. Handoff: Question, horizon, as_of, evidence[], missing_facets[], conflicts[]
+  去重、讀清理節錄並限制 token，隱私移除／裁剪後仍須保留所需支持。 交接資料：問題、期間、截止、證據、缺失面向及矛盾
 
 - **Context envelope → Draft** — Generate draft / 生成草稿
   System policy and user question stay separate from untrusted excerpts. Handoff: Direct answer + observed facts + conditional scenarios + citation IDs
   系統規則及使用者問題與不可信原文分開。 交接資料：直接答案＋觀察事實＋條件式情境＋引用 ID
 
 - **Draft → Validation** — Check support / 核對支持
-  Require claim support; a reranker score is not confidence. Handoff: Draft only; never stream an unvalidated recommendation
-  要求主張支持；重排分數不是信心。 交接資料：只產生草稿；不串流未驗證建議
+  The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence. Handoff: Draft only; never stream an unvalidated recommendation
+  模型 wrapper 回傳 state 前已清理輸出，原串流停用。要求主張支持，重排分數不是信心。 交接資料：只產生草稿；不串流未驗證建議
 
 - **Validation → Blocked → END** — Invalid / 無效
   Unknown citation or unsupported factual claim. Handoff: Do not release draft
   未知引用或無支持事實。 交接資料：不發布草稿
 
 - **Validation → Display + report rating** — Valid + saved / 有效＋已存
-  Persist before exposing the final answer. Handoff: Report ID, trace URL/status; separate feedback linked to run_id
-  先保存，再顯示最終答案。 交接資料：報告 ID、trace URL／狀態；回饋另存並連結 run_id
+  Run citation validation and the final privacy check, then persist the sanitized report before exposing it. Handoff: Report ID, trace URL/status; separate feedback linked to run_id
+  引用及最終隱私檢查後先保存清理報告，再顯示最終答案。 交接資料：報告 ID、trace URL／狀態；回饋另存並連結 run_id
 
 ## Validate citations and tool boundaries / 驗證引用及工具邊界
 
@@ -642,10 +723,14 @@ flowchart TD
   n0["Draft + evidence"]
   n1["Validation checks"]
   n2["Blocked → END"]
-  n3["Persist report"]
+  n3["Final privacy check"]
+  n4["Persist report"]
+  n5["Privacy blocked → END"]
   n0 -- "Check claims" --> n1
   n1 -- "Any failure" --> n2
   n1 -- "All pass" --> n3
+  n3 -- "Safe to store" --> n4
+  n3 -- "Withhold" --> n5
 ```
 
 - **Draft + evidence → Validation checks** — Check claims / 核對主張
@@ -656,9 +741,17 @@ flowchart TD
   A required validation fails. Handoff: validation_failed; no draft publication
   必要驗證失敗。 交接資料：validation_failed；不發布草稿
 
-- **Validation checks → Persist report** — All pass / 全部通過
+- **Validation checks → Final privacy check** — All pass / 全部通過
   Every material factual claim has excerpt support. Handoff: Validated result and source references
   所有重要事實主張有原文支持。 交接資料：已驗證結果及來源引用
+
+- **Final privacy check → Persist report** — Safe to store / 可安全儲存
+  Already sanitized report passes final privacy/schema checks. Handoff: Safe report and citation fields
+  已清理報告通過最終隱私／格式檢查。 交接資料：安全報告及引用欄位
+
+- **Final privacy check → Privacy blocked → END** — Withhold / 不發布
+  Privacy check fails; never save the raw draft or retry automatically. Handoff: Safe privacy_blocked error
+  隱私檢查失敗，不存原草稿，不自動重試。 交接資料：安全 privacy_blocked 錯誤
 
 ## Save and download the report / 保存及下載報告
 
@@ -775,8 +868,8 @@ flowchart TD
   Context 傳入 MCP 及供應商嘗試。 交接資料：trace_id、run_id、父 spans、錯誤及實際用量
 
 - **Span events → Redact → Collector → Langfuse / LangSmith** — Redact + export / 去敏感資料＋匯出
-  Keep one instrumentation tree; do not double-count tokens. Handoff: Sanitized operational traces and experiment feedback
-  保留一組 instrumentation；不重複計 token。 交接資料：清理後運行 traces 及實驗回饋
+  Disable raw callback payload capture before export. Allowlist safe IDs, policy and counts; the Collector is a second redaction boundary. Keep one instrumentation tree and do not double-count tokens. Handoff: Sanitized operational traces and experiment feedback
+  匯出前停用原 callback payload 擷取；只允許安全 ID、政策及計數，Collector 作第二清理邊界。保留一組 instrumentation，不重複計 token。 交接資料：清理後運行 traces 及實驗回饋
 
 - **Redact → Collector → Langfuse / LangSmith → Mark demo evidence incomplete** — Trace unavailable / Trace 不可用
   Trace cannot be flushed or opened by a reviewer. Handoff: Preserved answer + unavailable trace status
@@ -832,7 +925,7 @@ flowchart TD
   n4["n8n ALPHA VANTAGE NEWS_SENTIMENT"]
   n5["n8n RETRY DECISION"]
   n6["n8n BACKOFF + JITTER"]
-  n7["VALIDATE + DEDUP + GEO TAGS"]
+  n7["VALIDATE + REDACT + DEDUP + GEO TAGS"]
   n8["COMMIT COMPLETE BATCH"]
   n9["RECORD FAILED JOB"]
   n10["RETAIN PRIOR COMPLETED BATCH"]
@@ -926,7 +1019,7 @@ flowchart TD
 ```mermaid
 flowchart TD
   n0["COMMITTED NEWS + PROFILES"]
-  n1["CHUNK + HASH + VERSION"]
+  n1["SANITIZED CHUNK + HASH + VERSION"]
   n2["DOCUMENT EMBEDDING WORKER"]
   n3["POSTGRESQL pgvector + STATUS"]
   n4["REFRESH → SNAPSHOT → QUERY"]
@@ -1072,6 +1165,96 @@ flowchart TD
 - **text → fallback** — Sparse remains available / Sparse 仍可用
   Sparse remains available
   Sparse 仍可用
+
+## PII protection at every data boundary / 每個資料邊界的 PII 保護
+
+[English SVG](finance-diagrams/privacy-en.svg) · [繁體中文 SVG](finance-diagrams/privacy-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["EMAIL + CARD → REDACT"]
+  n1["API PRIVACY BEFORE GRAPH"]
+  n2["SANITIZED REQUEST → SCOPE"]
+  n3["n8n NEWS → SANITIZED EXCERPTS"]
+  n4["POSTGRESQL + CHUNKS + VECTORS"]
+  n5["RERANK / LLM / TOOL WRAPPERS"]
+  n6["RECHECK SUPPORT + CITATIONS"]
+  n7["INSUFFICIENT EVIDENCE → END"]
+  n8["FINAL PRIVACY CHECK → SAVE"]
+  n9["SAFE ATTRIBUTES → COLLECTOR"]
+  n10["LANGFUSE + LANGSMITH"]
+  n11["PRIVACY BLOCKED / WITHHOLD"]
+  n0 -- "User/review entry" --> n1
+  n1 -- "Sanitized before persistence" --> n2
+  n1 -- "Detector failure" --> n11
+  n0 -- "Independent news ingestion" --> n3
+  n3 -- "Sanitize before indexing" --> n4
+  n3 -- "No safe excerpt" --> n11
+  n0 -- "Every external boundary" --> n5
+  n5 -- "Sanitized state only" --> n6
+  n5 -- "Cannot sanitize result" --> n11
+  n6 -- "Support remains" --> n8
+  n6 -- "Required support lost" --> n7
+  n8 -- "Final check fails" --> n11
+  n0 -- "Before callback/export" --> n9
+  n9 -- "Redacted allowlisted spans" --> n10
+```
+
+- **policy → entry** — User/review entry / 用戶／覆核入口
+  User/review entry
+  用戶／覆核入口
+
+- **entry → scope** — Sanitized before persistence / 持久儲存前已清理
+  Sanitized before persistence
+  持久儲存前已清理
+
+- **entry → stop** — Detector failure / 偵測失敗
+  Detector failure
+  偵測失敗
+
+- **policy → ingest** — Independent news ingestion / 獨立新聞匯入
+  Independent news ingestion
+  獨立新聞匯入
+
+- **ingest → store** — Sanitize before indexing / 索引前清理
+  Sanitize before indexing
+  索引前清理
+
+- **ingest → stop** — No safe excerpt / 無安全節錄
+  No safe excerpt
+  無安全節錄
+
+- **policy → calls** — Every external boundary / 每個外部邊界
+  Every external boundary
+  每個外部邊界
+
+- **calls → coverage** — Sanitized state only / 只回安全 state
+  Sanitized state only
+  只回安全 state
+
+- **calls → stop** — Cannot sanitize result / 結果無法清理
+  Cannot sanitize result
+  結果無法清理
+
+- **coverage → release** — Support remains / 仍有支持
+  Support remains
+  仍有支持
+
+- **coverage → insufficient** — Required support lost / 必要支持流失
+  Required support lost
+  必要支持流失
+
+- **release → stop** — Final check fails / 最終檢查失敗
+  Final check fails
+  最終檢查失敗
+
+- **policy → telemetry** — Before callback/export / Callback／匯出之前
+  Before callback/export
+  Callback／匯出之前
+
+- **telemetry → traces** — Redacted allowlisted spans / 清理且核准 spans
+  Redacted allowlisted spans
+  清理且核准 spans
 
 ## Where AsyncPostgresSaver fits in your project / AsyncPostgresSaver 在項目的位置
 

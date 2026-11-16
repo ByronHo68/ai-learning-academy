@@ -1,0 +1,28 @@
+flowchart TD
+  n0["LANGGRAPH CALL SITES · MAX 3"]
+  n1["SCOPE · OPENROUTER · MAX 1"]
+  n2["REFINE · OPENROUTER · MAX 1"]
+  n3["REPORT · OPENROUTER · MAX 1"]
+  n4["DURABLE CALL RESERVATION"]
+  n5["SHARED PYTHON GATEWAY"]
+  n6["OPENROUTER CHAT COMPLETIONS"]
+  n7["APPROVED MODEL PROVIDER"]
+  n8["SANITIZE + PARSE + VALIDATE"]
+  n9["SAFE STATE + OTel METADATA"]
+  n10["UNAVAILABLE / PRIVACY BLOCKED"]
+  n11["NEWS / E5 / BGE / POSTGRESQL"]
+  n0 -- "每 API 請求先篩選" --> n1
+  n0 -- "只限缺口及餘額" --> n2
+  n0 -- "只限證據足夠" --> n3
+  n1 -- "角色 scope" --> n4
+  n2 -- "角色 refine" --> n4
+  n3 -- "角色 report" --> n4
+  n4 -- "已存預留＋剩餘時間" --> n5
+  n4 -- "已用／過期" --> n10
+  n5 -- "嚴格 JSON 請求" --> n6
+  n6 -- "明確路由" --> n7
+  n7 -- "緩衝回應" --> n8
+  n8 -- "全部邊界檢查通過" --> n9
+  n5 -- "隱私／傳送失敗" --> n10
+  n8 -- "無效輸出" --> n10
+  n0 -- "獨立模型／工具預算" --> n11

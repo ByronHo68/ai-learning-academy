@@ -1,12 +1,14 @@
 flowchart TD
   n0["Selected passages"]
   n1["Context envelope"]
-  n2["Draft"]
-  n3["Validation"]
-  n4["Blocked → END"]
-  n5["Display + report rating"]
+  n2["Unavailable → END"]
+  n3["Draft"]
+  n4["Validation"]
+  n5["Blocked → END"]
+  n6["Display + report rating"]
   n0 -- "讀取＋裁剪" --> n1
-  n1 -- "生成草稿" --> n2
-  n2 -- "核對支持" --> n3
-  n3 -- "無效" --> n4
-  n3 -- "有效＋已存" --> n5
+  n1 -- "報告 API 失敗" --> n2
+  n1 -- "生成草稿" --> n3
+  n3 -- "核對支持" --> n4
+  n4 -- "無效" --> n5
+  n4 -- "有效＋已存" --> n6

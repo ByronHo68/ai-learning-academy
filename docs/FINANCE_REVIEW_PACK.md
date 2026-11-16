@@ -8,6 +8,8 @@ Only sanitized research text enters storage. Keep privacy_policy_version on runs
 
 只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。
+
 Open `/finance-project/rerank-hnsw` for the HNSW graph animation, reranking lesson, model choices and Python/SQL examples. 中文：HNSW 及重排動畫、模型候選及程式例子。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
@@ -272,7 +274,17 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
 
 ## Revised news, retrieval and observability requirements / 新版要求
 
-API PII redaction before graph/state/logs → scope gate → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → buffered LLM + output redaction → Citations + final privacy → save + sanitized trace URL
+API PII redaction → OpenRouter scope → n8n MCP → refresh_company_news → Versioned evidence + time filters → Sparse / gated hybrid → rank → Optional review → validate selection → evidence gate → Sanitized context → OpenRouter report + output redaction → Citations + final privacy → save + sanitized trace URL
+
+### OpenRouter for all generative calls / 所有生成呼叫使用 OpenRouter
+
+One shared server-side gateway serves scope, optional refinement and report generation. Reserve at most one attempt per role and three per run in a durable host ledger before dispatch. Use exact model/provider settings, strict validated schemas, clipped timeouts and no hidden retries/fallbacks. Missing usage stays null; no raw payload telemetry.
+
+共用伺服器 gateway 處理 scope、可選補查及報告；發出前在持久 host ledger 預留每角色最多一次、每任務三次。固定模型／provider 設定、嚴格驗證 schema、限制時限，不暗中重試／回退；缺用量保留 null，不記原 payload。
+
+The Python adapter and offline HTTP-fixture tests exist. Live OpenRouter, durable reservation and research-API integration remain NOT RUN. Keep E5/BGE, PostgreSQL and n8n on their separate paths. Never expose OPENROUTER_API_KEY through the browser.
+
+Python adapter 及離線 HTTP fixture 測試已有；真實 OpenRouter、持久預留及研究 API 整合仍 NOT RUN。E5／BGE、PostgreSQL 及 n8n 保持各自路徑，不能在瀏覽器暴露 OPENROUTER_API_KEY。
 
 ### PII filtering before persistence and external calls / 持久儲存及外部呼叫前清理 PII
 

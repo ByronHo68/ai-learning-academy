@@ -1,5 +1,7 @@
 # Reranking and HNSW in the research project / 研究項目的重排及 HNSW
 
+Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。
+
 Open `/finance-project/rerank-hnsw` for the bilingual mind map and animated layered graph / reranking lesson. Browser calls: zero. The graph, 2D vectors and relevance rubric are handmade fictional fixtures, not real HNSW or E5/BGE outputs. Live model inference, SQL, ANN recall and performance are NOT RUN. Full-text remains the default until frozen admission.
 
 開啟 `/finance-project/rerank-hnsw` 看雙語心智圖、分層圖及重排動畫。瀏覽器外部呼叫為零，人手圖、二維向量及相關 rubric 是虛構 fixture，不是真實 HNSW 或 E5／BGE 輸出。真實推論、SQL、ANN 召回及效能均 NOT RUN；凍結准入前預設全文。

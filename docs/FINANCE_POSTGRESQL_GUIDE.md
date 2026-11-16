@@ -4,6 +4,8 @@ Only sanitized research text enters storage. Keep privacy_policy_version on runs
 
 只把清理後研究文字存入資料庫，任務及證據段落記錄 privacy_policy_version；AsyncPostgresSaver 不會清理 state。一個 PostgreSQL 服務保存證據、全文索引、可選 pgvector 向量、報告及回饋；LangGraph 在獨立資料庫保存 PostgreSQL checkpoints。瀏覽器模擬仍只使用暫存頁面狀態。
 
+Open `/finance-project/openrouter` for scope/refine/report API wiring, the shared Python gateway and private configuration. 中文：每個生成 LLM 呼叫的 OpenRouter 接線、共用 gateway 及私人設定。
+
 Open `/finance-project/rerank-hnsw` for the HNSW graph animation, reranking lesson, model choices and Python/SQL examples. 中文：HNSW 及重排動畫、模型候選及程式例子。
 
 Open `/finance-project/vector-db` for the vector database mind map, animated search, model candidates and standalone Python/PostgreSQL tutorial. 中文：向量資料庫心智圖、搜尋動畫、模型候選及 Python 教學。
@@ -265,6 +267,12 @@ A daily batch is current as of its last successful fetch. Failed daily ingestion
   }
 }
 ```
+
+### model_call_reservations (host extension, NOT RUN)
+
+Before each paid OpenRouter attempt, atomically reserve authenticated run_id + role and configuration hash; at most scope/refine/report once each, three total. Persist time/counters independently of a later graph checkpoint. Restore reservations on resume, reject changed model/provider/schema/prompt configuration and never retry an ambiguous spent attempt. The SQL subset below does not implement this ledger; the host must supply it to the adapter.
+
+每次付費 OpenRouter 嘗試前原子預留已驗證 run_id＋角色及設定 hash；scope／refine／report 各最多一次，總共三次。時間／計數須獨立於後續 graph checkpoint 先存；恢復時載入預留、拒絕模型／provider／schema／提示改動，結果不明但已花費的嘗試不重試。下方 SQL 子集未實作此 ledger，host 須提供予 adapter。
 
 ### evidence_selection_revisions (proposed extension)
 

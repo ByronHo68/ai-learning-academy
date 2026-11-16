@@ -3,6 +3,7 @@ import { financeGraphNodes } from './finance-graph';
 import { financePreparationNodes } from './finance-evidence';
 import { financeN8nDailyDiagram } from './finance-n8n';
 import { financeEmbeddingDiagram } from './finance-embeddings';
+import { openRouterDiagram } from './finance-openrouter';
 import { rerankHnswDiagram } from './finance-rerank';
 import { financePrivacyDiagram } from './finance-privacy';
 import { vectorStorageDiagram } from './finance-vector-lesson';
@@ -33,6 +34,8 @@ export const financeOverallDiagram: FinanceDiagram = {
     edge('generate', 'privacy_stop', 'Output wrapper fails', '輸出 wrapper 失敗', 'stop'),
     edge('privacy_publish', 'save', 'Safe report', '安全報告'),
     edge('privacy_publish', 'privacy_stop', 'Release check fails', '發布檢查失敗', 'stop'),
+    edge('scope', 'unavailable', 'OpenRouter error / refusal / schema', 'OpenRouter 錯誤／拒答／schema', 'stop'),
+    edge('refine', 'unavailable', 'OpenRouter refinement fails', 'OpenRouter 補查失敗', 'stop'),
     edge('scope', 'refresh', 'Supported', '範圍符合'),
     edge('scope', 'clarify', 'Ambiguous', '不明確', 'stop'),
     edge('scope', 'irrelevant', 'Unrelated', '不相關', 'stop'),
@@ -92,7 +95,7 @@ export function financeFunctionDiagram(id: FinanceFunctionId): FinanceDiagram {
 export const financeDiagrams: FinanceDiagram[] = [
   financeOverallDiagram,
   ...[...financeFunctions, ...financeEngineeringWorkflows].map(guide => financeFunctionDiagram(guide.id)),
-  financeN8nDailyDiagram, financeEmbeddingDiagram, vectorStorageDiagram, rerankHnswDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
+  financeN8nDailyDiagram, financeEmbeddingDiagram, vectorStorageDiagram, rerankHnswDiagram, openRouterDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
 ];
 export const financeDiagramIds = financeDiagrams.map(diagram => diagram.id);
 

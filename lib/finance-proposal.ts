@@ -12,7 +12,7 @@ export const financeRuntimeLimits = { newsRefreshes: 1, searchRounds: 2, sourceR
 
 export const financeLocalCommands = `# Proposed application repository, after its scaffold exists.
 # These commands do not start finance services in this academy repository.
-# Configure private n8n MCP and approved news-provider credentials first.
+# Configure private n8n MCP, news credentials and server-only OpenRouter settings first.
 # Start PostgreSQL 18 with pgvector (candidate retrieval), OTel Collector and the official Langfuse stack
 # separately; configure LangSmith server credentials. Dependencies may use Docker.
 # Keep retrieval_mode=sparse until real-news evaluation and safety gates pass.
@@ -22,7 +22,9 @@ cd services/research
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-# Copy .env.example to .env.local; set the chosen provider key locally.
+# Copy .env.example to .env.local; set OPENROUTER_API_KEY, OPENROUTER_MODEL
+# and OPENROUTER_PROVIDER. Optional role overrides use OPENROUTER_SCOPE/REFINE/REPORT_MODEL.
+# All scope/refine/report calls share the OpenRouter gateway; embeddings/reranking stay separate.
 # Set DATABASE_URL and CHECKPOINT_DATABASE_URL for separate research/checkpoint DBs.
 # Keep .env.local out of Git. The scaffold must load it server-side.
 # Apply versioned SQL migrations and AsyncPostgresSaver.setup() before ingestion.

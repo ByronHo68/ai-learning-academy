@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 19 connected diagrams, including HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 20 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及19 張連線圖，包含 HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及20 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -51,7 +51,7 @@ flowchart TD
   n0["API PRIVACY BEFORE GRAPH"]
   n1["PRIVACY BLOCKED"]
   n2["FINAL PRIVACY CHECK"]
-  n3["SCOPE"]
+  n3["OPENROUTER SCOPE"]
   n4["n8n COMPANY NEWS REFRESH"]
   n5["PIN EVIDENCE SNAPSHOT"]
   n6["SEARCH + QUERY EMBEDDING"]
@@ -61,9 +61,9 @@ flowchart TD
   n10["VALIDATE SELECTION"]
   n11["REVIEW EXPIRED"]
   n12["EVIDENCE GATE"]
-  n13["REFINE ONCE"]
+  n13["OPENROUTER REFINE ONCE"]
   n14["BUILD SANITIZED CONTEXT"]
-  n15["LLM + OUTPUT PRIVACY"]
+  n15["OPENROUTER REPORT + PRIVACY"]
   n16["VALIDATE"]
   n17["SAVE + TRACE"]
   n18["ANSWER"]
@@ -89,6 +89,8 @@ flowchart TD
   n15 -- "Output wrapper fails" --> n1
   n2 -- "Safe report" --> n17
   n2 -- "Release check fails" --> n1
+  n3 -- "OpenRouter error / refusal / schema" --> n22
+  n13 -- "OpenRouter refinement fails" --> n22
   n3 -- "Supported" --> n4
   n3 -- "Ambiguous" --> n21
   n3 -- "Unrelated" --> n20
@@ -133,8 +135,8 @@ flowchart TD
 ```
 
 - **privacy_request → scope** — Sanitized before graph invoke / Graph 執行前已清理
-  Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.
-  新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。
+  Call the shared OpenRouter gateway role scope once after privacy and before any news call. Strict schema, approved model/provider, saved call reservation and no hidden retries apply. API/refusal/schema failure returns unavailable, not irrelevant. Parse the request before any news call. Use a constrained intent decision; ambiguous intent asks one question. Do not classify by ticker keywords alone.
+  隱私檢查後、新聞前，共用 OpenRouter gateway 的 scope 角色只呼叫一次；用嚴格 schema、核准模型／provider、已存呼叫預留，不暗中重試。API／拒答／schema 失敗回 unavailable，不是 irrelevant。新聞呼叫前解析請求；用受限制意圖判斷，不明確先問一題，不能只按 ticker 關鍵字分類。
 
 - **privacy_request → privacy_stop** — Entry check fails / 入口檢查失敗
   Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
@@ -179,6 +181,14 @@ flowchart TD
 - **privacy_publish → privacy_stop** — Release check fails / 發布檢查失敗
   Stop the affected path when sanitization fails. Never store or stream the offending value, raw context, raw draft or raw exception. Ingress rejection happens outside LangGraph; model/tool wrappers return only safe error state. Do not retry privacy failures automatically.
   清理失敗停止該路徑，不存或串流觸發值、原 context／草稿或 exception。入口拒絕在 LangGraph 外，模型／工具 wrapper 只回安全錯誤 state；不自動重試隱私失敗。
+
+- **scope → unavailable** — OpenRouter error / refusal / schema / OpenRouter 錯誤／拒答／schema
+  Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
+  展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
+
+- **refine → unavailable** — OpenRouter refinement fails / OpenRouter 補查失敗
+  Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
+  展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
 - **scope → refresh** — Supported / 範圍符合
   Call refresh_company_news through n8n MCP once per accepted prompt. n8n owns provider timeouts and bounded transient retries, validates and deduplicates records, then sanitizes permitted excerpts before committing searchable evidence and returning a structured receipt. Disable raw n8n execution payload retention. A host timeout reconciles the original execution. Daily global-news batches are acquired separately.
@@ -269,8 +279,8 @@ flowchart TD
   展示實際運作失敗及安全重試選項；恢復不能重設預算，亦不能聲稱沒有相關新聞。
 
 - **gate → refine** — Gap + budget left / 有缺口＋餘額
-  Target the missing facet without changing the company or question. Retrieval increments attempts, including failed attempts; allow only two search rounds total.
-  針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
+  Call shared OpenRouter role refine at most once for the missing facet, with strict query schema and the saved run reservation. Preserve company, question and cutoff. API failure stops as unavailable. Target the missing facet without changing the company or question. Retrieval increments attempts, including failed attempts; allow only two search rounds total.
+  共用 OpenRouter refine 角色最多一次，按嚴格 query schema 及已存任務預留處理缺少面向；保留公司、問題及截止。API 失敗回 unavailable。針對缺少面向補查，不改公司或原問題；檢索次數包含失敗嘗試，總共只准兩輪。
 
 - **refine → retrieve** — Search 2 of 2 / 第 2／2 次搜尋
   Start with PostgreSQL full-text search. After hybrid admission, embed the query with the pinned model and frozen vector-readiness view, apply the same snapshot/company/time/permission filters to pgvector and full-text, and fuse the results by rank.
@@ -289,8 +299,8 @@ flowchart TD
   說明缺少哪項證據，展示有支持事實及有用下一題；不能靠模型記憶補預測。
 
 - **context → generate** — Context ready / 上下文就緒
-  Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
-  邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
+  Call shared OpenRouter role report only after evidence/context checks, using an explicit evaluated model/provider and a durable reservation. No provider fallback, repair call or SDK retry. Use a boundary wrapper to buffer and sanitize provider output before any state update, callback payload or release. Disable raw token streaming; failure routes to privacy_stop. Supply sanitized excerpts as untrusted data, never as system messages. Require a direct answer, facts, conditional scenarios, assumptions and invalidation signals. Provider/schema failure is an error, not a prediction.
+  證據／context 檢查後才呼叫共用 OpenRouter report 角色，以明確已評估模型／provider 及持久預留執行，不做 provider 回退、修補呼叫或 SDK 重試。邊界 wrapper 緩衝並清理模型結果，之後才回傳 state、callback payload 或發布；停用原 token 串流，清理失敗轉 privacy_stop。清理節錄只作不可信資料，不放 system 訊息；要求直接答案、事實、條件式情境、假設及失效訊號。供應商／格式失敗是錯誤，不是預測。
 
 - **context → unavailable** — Deadline reached / 到達時限
   Show the actual operational failure and safe retry option. Do not reset budgets on resume or claim that no relevant news exists.
@@ -354,15 +364,17 @@ flowchart TD
   n1["Prompt + selection"]
   n2["Privacy blocked → END"]
   n3["Scope gate"]
-  n4["Clarify → END"]
-  n5["Out of scope → END"]
-  n6["News refresh"]
+  n4["Unavailable → END"]
+  n5["Clarify → END"]
+  n6["Out of scope → END"]
+  n7["News refresh"]
   n0 -- "Sanitized entry" --> n1
   n0 -- "Fail closed" --> n2
   n1 -- "Validate" --> n3
-  n3 -- "Ambiguous" --> n4
-  n3 -- "Unrelated" --> n5
-  n3 -- "Supported" --> n6
+  n3 -- "API failure" --> n4
+  n3 -- "Ambiguous" --> n5
+  n3 -- "Unrelated" --> n6
+  n3 -- "Supported" --> n7
 ```
 
 - **API privacy before graph → Prompt + selection** — Sanitized entry / 清理入口
@@ -374,8 +386,12 @@ flowchart TD
   偵測失敗，不執行 graph 或抓新聞。 交接資料：安全錯誤類別，不回退原文
 
 - **Prompt + selection → Scope gate** — Validate / 驗證
-  Validate company, horizon and question intent. Handoff: Original question + canonical company + horizon
-  驗證公司、期間及問題意圖。 交接資料：原問題＋標準公司＋期間
+  Validate local schema/privacy, then call the shared OpenRouter scope role once for typed intent. Handoff: Original question + canonical company + horizon
+  本機 schema／隱私驗證後，共用 OpenRouter scope 角色呼叫一次作結構化意圖分類。 交接資料：原問題＋標準公司＋期間
+
+- **Scope gate → Unavailable → END** — API failure / API 失敗
+  OpenRouter times out, refuses or returns invalid output. The attempt remains spent. Handoff: Safe error; no news or report call
+  OpenRouter 超時、拒答或輸出無效，嘗試仍計數。 交接資料：安全錯誤，不呼叫新聞或報告
 
 - **Scope gate → Clarify → END** — Ambiguous / 不明確
   Company or intent is ambiguous. Handoff: One clarification question; no news/retrieval calls
@@ -522,7 +538,7 @@ flowchart TD
   n6["Validate selection revision"]
   n7["Review expired → END"]
   n8["Evidence gate"]
-  n9["Refine query once"]
+  n9["OpenRouter refine query once"]
   n10["Insufficient → END"]
   n11["Build context"]
   n0 -- "Database unavailable" --> n1
@@ -538,6 +554,7 @@ flowchart TD
   n6 -- "Recheck after exclusion" --> n8
   n5 -- "No working path" --> n1
   n8 -. "Gap after search 1" .-> n9
+  n9 -- "Refinement API failure" --> n1
   n9 -. "Search 2 of 2" .-> n0
   n8 -- "Still insufficient" --> n10
   n8 -- "Enough support" --> n11
@@ -591,11 +608,15 @@ flowchart TD
   Sparse also fails or the deadline expires. Handoff: Dependency error, not an empty evidence claim
   Sparse 亦失敗或已超時。 交接資料：依賴錯誤，不聲稱沒有證據
 
-- **Evidence gate → Refine query once** — Gap after search 1 / 首次搜尋有缺口
+- **Evidence gate → OpenRouter refine query once** — Gap after search 1 / 首次搜尋有缺口
   First search lacks coverage and the original budget remains. Handoff: Missing facets; preserve company, cutoff and snapshot
   首次搜尋覆蓋不足，原預算仍有餘額。 交接資料：缺失面向；保留公司、截止及快照
 
-- **Refine query once → PostgreSQL → full-text / pgvector** — Search 2 of 2 / 第 2／2 次搜尋
+- **OpenRouter refine query once → Unavailable → END** — Refinement API failure / 補查 API 失敗
+  The shared OpenRouter refinement call fails. Its attempt remains spent; do not run another model or search. Handoff: Safe provider error; same run limits
+  共用 OpenRouter 補查呼叫失敗，嘗試仍計數，不另跑模型或搜尋。 交接資料：安全供應商錯誤，原任務上限
+
+- **OpenRouter refine query once → PostgreSQL → full-text / pgvector** — Search 2 of 2 / 第 2／2 次搜尋
   Search again with a narrower query; at most two searches total, including failed attempts. Handoff: Same snapshot, new query, retained search counter
   收窄查詢再搜尋；包含失敗嘗試總共最多兩次。 交接資料：相同快照、新查詢、保留搜尋計數
 
@@ -619,7 +640,7 @@ flowchart TD
   n3["Review expired → END"]
   n4["Refine → retrieve"]
   n5["Insufficient → END"]
-  n6["Context → LLM → validation"]
+  n6["Context → OpenRouter report → validation"]
   n7["Save → answer"]
   n8["Blocked → END"]
   n9["Unavailable → END"]
@@ -659,19 +680,19 @@ flowchart TD
   Second attempt fails to cover the question. Handoff: Supported facts + missing facets; no forecast
   第二次仍未覆蓋問題。 交接資料：有支持事實＋缺失面向；不作預測
 
-- **Evidence gate → Context → LLM → validation** — Enough evidence / 證據足夠
+- **Evidence gate → Context → OpenRouter report → validation** — Enough evidence / 證據足夠
   All required facets have support; conflicts are retained. Handoff: Prompt-specific draft with citations and conditional scenarios
   所有所需面向有支持，矛盾證據保留。 交接資料：針對提示的草稿、引用及條件式情境
 
-- **Context → LLM → validation → Save → answer** — Validation passed / 驗證通過
+- **Context → OpenRouter report → validation → Save → answer** — Validation passed / 驗證通過
   Validation passes within the budget. Handoff: Validated cited answer
   預算內通過驗證。 交接資料：已驗證引用答案
 
-- **Context → LLM → validation → Blocked → END** — Invalid citation / 引用無效
+- **Context → OpenRouter report → validation → Blocked → END** — Invalid citation / 引用無效
   Citation or support validation fails. Handoff: Withheld draft and validation errors
   引用或支持驗證失敗。 交接資料：不發布草稿及驗證錯誤
 
-- **Context → LLM → validation → Unavailable → END** — Timeout / error / 超時／錯誤
+- **Context → OpenRouter report → validation → Unavailable → END** — Timeout / error / 超時／錯誤
   Deadline, call limit or dependency failure. Handoff: Typed error + resumable checkpoint when safe
   超時、超額或依賴失敗。 交接資料：結構化錯誤＋安全時可恢復 checkpoint
 
@@ -683,24 +704,30 @@ flowchart TD
 flowchart TD
   n0["Selected passages"]
   n1["Context envelope"]
-  n2["Draft"]
-  n3["Validation"]
-  n4["Blocked → END"]
-  n5["Display + report rating"]
+  n2["Unavailable → END"]
+  n3["Draft"]
+  n4["Validation"]
+  n5["Blocked → END"]
+  n6["Display + report rating"]
   n0 -- "Read + trim" --> n1
-  n1 -- "Generate draft" --> n2
-  n2 -- "Check support" --> n3
-  n3 -- "Invalid" --> n4
-  n3 -- "Valid + saved" --> n5
+  n1 -- "Report API failure" --> n2
+  n1 -- "Generate draft" --> n3
+  n3 -- "Check support" --> n4
+  n4 -- "Invalid" --> n5
+  n4 -- "Valid + saved" --> n6
 ```
 
 - **Selected passages → Context envelope** — Read + trim / 讀取＋裁剪
   Deduplicate, read sanitized excerpt versions and enforce the token budget; privacy removal/trimming must retain required support. Handoff: Question, horizon, as_of, evidence[], missing_facets[], conflicts[]
   去重、讀清理節錄並限制 token，隱私移除／裁剪後仍須保留所需支持。 交接資料：問題、期間、截止、證據、缺失面向及矛盾
 
+- **Context envelope → Unavailable → END** — Report API failure / 報告 API 失敗
+  OpenRouter report call times out, refuses or returns invalid schema; do not publish a fallback draft. Handoff: Safe error and spent attempt
+  OpenRouter 報告呼叫超時、拒答或 schema 無效，不發布回退草稿。 交接資料：安全錯誤及已計嘗試
+
 - **Context envelope → Draft** — Generate draft / 生成草稿
-  System policy and user question stay separate from untrusted excerpts. Handoff: Direct answer + observed facts + conditional scenarios + citation IDs
-  系統規則及使用者問題與不可信原文分開。 交接資料：直接答案＋觀察事實＋條件式情境＋引用 ID
+  Call shared OpenRouter role report after evidence gates, with strict schema and the saved reservation. System policy and user question stay separate from untrusted excerpts. Handoff: Direct answer + observed facts + conditional scenarios + citation IDs
+  證據關卡後，以嚴格 schema 及已存預留呼叫共用 OpenRouter report 角色；系統規則及使用者問題與不可信原文分開。 交接資料：直接答案＋觀察事實＋條件式情境＋引用 ID
 
 - **Draft → Validation** — Check support / 核對支持
   The model wrapper has already sanitized output before returning state; raw streaming is disabled. Require claim support; a reranker score is not confidence. Handoff: Draft only; never stream an unvalidated recommendation
@@ -1254,6 +1281,101 @@ flowchart TD
 - **fallback → review** — Working sparse, same budget / Sparse 可用，原預算
   Working sparse, same budget
   Sparse 可用，原預算
+
+## Every generative call uses one OpenRouter boundary / 每次生成呼叫共用 OpenRouter 邊界
+
+[English SVG](../public/downloads/finance-diagrams/openrouter-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/openrouter-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["LANGGRAPH CALL SITES · MAX 3"]
+  n1["SCOPE · OPENROUTER · MAX 1"]
+  n2["REFINE · OPENROUTER · MAX 1"]
+  n3["REPORT · OPENROUTER · MAX 1"]
+  n4["DURABLE CALL RESERVATION"]
+  n5["SHARED PYTHON GATEWAY"]
+  n6["OPENROUTER CHAT COMPLETIONS"]
+  n7["APPROVED MODEL PROVIDER"]
+  n8["SANITIZE + PARSE + VALIDATE"]
+  n9["SAFE STATE + OTel METADATA"]
+  n10["UNAVAILABLE / PRIVACY BLOCKED"]
+  n11["NEWS / E5 / BGE / POSTGRESQL"]
+  n0 -- "Every accepted API request is screened" --> n1
+  n0 -- "Gap and budget only" --> n2
+  n0 -- "Evidence sufficient only" --> n3
+  n1 -- "Role: scope" --> n4
+  n2 -- "Role: refine" --> n4
+  n3 -- "Role: report" --> n4
+  n4 -- "Persisted permit + time left" --> n5
+  n4 -- "Already spent / expired" --> n10
+  n5 -- "Strict JSON request" --> n6
+  n6 -- "Explicit route" --> n7
+  n7 -- "Buffered response" --> n8
+  n8 -- "All boundary checks pass" --> n9
+  n5 -- "Privacy / transport failure" --> n10
+  n8 -- "Invalid output" --> n10
+  n0 -- "Separate model/tool budgets" --> n11
+```
+
+- **sites → scope** — Every accepted API request is screened / 每 API 請求先篩選
+  Every accepted API request is screened
+  每 API 請求先篩選
+
+- **sites → refine** — Gap and budget only / 只限缺口及餘額
+  Gap and budget only
+  只限缺口及餘額
+
+- **sites → report** — Evidence sufficient only / 只限證據足夠
+  Evidence sufficient only
+  只限證據足夠
+
+- **scope → reserve** — Role: scope / 角色 scope
+  Role: scope
+  角色 scope
+
+- **refine → reserve** — Role: refine / 角色 refine
+  Role: refine
+  角色 refine
+
+- **report → reserve** — Role: report / 角色 report
+  Role: report
+  角色 report
+
+- **reserve → gateway** — Persisted permit + time left / 已存預留＋剩餘時間
+  Persisted permit + time left
+  已存預留＋剩餘時間
+
+- **reserve → stop** — Already spent / expired / 已用／過期
+  Already spent / expired
+  已用／過期
+
+- **gateway → router** — Strict JSON request / 嚴格 JSON 請求
+  Strict JSON request
+  嚴格 JSON 請求
+
+- **router → provider** — Explicit route / 明確路由
+  Explicit route
+  明確路由
+
+- **provider → validate** — Buffered response / 緩衝回應
+  Buffered response
+  緩衝回應
+
+- **validate → state** — All boundary checks pass / 全部邊界檢查通過
+  All boundary checks pass
+  全部邊界檢查通過
+
+- **gateway → stop** — Privacy / transport failure / 隱私／傳送失敗
+  Privacy / transport failure
+  隱私／傳送失敗
+
+- **validate → stop** — Invalid output / 無效輸出
+  Invalid output
+  無效輸出
+
+- **sites → separate** — Separate model/tool budgets / 獨立模型／工具預算
+  Separate model/tool budgets
+  獨立模型／工具預算
 
 ## PII protection at every data boundary / 每個資料邊界的 PII 保護
 

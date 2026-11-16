@@ -1,0 +1,28 @@
+flowchart TD
+  n0["LANGGRAPH CALL SITES · MAX 3"]
+  n1["SCOPE · OPENROUTER · MAX 1"]
+  n2["REFINE · OPENROUTER · MAX 1"]
+  n3["REPORT · OPENROUTER · MAX 1"]
+  n4["DURABLE CALL RESERVATION"]
+  n5["SHARED PYTHON GATEWAY"]
+  n6["OPENROUTER CHAT COMPLETIONS"]
+  n7["APPROVED MODEL PROVIDER"]
+  n8["SANITIZE + PARSE + VALIDATE"]
+  n9["SAFE STATE + OTel METADATA"]
+  n10["UNAVAILABLE / PRIVACY BLOCKED"]
+  n11["NEWS / E5 / BGE / POSTGRESQL"]
+  n0 -- "Every accepted API request is screened" --> n1
+  n0 -- "Gap and budget only" --> n2
+  n0 -- "Evidence sufficient only" --> n3
+  n1 -- "Role: scope" --> n4
+  n2 -- "Role: refine" --> n4
+  n3 -- "Role: report" --> n4
+  n4 -- "Persisted permit + time left" --> n5
+  n4 -- "Already spent / expired" --> n10
+  n5 -- "Strict JSON request" --> n6
+  n6 -- "Explicit route" --> n7
+  n7 -- "Buffered response" --> n8
+  n8 -- "All boundary checks pass" --> n9
+  n5 -- "Privacy / transport failure" --> n10
+  n8 -- "Invalid output" --> n10
+  n0 -- "Separate model/tool budgets" --> n11

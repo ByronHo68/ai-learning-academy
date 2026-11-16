@@ -80,7 +80,7 @@ flowchart TD
   F --> R
   E -->|No, second search| I[Insufficient evidence]
   E -->|Yes| X[Question + policy + cited context]
-  X --> L[LLM API]
+  X --> L[OpenRouter LLM API]
   L --> V{Citation validation}
   V -->|Pass| B[Cited report]
   V -->|Fail| W[Withhold draft]
@@ -165,9 +165,9 @@ Research the risks to MSFT cloud margins.
 
 You → Research app · LangGraph
 
-Code checks company, topic and horizon before any external call. A valid question can continue.
+Local schema/privacy checks run first. The shared OpenRouter scope role classifies intent before any MCP news call; API failure is unavailable. A valid question can continue.
 
-程式先檢查公司、題目及期間，合適才可進行外部呼叫。
+本機 schema／隱私先檢查，再由共用 OpenRouter scope 角色在 MCP 新聞呼叫前分類意圖；API 失敗回 unavailable，合適問題才繼續。
 
 ```text
 MSFT · cloud margins · next quarter
@@ -259,11 +259,11 @@ policy + original question + dated excerpts + source IDs
 
 ### Write a grounded draft / 按證據寫草稿
 
-Context builder → LLM
+Context builder → OpenRouter LLM API
 
-The LLM API produces a draft addressing the question. This call is separate from MCP. A price guarantee or unsupported probability cannot be inferred from retrieval scores.
+The shared OpenRouter report role produces a buffered, schema-validated draft addressing the question. Scope and conditional refinement also use the shared gateway. This call is separate from MCP. A price guarantee or unsupported probability cannot be inferred from retrieval scores.
 
-LLM API 按問題產生草稿，這次呼叫與 MCP 分開。檢索分數不能推出價格保證或無支持的機率。
+共用 OpenRouter report 角色按問題產生緩衝、schema 驗證草稿；scope 及有條件補查亦用同一 gateway，這次呼叫與 MCP 分開。檢索分數不能推出價格保證或無支持的機率。
 
 ```text
 selected evidence → cited facts + conditional scenarios
@@ -285,9 +285,9 @@ supported claims → report; invalid claims → withhold
 
 Evidence check → Research app · LangGraph
 
-Keep the original question and snapshot. One narrower retrieval attempt is allowed; do not refresh news again or reset the search budget.
+The shared OpenRouter refine role produces one query with a saved call reservation. Keep the original question and snapshot. One narrower retrieval attempt is allowed; do not refresh news again or reset the search budget.
 
-保留原問題及快照，只容許一次較精準檢索；不重新刷新新聞或重設搜尋上限。
+共用 OpenRouter refine 角色在已存呼叫預留下產生一條查詢；保留原問題及快照，只容許一次較精準檢索；不重新刷新新聞或重設搜尋上限。
 
 ```text
 coverage missing → refine query once, same snapshot

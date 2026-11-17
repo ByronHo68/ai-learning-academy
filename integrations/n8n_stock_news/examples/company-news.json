@@ -1,0 +1,29 @@
+{
+  "symbol": "MSFT",
+  "news": [
+    {
+      "title": "Fictional company event 1",
+      "summary": null,
+      "publisher": "Demo publisher",
+      "publishedAt": "2026-11-16T08:00:00Z",
+      "url": "https://example.com/news/1",
+      "content": "Fictional source excerpt 1."
+    },
+    {
+      "title": "Fictional company event 2",
+      "summary": null,
+      "publisher": "Demo publisher",
+      "publishedAt": "2026-11-15T08:00:00Z",
+      "url": "https://example.com/news/2",
+      "content": "Fictional source excerpt 2."
+    },
+    {
+      "title": "Fictional company event 3",
+      "summary": null,
+      "publisher": "Demo publisher",
+      "publishedAt": "2026-11-14T08:00:00Z",
+      "url": "https://example.com/news/3",
+      "content": "Fictional source excerpt 3."
+    }
+  ]
+}

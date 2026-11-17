@@ -1,0 +1,76 @@
+{
+  "name": "Offline example - three news items - no API or database",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Run offline demo",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2",
+      "name": "Fictional MCP response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return [{json:{\"symbol\": \"MSFT\", \"news\": [{\"title\": \"Fictional company event 1\", \"summary\": null, \"publisher\": \"Demo publisher\", \"publishedAt\": \"2026-11-16T08:00:00Z\", \"url\": \"https://example.com/news/1\", \"content\": \"Fictional source excerpt 1.\"}, {\"title\": \"Fictional company event 2\", \"summary\": null, \"publisher\": \"Demo publisher\", \"publishedAt\": \"2026-11-15T08:00:00Z\", \"url\": \"https://example.com/news/2\", \"content\": \"Fictional source excerpt 2.\"}, {\"title\": \"Fictional company event 3\", \"summary\": null, \"publisher\": \"Demo publisher\", \"publishedAt\": \"2026-11-14T08:00:00Z\", \"url\": \"https://example.com/news/3\", \"content\": \"Fictional source excerpt 3.\"}]}}];"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Validate three news items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Embedded in n8n Code nodes by build.py. No network or filesystem access.\nfunction fail() { throw new Error('invalid_news_payload'); }\nfunction text(v, nullable = false) {\n  if (nullable && v === null) return null;\n  if (typeof v !== 'string' || v.length > 100000) fail();\n  return v.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi, '[EMAIL]')\n    .replace(/\\b(?:\\d[ -]?){13,19}\\b/g, '[CARD_OR_LONG_NUMBER]');\n}\nfunction date(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T.*(?:Z|[+-]\\d{2}:?\\d{2})$/.test(v) || !Number.isFinite(Date.parse(v))) fail();\n  return new Date(v).toISOString();\n}\nfunction url(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || v.length > 4096) fail();\n  if (!/^https?:\\/\\/[^\\s/@]+(?:\\/|$)/i.test(v) || text(v) !== v) return null;\n  const [base, query] = v.split('#')[0].split('?');\n  const kept = (query || '').split('&').filter(x => x && !/^(utm_[^=]*|fbclid|gclid)=/i.test(x)).sort();\n  return base + (kept.length ? '?' + kept.join('&') : '');\n}\nfunction unwrap(raw) {\n  if (!raw || typeof raw !== 'object' || raw.isError || raw.error) fail();\n  let value = raw.structuredContent ?? raw;\n  if (!Array.isArray(value.news) && Array.isArray(raw.content)) {\n    const blocks = raw.content.filter(x => x.type === 'text');\n    if (blocks.length !== 1) fail();\n    value = typeof blocks[0].text === 'string' ? JSON.parse(blocks[0].text) : blocks[0].text;\n  }\n  return value;\n}\nfunction company(raw, symbol) {\n  const value = unwrap(raw);\n  if (value.symbol !== symbol || !Array.isArray(value.news) || value.news.length > 100) fail();\n  const rows = value.news.map(n => {\n    if (!n || typeof n !== 'object' || typeof n.title !== 'string' || !n.title.trim() || typeof n.content !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary, true), publisher: text(n.publisher, true),\n      publishedAt: date(n.publishedAt), url: url(n.url), content: text(n.content) };\n  });\n  rows.sort((a,b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0));\n  const seen = new Set();\n  return rows.filter(n => { const key = n.url || JSON.stringify([n.title,n.publisher,n.publishedAt,n.content]);\n    if (seen.has(key)) return false; seen.add(key); return true; }).slice(0,3);\n}\nfunction daily(raw, topic) {\n  if (!raw || !Array.isArray(raw.feed) || raw.feed.length > 1000 || raw.Note || raw.Information || raw['Error Message']) fail();\n  return raw.feed.map(n => {\n    const t = n.time_published;\n    if (typeof t !== 'string' || !/^\\d{8}T\\d{6}$/.test(t)) fail();\n    const publishedAt = `${t.slice(0,4)}-${t.slice(4,6)}-${t.slice(6,8)}T${t.slice(9,11)}:${t.slice(11,13)}:${t.slice(13,15)}Z`;\n    if (typeof n.title !== 'string' || !n.title.trim() || typeof n.summary !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary), content: text(n.summary), publisher: text(n.source ?? null,true),\n      publishedAt: date(publishedAt), url: url(n.url ?? null), topic };\n  });\n}\n\nreturn [{json:{symbol:'MSFT',news:company($json,'MSFT')}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Run offline demo": {
+      "main": [
+        [
+          {
+            "node": "Fictional MCP response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fictional MCP response": {
+      "main": [
+        [
+          {
+            "node": "Validate three news items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Hong_Kong",
+    "executionTimeout": 60,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false
+  }
+}

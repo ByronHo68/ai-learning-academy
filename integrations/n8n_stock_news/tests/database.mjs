@@ -1,0 +1,26 @@
+// Run with PGLITE_MODULE pointing at a temporary installation of @electric-sql/pglite.
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+const {PGlite}=await import(pathToFileURL(process.env.PGLITE_MODULE).href);
+const db=new PGlite();
+await db.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
+const claim=async(k,c={policy:'v1'})=>(await db.query('SELECT news_ingest.claim_batch($1,$2) AS r',[k,JSON.stringify(c)])).rows[0].r;
+const commit=async(k,items)=>(await db.query('SELECT news_ingest.commit_batch($1,$2) AS r',[k,JSON.stringify(items)])).rows[0].r;
+const article={title:'Example',content:'Excerpt',summary:null,publisher:null,publishedAt:null,url:'https://example.com/a',topic:'company:MSFT'};
+assert.equal((await claim('one')).acquired,true);
+assert.equal((await claim('one')).acquired,false);
+const one=await commit('one',[article,article]);assert.equal(one.unique_versions,1);assert.equal(one.new_versions,1);
+assert.deepEqual(await commit('one',[article]),one);
+await assert.rejects(()=>claim('one',{policy:'v2'}));
+await claim('two');const two=await commit('two',[article]);assert.equal(two.new_versions,0);
+await claim('three');const three=await commit('three',[{...article,content:'Corrected excerpt'}]);assert.equal(three.new_versions,1);
+assert.notDeepEqual(three.version_ids,one.version_ids);
+await claim('four');await commit('four',[{...article,topic:'economy_macro'},{...article,topic:'economy_fiscal'}]);
+const versions=await db.query('SELECT count(*)::int AS n FROM news_ingest.versions');assert.equal(versions.rows[0].n,2);
+await claim('broken');await assert.rejects(()=>commit('broken',[{...article,url:'https://example.com/new'},{}]));
+assert.equal((await db.query('SELECT count(*)::int AS n FROM news_ingest.versions')).rows[0].n,2);
+assert.equal((await claim('broken')).status,'pending');
+await claim('empty');assert.equal((await commit('empty',[])).unique_versions,0);
+assert.equal((await db.query('SELECT count(*)::int AS n FROM news_ingest.embedding_outbox')).rows[0].n,2);
+await db.close();console.log('Database checks passed: claim, replay, conflict, duplicate, correction, topic links, rollback, empty batch and embedding outbox.');

@@ -1,0 +1,847 @@
+{
+  "name": "Daily macro fiscal and geopolitical candidates - Alpha Vantage",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily 08:00 Hong Kong",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Manual daily run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "3",
+      "name": "Plan daily batch",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const end=new Date();\nend.setUTCHours(0,0,0,0);\nconst start=new Date(end.getTime()-48*3600000);\nconst fmt=d=>d.toISOString().replace(/[-:]/g,'').slice(0,13);\n// Fixed UTC midnight makes the query window stable on replay. A 48h overlap catches some late items.\nreturn [{json:{batch_key:'global:'+end.toISOString().slice(0,10)+':v1',\n deadline:Date.now()+540000,time_from:fmt(start),time_to:fmt(end),\n config:{provider:'alphavantage',policy:'v1',time_from:fmt(start),time_to:fmt(end),topics:['economy_macro','economy_fiscal','broad_candidates'],\n coverage:'Latest 100/query in a rolling 48h window. May be truncated. Broad feed is geopolitical candidates, not verified geopolitical coverage.'}}}];"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Claim batch",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT news_ingest.claim_batch($1,$2::jsonb) AS result;",
+        "options": {
+          "queryReplacement": "={{ [$json.batch_key, JSON.stringify($json.config)] }}"
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "New batch?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "New batch?",
+              "leftValue": "={{ $json.result.acquired }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "6",
+      "name": "Existing batch status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        250
+      ],
+      "parameters": {
+        "jsCode": "return [{json:$json.result}];"
+      }
+    },
+    {
+      "id": "7",
+      "name": "Fetch economy_macro",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "url": "https://www.alphavantage.co/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "function",
+              "value": "NEWS_SENTIMENT"
+            },
+            {
+              "name": "sort",
+              "value": "LATEST"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "time_from",
+              "value": "={{ $('Plan daily batch').first().json.time_from }}"
+            },
+            {
+              "name": "time_to",
+              "value": "={{ $('Plan daily batch').first().json.time_to }}"
+            },
+            {
+              "name": "topics",
+              "value": "economy_macro"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "8",
+      "name": "Validate economy_macro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Embedded in n8n Code nodes by build.py. No network or filesystem access.\nfunction fail() { throw new Error('invalid_news_payload'); }\nfunction text(v, nullable = false) {\n  if (nullable && v === null) return null;\n  if (typeof v !== 'string' || v.length > 100000) fail();\n  return v.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi, '[EMAIL]')\n    .replace(/\\b(?:\\d[ -]?){13,19}\\b/g, '[CARD_OR_LONG_NUMBER]');\n}\nfunction date(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T.*(?:Z|[+-]\\d{2}:?\\d{2})$/.test(v) || !Number.isFinite(Date.parse(v))) fail();\n  return new Date(v).toISOString();\n}\nfunction url(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || v.length > 4096) fail();\n  if (!/^https?:\\/\\/[^\\s/@]+(?:\\/|$)/i.test(v) || text(v) !== v) return null;\n  const [base, query] = v.split('#')[0].split('?');\n  const kept = (query || '').split('&').filter(x => x && !/^(utm_[^=]*|fbclid|gclid)=/i.test(x)).sort();\n  return base + (kept.length ? '?' + kept.join('&') : '');\n}\nfunction unwrap(raw) {\n  if (!raw || typeof raw !== 'object' || raw.isError || raw.error) fail();\n  let value = raw.structuredContent ?? raw;\n  if (!Array.isArray(value.news) && Array.isArray(raw.content)) {\n    const blocks = raw.content.filter(x => x.type === 'text');\n    if (blocks.length !== 1) fail();\n    value = typeof blocks[0].text === 'string' ? JSON.parse(blocks[0].text) : blocks[0].text;\n  }\n  return value;\n}\nfunction company(raw, symbol) {\n  const value = unwrap(raw);\n  if (value.symbol !== symbol || !Array.isArray(value.news) || value.news.length > 100) fail();\n  const rows = value.news.map(n => {\n    if (!n || typeof n !== 'object' || typeof n.title !== 'string' || !n.title.trim() || typeof n.content !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary, true), publisher: text(n.publisher, true),\n      publishedAt: date(n.publishedAt), url: url(n.url), content: text(n.content) };\n  });\n  rows.sort((a,b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0));\n  const seen = new Set();\n  return rows.filter(n => { const key = n.url || JSON.stringify([n.title,n.publisher,n.publishedAt,n.content]);\n    if (seen.has(key)) return false; seen.add(key); return true; }).slice(0,3);\n}\nfunction daily(raw, topic) {\n  if (!raw || !Array.isArray(raw.feed) || raw.feed.length > 1000 || raw.Note || raw.Information || raw['Error Message']) fail();\n  return raw.feed.map(n => {\n    const t = n.time_published;\n    if (typeof t !== 'string' || !/^\\d{8}T\\d{6}$/.test(t)) fail();\n    const publishedAt = `${t.slice(0,4)}-${t.slice(4,6)}-${t.slice(6,8)}T${t.slice(9,11)}:${t.slice(11,13)}:${t.slice(13,15)}Z`;\n    if (typeof n.title !== 'string' || !n.title.trim() || typeof n.summary !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary), content: text(n.summary), publisher: text(n.source ?? null,true),\n      publishedAt: date(publishedAt), url: url(n.url ?? null), topic };\n  });\n}\n\nreturn [{json:{articles:daily($json.response,'economy_macro')}}];"
+      }
+    },
+    {
+      "id": "9",
+      "name": "Classify Fetch economy_macro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "function classify(raw, attempt, deadline, now = Date.now()) {\n  const remaining = deadline - now;\n  if (remaining <= 0) throw new Error('acquisition_deadline_exhausted');\n  const status = Number(raw.statusCode || 0);\n  const message = String(raw.error?.message || raw.error || '');\n  const transient = [429,500,502,503,504].includes(status) || /\\b(ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN)\\b/.test(message);\n  const failed = !!raw.error || raw.isError || status >= 400;\n  if (!failed) return { retry:false, response:raw.body ?? raw };\n  if (!transient || attempt >= 3) throw new Error('provider_unavailable_or_permanent_error');\n  const header = raw.headers?.['retry-after'];\n  const seconds = header == null ? 0 : (/^\\d+$/.test(String(header)) ? Number(header) : Math.max(0,(Date.parse(header)-now)/1000));\n  if (!Number.isFinite(seconds)) throw new Error('invalid_retry_after');\n  const delay = Math.max(2 ** (attempt-1) + Math.random(), seconds);\n  if (delay*1000 + 10000 >= remaining) throw new Error('retry_exceeds_deadline');\n  return { retry:true, delay_seconds:delay };\n}\n\nreturn [{json:classify($json,$runIndex+1,$('Plan daily batch').first().json.deadline)}];"
+      }
+    },
+    {
+      "id": "10",
+      "name": "Retry Fetch economy_macro?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "Retry Fetch economy_macro?",
+              "leftValue": "={{ $json.retry }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "11",
+      "name": "Backoff Fetch economy_macro",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $json.delay_seconds }}",
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "12",
+      "name": "Fetch economy_fiscal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        500
+      ],
+      "parameters": {
+        "url": "https://www.alphavantage.co/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "function",
+              "value": "NEWS_SENTIMENT"
+            },
+            {
+              "name": "sort",
+              "value": "LATEST"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "time_from",
+              "value": "={{ $('Plan daily batch').first().json.time_from }}"
+            },
+            {
+              "name": "time_to",
+              "value": "={{ $('Plan daily batch').first().json.time_to }}"
+            },
+            {
+              "name": "topics",
+              "value": "economy_fiscal"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "13",
+      "name": "Validate economy_fiscal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        500
+      ],
+      "parameters": {
+        "jsCode": "// Embedded in n8n Code nodes by build.py. No network or filesystem access.\nfunction fail() { throw new Error('invalid_news_payload'); }\nfunction text(v, nullable = false) {\n  if (nullable && v === null) return null;\n  if (typeof v !== 'string' || v.length > 100000) fail();\n  return v.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi, '[EMAIL]')\n    .replace(/\\b(?:\\d[ -]?){13,19}\\b/g, '[CARD_OR_LONG_NUMBER]');\n}\nfunction date(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T.*(?:Z|[+-]\\d{2}:?\\d{2})$/.test(v) || !Number.isFinite(Date.parse(v))) fail();\n  return new Date(v).toISOString();\n}\nfunction url(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || v.length > 4096) fail();\n  if (!/^https?:\\/\\/[^\\s/@]+(?:\\/|$)/i.test(v) || text(v) !== v) return null;\n  const [base, query] = v.split('#')[0].split('?');\n  const kept = (query || '').split('&').filter(x => x && !/^(utm_[^=]*|fbclid|gclid)=/i.test(x)).sort();\n  return base + (kept.length ? '?' + kept.join('&') : '');\n}\nfunction unwrap(raw) {\n  if (!raw || typeof raw !== 'object' || raw.isError || raw.error) fail();\n  let value = raw.structuredContent ?? raw;\n  if (!Array.isArray(value.news) && Array.isArray(raw.content)) {\n    const blocks = raw.content.filter(x => x.type === 'text');\n    if (blocks.length !== 1) fail();\n    value = typeof blocks[0].text === 'string' ? JSON.parse(blocks[0].text) : blocks[0].text;\n  }\n  return value;\n}\nfunction company(raw, symbol) {\n  const value = unwrap(raw);\n  if (value.symbol !== symbol || !Array.isArray(value.news) || value.news.length > 100) fail();\n  const rows = value.news.map(n => {\n    if (!n || typeof n !== 'object' || typeof n.title !== 'string' || !n.title.trim() || typeof n.content !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary, true), publisher: text(n.publisher, true),\n      publishedAt: date(n.publishedAt), url: url(n.url), content: text(n.content) };\n  });\n  rows.sort((a,b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0));\n  const seen = new Set();\n  return rows.filter(n => { const key = n.url || JSON.stringify([n.title,n.publisher,n.publishedAt,n.content]);\n    if (seen.has(key)) return false; seen.add(key); return true; }).slice(0,3);\n}\nfunction daily(raw, topic) {\n  if (!raw || !Array.isArray(raw.feed) || raw.feed.length > 1000 || raw.Note || raw.Information || raw['Error Message']) fail();\n  return raw.feed.map(n => {\n    const t = n.time_published;\n    if (typeof t !== 'string' || !/^\\d{8}T\\d{6}$/.test(t)) fail();\n    const publishedAt = `${t.slice(0,4)}-${t.slice(4,6)}-${t.slice(6,8)}T${t.slice(9,11)}:${t.slice(11,13)}:${t.slice(13,15)}Z`;\n    if (typeof n.title !== 'string' || !n.title.trim() || typeof n.summary !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary), content: text(n.summary), publisher: text(n.source ?? null,true),\n      publishedAt: date(publishedAt), url: url(n.url ?? null), topic };\n  });\n}\n\nreturn [{json:{articles:daily($json.response,'economy_fiscal')}}];"
+      }
+    },
+    {
+      "id": "14",
+      "name": "Classify Fetch economy_fiscal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        500
+      ],
+      "parameters": {
+        "jsCode": "function classify(raw, attempt, deadline, now = Date.now()) {\n  const remaining = deadline - now;\n  if (remaining <= 0) throw new Error('acquisition_deadline_exhausted');\n  const status = Number(raw.statusCode || 0);\n  const message = String(raw.error?.message || raw.error || '');\n  const transient = [429,500,502,503,504].includes(status) || /\\b(ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN)\\b/.test(message);\n  const failed = !!raw.error || raw.isError || status >= 400;\n  if (!failed) return { retry:false, response:raw.body ?? raw };\n  if (!transient || attempt >= 3) throw new Error('provider_unavailable_or_permanent_error');\n  const header = raw.headers?.['retry-after'];\n  const seconds = header == null ? 0 : (/^\\d+$/.test(String(header)) ? Number(header) : Math.max(0,(Date.parse(header)-now)/1000));\n  if (!Number.isFinite(seconds)) throw new Error('invalid_retry_after');\n  const delay = Math.max(2 ** (attempt-1) + Math.random(), seconds);\n  if (delay*1000 + 10000 >= remaining) throw new Error('retry_exceeds_deadline');\n  return { retry:true, delay_seconds:delay };\n}\n\nreturn [{json:classify($json,$runIndex+1,$('Plan daily batch').first().json.deadline)}];"
+      }
+    },
+    {
+      "id": "15",
+      "name": "Retry Fetch economy_fiscal?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        500
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "Retry Fetch economy_fiscal?",
+              "leftValue": "={{ $json.retry }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "16",
+      "name": "Backoff Fetch economy_fiscal",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        700
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $json.delay_seconds }}",
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "17",
+      "name": "Quota spacing economy_fiscal",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        250
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 65,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "18",
+      "name": "Fetch broad_candidates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        1000
+      ],
+      "parameters": {
+        "url": "https://www.alphavantage.co/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "function",
+              "value": "NEWS_SENTIMENT"
+            },
+            {
+              "name": "sort",
+              "value": "LATEST"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "time_from",
+              "value": "={{ $('Plan daily batch').first().json.time_from }}"
+            },
+            {
+              "name": "time_to",
+              "value": "={{ $('Plan daily batch').first().json.time_to }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "19",
+      "name": "Validate broad_candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "// Embedded in n8n Code nodes by build.py. No network or filesystem access.\nfunction fail() { throw new Error('invalid_news_payload'); }\nfunction text(v, nullable = false) {\n  if (nullable && v === null) return null;\n  if (typeof v !== 'string' || v.length > 100000) fail();\n  return v.replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi, '[EMAIL]')\n    .replace(/\\b(?:\\d[ -]?){13,19}\\b/g, '[CARD_OR_LONG_NUMBER]');\n}\nfunction date(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T.*(?:Z|[+-]\\d{2}:?\\d{2})$/.test(v) || !Number.isFinite(Date.parse(v))) fail();\n  return new Date(v).toISOString();\n}\nfunction url(v) {\n  if (v === null) return null;\n  if (typeof v !== 'string' || v.length > 4096) fail();\n  if (!/^https?:\\/\\/[^\\s/@]+(?:\\/|$)/i.test(v) || text(v) !== v) return null;\n  const [base, query] = v.split('#')[0].split('?');\n  const kept = (query || '').split('&').filter(x => x && !/^(utm_[^=]*|fbclid|gclid)=/i.test(x)).sort();\n  return base + (kept.length ? '?' + kept.join('&') : '');\n}\nfunction unwrap(raw) {\n  if (!raw || typeof raw !== 'object' || raw.isError || raw.error) fail();\n  let value = raw.structuredContent ?? raw;\n  if (!Array.isArray(value.news) && Array.isArray(raw.content)) {\n    const blocks = raw.content.filter(x => x.type === 'text');\n    if (blocks.length !== 1) fail();\n    value = typeof blocks[0].text === 'string' ? JSON.parse(blocks[0].text) : blocks[0].text;\n  }\n  return value;\n}\nfunction company(raw, symbol) {\n  const value = unwrap(raw);\n  if (value.symbol !== symbol || !Array.isArray(value.news) || value.news.length > 100) fail();\n  const rows = value.news.map(n => {\n    if (!n || typeof n !== 'object' || typeof n.title !== 'string' || !n.title.trim() || typeof n.content !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary, true), publisher: text(n.publisher, true),\n      publishedAt: date(n.publishedAt), url: url(n.url), content: text(n.content) };\n  });\n  rows.sort((a,b) => (Date.parse(b.publishedAt) || 0) - (Date.parse(a.publishedAt) || 0));\n  const seen = new Set();\n  return rows.filter(n => { const key = n.url || JSON.stringify([n.title,n.publisher,n.publishedAt,n.content]);\n    if (seen.has(key)) return false; seen.add(key); return true; }).slice(0,3);\n}\nfunction daily(raw, topic) {\n  if (!raw || !Array.isArray(raw.feed) || raw.feed.length > 1000 || raw.Note || raw.Information || raw['Error Message']) fail();\n  return raw.feed.map(n => {\n    const t = n.time_published;\n    if (typeof t !== 'string' || !/^\\d{8}T\\d{6}$/.test(t)) fail();\n    const publishedAt = `${t.slice(0,4)}-${t.slice(4,6)}-${t.slice(6,8)}T${t.slice(9,11)}:${t.slice(11,13)}:${t.slice(13,15)}Z`;\n    if (typeof n.title !== 'string' || !n.title.trim() || typeof n.summary !== 'string') fail();\n    return { title: text(n.title), summary: text(n.summary), content: text(n.summary), publisher: text(n.source ?? null,true),\n      publishedAt: date(publishedAt), url: url(n.url ?? null), topic };\n  });\n}\n\nreturn [{json:{articles:daily($json.response,'broad_candidates')}}];"
+      }
+    },
+    {
+      "id": "20",
+      "name": "Classify Fetch broad_candidates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "function classify(raw, attempt, deadline, now = Date.now()) {\n  const remaining = deadline - now;\n  if (remaining <= 0) throw new Error('acquisition_deadline_exhausted');\n  const status = Number(raw.statusCode || 0);\n  const message = String(raw.error?.message || raw.error || '');\n  const transient = [429,500,502,503,504].includes(status) || /\\b(ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN)\\b/.test(message);\n  const failed = !!raw.error || raw.isError || status >= 400;\n  if (!failed) return { retry:false, response:raw.body ?? raw };\n  if (!transient || attempt >= 3) throw new Error('provider_unavailable_or_permanent_error');\n  const header = raw.headers?.['retry-after'];\n  const seconds = header == null ? 0 : (/^\\d+$/.test(String(header)) ? Number(header) : Math.max(0,(Date.parse(header)-now)/1000));\n  if (!Number.isFinite(seconds)) throw new Error('invalid_retry_after');\n  const delay = Math.max(2 ** (attempt-1) + Math.random(), seconds);\n  if (delay*1000 + 10000 >= remaining) throw new Error('retry_exceeds_deadline');\n  return { retry:true, delay_seconds:delay };\n}\n\nreturn [{json:classify($json,$runIndex+1,$('Plan daily batch').first().json.deadline)}];"
+      }
+    },
+    {
+      "id": "21",
+      "name": "Retry Fetch broad_candidates?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        1000
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "Retry Fetch broad_candidates?",
+              "leftValue": "={{ $json.retry }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "22",
+      "name": "Backoff Fetch broad_candidates",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        1200
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": "={{ $json.delay_seconds }}",
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "23",
+      "name": "Quota spacing broad_candidates",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        750
+      ],
+      "parameters": {
+        "resume": "timeInterval",
+        "amount": 65,
+        "unit": "seconds"
+      }
+    },
+    {
+      "id": "24",
+      "name": "Combine validated streams",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        1000
+      ],
+      "parameters": {
+        "jsCode": "const cfg=$('Plan daily batch').first().json;\nif(Date.now()>cfg.deadline) throw new Error('acquisition_deadline_exhausted');\nreturn [{json:{batch_key:cfg.batch_key,articles:[\n ...$('Validate economy_macro').first().json.articles,\n ...$('Validate economy_fiscal').first().json.articles,\n ...$('Validate broad_candidates').first().json.articles]}}];"
+      }
+    },
+    {
+      "id": "25",
+      "name": "Commit complete batch",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2160,
+        1000
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT news_ingest.commit_batch($1,$2::jsonb) AS receipt;",
+        "options": {
+          "queryReplacement": "={{ [$json.batch_key, JSON.stringify($json.articles)] }}"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 08:00 Hong Kong": {
+      "main": [
+        [
+          {
+            "node": "Plan daily batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual daily run": {
+      "main": [
+        [
+          {
+            "node": "Plan daily batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan daily batch": {
+      "main": [
+        [
+          {
+            "node": "Claim batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim batch": {
+      "main": [
+        [
+          {
+            "node": "New batch?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New batch?": {
+      "main": [
+        [
+          {
+            "node": "Fetch economy_macro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Existing batch status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch economy_macro": {
+      "main": [
+        [
+          {
+            "node": "Classify Fetch economy_macro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Fetch economy_macro": {
+      "main": [
+        [
+          {
+            "node": "Retry Fetch economy_macro?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Fetch economy_macro?": {
+      "main": [
+        [
+          {
+            "node": "Backoff Fetch economy_macro",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate economy_macro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backoff Fetch economy_macro": {
+      "main": [
+        [
+          {
+            "node": "Fetch economy_macro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch economy_fiscal": {
+      "main": [
+        [
+          {
+            "node": "Classify Fetch economy_fiscal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Fetch economy_fiscal": {
+      "main": [
+        [
+          {
+            "node": "Retry Fetch economy_fiscal?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Fetch economy_fiscal?": {
+      "main": [
+        [
+          {
+            "node": "Backoff Fetch economy_fiscal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate economy_fiscal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backoff Fetch economy_fiscal": {
+      "main": [
+        [
+          {
+            "node": "Fetch economy_fiscal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate economy_macro": {
+      "main": [
+        [
+          {
+            "node": "Quota spacing economy_fiscal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quota spacing economy_fiscal": {
+      "main": [
+        [
+          {
+            "node": "Fetch economy_fiscal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch broad_candidates": {
+      "main": [
+        [
+          {
+            "node": "Classify Fetch broad_candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Fetch broad_candidates": {
+      "main": [
+        [
+          {
+            "node": "Retry Fetch broad_candidates?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Fetch broad_candidates?": {
+      "main": [
+        [
+          {
+            "node": "Backoff Fetch broad_candidates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate broad_candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Backoff Fetch broad_candidates": {
+      "main": [
+        [
+          {
+            "node": "Fetch broad_candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate economy_fiscal": {
+      "main": [
+        [
+          {
+            "node": "Quota spacing broad_candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quota spacing broad_candidates": {
+      "main": [
+        [
+          {
+            "node": "Fetch broad_candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate broad_candidates": {
+      "main": [
+        [
+          {
+            "node": "Combine validated streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine validated streams": {
+      "main": [
+        [
+          {
+            "node": "Commit complete batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Hong_Kong",
+    "executionTimeout": 600,
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveManualExecutions": false,
+    "saveExecutionProgress": false
+  }
+}

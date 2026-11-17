@@ -126,6 +126,8 @@ PGlite runs real PostgreSQL engine code locally. These checks cover sequential c
 
 Read [DESIGN.md](DESIGN.md) for embedding, snapshots, profile updates, forecast horizons, and limitations.
 
+Use the [Cursor application build plan](../../docs/CURSOR_STOCK_RESEARCH_BUILD_PLAN.md) to build the complete application stage by stage. It covers the research API, database admission, checkpoints, OpenRouter, review UI, evaluated retrieval, and release checks beyond these collection templates.
+
 ## Official references
 
 - [n8n standalone MCP Client](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcpclient/)

@@ -1,21 +1,32 @@
 flowchart TD
   n0["n8n NEWS ARRAY"]
-  n1["VALIDATE, SANITIZE, COMMIT"]
-  n2["READ COMMITTED VERSION"]
-  n3["TOKENIZE AND SPLIT"]
-  n4["RECORD MISSING TEXT"]
-  n5["WRITE CHUNK METADATA"]
-  n6["ENCODE E5 PASSAGE"]
-  n7["STORE READY VECTORS"]
-  n8["PIN RETRIEVAL SNAPSHOT"]
-  n9["SEARCH, RERANK, CITE"]
-  n0 -- "每篇獨立版本" --> n1
-  n1 -- "新版本入列" --> n2
-  n2 -- "全文或摘要" --> n3
-  n2 -- "無可用文字" --> n4
-  n3 -- "確實原文範圍" --> n5
-  n5 -- "切段後編碼" --> n6
-  n6 -- "全部預期向量有效" --> n7
-  n5 -- "全文搜尋用已准入原文" --> n8
-  n7 -- "只限已准入混合" --> n8
-  n8 -- "合資格版本及截止" --> n9
+  n1["CHECK CONTENT SIZE"]
+  n2["KEEP VALIDATED SUMMARY"]
+  n3["RECORD ACQUISITION GAP"]
+  n4["VALIDATE, SANITIZE, COMMIT"]
+  n5["READ COMMITTED VERSION"]
+  n6["TOKENIZE AND SPLIT"]
+  n7["RECORD MISSING TEXT"]
+  n8["WRITE CHUNK METADATA"]
+  n9["ENCODE E5 BATCH"]
+  n10["SAVE VECTORS AND PROGRESS"]
+  n11["QUEUE REMAINING CHUNKS"]
+  n12["PIN RETRIEVAL SNAPSHOT"]
+  n13["SEARCH, RERANK, CITE"]
+  n0 -- "回應符合位元組上限" --> n1
+  n0 -- "回應超大" --> n3
+  n1 -- "正文符合欄位上限" --> n4
+  n1 -- "超長且有可用摘要" --> n2
+  n1 -- "超長且無可用摘要" --> n3
+  n2 -- "已記錄摘要覆蓋" --> n4
+  n4 -- "新版本入列" --> n5
+  n5 -- "全文或摘要" --> n6
+  n5 -- "無可用文字" --> n7
+  n6 -- "確實原文範圍" --> n8
+  n8 -- "切段後編碼" --> n9
+  n9 -- "提交已完成的一批" --> n10
+  n10 -- "尚有餘下段落" --> n11
+  n11 -. "下一批處理" .-> n9
+  n8 -- "全文搜尋用已准入原文" --> n12
+  n10 -- "只限已准入混合" --> n12
+  n12 -- "合資格版本及截止" --> n13

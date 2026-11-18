@@ -156,6 +156,7 @@ export default function FinanceN8nContent({ lang }: { lang: Lang }) {
       <p><a href="https://docs.n8n.io/deploy/host-n8n/install-options/install-using-docker-compose.md">{lang === 'zh' ? 'n8n 官方 Compose 安裝' : 'Official n8n Compose installation'}</a> · <Link href="/finance-project/mcp">{lang === 'zh' ? 'MCP 點樣把 app 接到 n8n' : 'How MCP connects the app to n8n'}</Link> · <Link href="/finance-project#finance-yfinance">{lang === 'zh' ? 'YFinance adapter' : 'YFinance adapter'}</Link></p>
     </section>
 
+    <p><Link href="/finance-project/chunking#chunk-limits">{lang === 'zh' ? '新聞長度上限及超長文章處理 →' : 'See news size limits and how to handle oversized articles →'}</Link></p>
     <p><Link href="/finance-project/chunking">{lang === 'zh' ? '提交之後：試用新聞切段及 metadata 動畫 →' : 'After commit: try the news chunking and metadata animation →'}</Link></p>
     <section className="finance-section" id="n8n-retry">
       <p className="eyebrow">04 · RETRY RULES ALREADY IN THE PROJECTION</p>

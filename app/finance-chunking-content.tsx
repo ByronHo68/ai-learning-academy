@@ -8,6 +8,7 @@ import {
   chunkConcepts, chunkEncoderExample, chunkExample, chunkMeasurements,
   chunkMetadataGuide, chunkPresetNames, chunkReferences, financeChunkDiagram,
 } from '../lib/finance-chunking';
+import { chunkLimitCases, chunkLimitExample, chunkLimitSettings, chunkLimitStatus } from '../lib/finance-chunk-limits';
 import { FinanceDiagramCanvas } from './finance-diagram';
 
 const downloads = '/downloads/';
@@ -142,6 +143,59 @@ function ChunkDemo({ lang }: { lang: Lang }) {
   </section>;
 }
 
+function ChunkLimits({ lang }: { lang: Lang }) {
+  const zh = lang === 'zh';
+  const [caseId, setCaseId] = useState(chunkLimitCases[0].id);
+  const [finished, setFinished] = useState(false);
+  const scenario = chunkLimitCases.find(item => item.id === caseId) ?? chunkLimitCases[0];
+  const metadata = chunkLimitExample(scenario, finished);
+  const { planned_chunks: planned, ready_chunks: ready, queued_chunks: queued } = metadata.vector_index;
+  const status = {
+    full_body: zh ? '保存全文' : 'Full body stored',
+    summary_only: zh ? '只保存摘要' : 'Summary stored',
+    skipped: zh ? '略過文章' : 'Article skipped',
+  }[scenario.kind];
+
+  return <section className="finance-section" id="chunk-limits">
+    <h2>{zh ? '為新聞設定三個上限' : 'Set three limits for news content'}</h2>
+    <p>{zh ? '符合接收上限的 8,000 字元文章可以保存全文。索引和報告各自有工作預算。' : 'Store the entire 8,000-character article when it fits the intake limit. Indexing and report generation each have their own budget.'}</p>
+    <div className="chunk-records chunk-limit-cards">
+      {chunkLimitSettings.map(setting => <article key={setting.id}>
+        <h3>{pick(setting.title, lang)}</h3>
+        <strong className="chunk-limit-value">{pick(setting.amount, lang)}</strong>
+        <p className="chunk-limit-unit">{pick(setting.unit, lang)}</p>
+        <p>{pick(setting.body, lang)}</p>
+      </article>)}
+    </div>
+    <div className="vd-stage chunk-limit-lab">
+      <h3>{zh ? '試試普通、長篇及超長文章' : 'Try ordinary, long, and oversized articles'}</h3>
+      <p>{pick(chunkLimitStatus, lang)}</p>
+      <div className="vd-scenarios" role="group" aria-label={zh ? '文章長度情境' : 'Article size scenarios'}>
+        {chunkLimitCases.map(item => <button type="button" key={item.id} aria-pressed={caseId === item.id}
+          onClick={() => { setCaseId(item.id); setFinished(false); }}>{pick(item.title, lang)}</button>)}
+      </div>
+      <div className="chunk-records chunk-limit-results">
+        <article aria-live="polite">
+          <h4>{status}</h4>
+          <p>{pick(scenario.detail, lang)}</p>
+          {planned > 0 && <div className="chunk-queue">
+            <progress value={ready} max={planned} aria-label={zh ? '可用向量進度' : 'Ready vector progress'}/>
+            <p>{zh ? `${ready} / ${planned} 段就緒 · ${queued} 段排隊` : `${ready} / ${planned} chunks ready · ${queued} queued`}</p>
+            {queued > 0 && <button type="button" onClick={() => setFinished(true)}>{zh ? '模擬下一批完成' : 'Simulate next batch'}</button>}
+            {finished && <p>{zh ? '下一個快照可納入新就緒向量。' : 'The next snapshot can include the newly ready vectors.'}</p>}
+          </div>}
+          <h4>{zh ? '報告能使用甚麼？' : 'What can the report use?'}</h4>
+          <p>{pick(scenario.report, lang)}</p>
+        </article>
+        <article>
+          <h4>{zh ? '覆蓋記錄範例' : 'Example coverage record'}</h4>
+          <pre aria-label={zh ? '覆蓋 JSON' : 'Coverage JSON'}>{JSON.stringify(metadata, null, 2)}</pre>
+        </article>
+      </div>
+    </div>
+  </section>;
+}
+
 export default function FinanceChunkingContent({ lang }: { lang: Lang }) {
   const zh = lang === 'zh';
   const [conceptId, setConceptId] = useState('chunk');
@@ -154,6 +208,7 @@ export default function FinanceChunkingContent({ lang }: { lang: Lang }) {
       <p>{zh ? 'Chunk 是一段可獨立搜尋的文章原文。用你的 n8n 回傳格式試切段、看重疊，再為每段加上可追溯的 metadata。' : 'A chunk is a section of one article that you can search for on its own. Try splitting your n8n news response, then inspect how each chunk links back to its source.'}</p>
       <div className="fr-hero-actions">
         <a href="#chunk-demo" className="primary-action"><Play size={17}/>{zh ? '試 8,000 字元' : 'Try 8,000 characters'}</a>
+        <a href="#chunk-limits" className="secondary-action">{zh ? '試超長文章' : 'Try oversized articles'}</a>
         <a href="#chunk-workflow" className="secondary-action"><GitBranch size={17}/>{zh ? '查看項目流程' : 'See the project workflow'}</a>
         <a href={downloads + 'stock-research-chunk-news.json'} download className="secondary-action">{zh ? '下載三篇新聞 JSON' : 'Download three-article JSON'}</a>
       </div>
@@ -161,6 +216,7 @@ export default function FinanceChunkingContent({ lang }: { lang: Lang }) {
     <div className="fr-disclosure"><Layers size={23}/><p>{zh ? '此離線動畫使用虛構新聞及預先量度的 E5 tokenizer 結果。每次只處理 news 陣列中的一篇文章。' : 'The offline animation uses fictional news and precomputed E5 tokenizer measurements. Each item in the news array is split separately.'}</p></div>
 
     <ChunkDemo lang={lang}/>
+    <ChunkLimits lang={lang}/>
 
     <section className="finance-section" id="chunk-mindmap">
       <h2>{zh ? '心智圖：每段文字需要甚麼？' : 'Mind map for a searchable chunk'}</h2>

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { chunkExample, chunkMeasurements } from '../lib/finance-chunking';
+import { chunkLimitCases, chunkLimitExample } from '../lib/finance-chunk-limits';
 
 test('each illustrated chunk resolves to its exact article slice within the model limit', () => {
   assert.equal(chunkExample.news.length, 3);
@@ -30,4 +31,31 @@ test('each illustrated chunk resolves to its exact article slice within the mode
       assert.equal(end, body.length);
     }
   }
+});
+
+test('the news limit demo tracks article coverage separately from vector readiness', () => {
+  const examples = new Map(chunkLimitCases.map(item => [item.id, item]));
+  const long = examples.get('long');
+  const summary = examples.get('summary');
+  const skipped = examples.get('skip');
+  assert.ok(long && summary && skipped);
+
+  const partial = chunkLimitExample(long, false);
+  const complete = chunkLimitExample(long, true);
+  assert.equal(partial.intake.source_coverage, 'full_body');
+  assert.deepEqual(complete.intake, partial.intake);
+  assert.equal(partial.vector_index.status, 'partial');
+  assert.equal(partial.vector_index.ready_chunks + partial.vector_index.queued_chunks, partial.vector_index.planned_chunks);
+  assert.equal(complete.vector_index.status, 'complete');
+  assert.equal(complete.vector_index.queued_chunks, 0);
+
+  const fallback = chunkLimitExample(summary, false);
+  assert.equal(fallback.vector_index.status, 'complete');
+  assert.equal(fallback.intake.source_coverage, 'summary_only');
+  assert.equal(fallback.intake.source_field, 'summary');
+  assert.equal(fallback.intake.reason, 'content_over_limit');
+  const rejected = chunkLimitExample(skipped, false);
+  assert.equal(rejected.intake.source_field, null);
+  assert.equal(rejected.vector_index.status, 'not_applicable');
+  assert.equal(rejected.vector_index.planned_chunks, 0);
 });

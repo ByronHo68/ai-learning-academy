@@ -44,6 +44,25 @@
 }
 .chunk-records h3 { margin-top: 0; }
 .chunk-records pre { margin-bottom: 0; }
+.chunk-limit-value {
+  display: block;
+  color: #126b70;
+  font-size: clamp(1.6rem, 3vw, 2.5rem);
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+.chunk-limit-unit { color: #526964; font-size: .9rem; }
+.chunk-limit-lab h4 { margin: 0 0 8px; }
+.chunk-limit-results { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+.chunk-limit-results article > :last-child { margin-bottom: 0; }
+.chunk-queue {
+  padding: 12px;
+  margin: 14px 0;
+  border-radius: 8px;
+  background: #edf5f1;
+}
+.chunk-queue progress { width: 100%; }
+.chunk-queue p { margin: 6px 0; font-size: .9rem; }
 @media (max-width: 520px) {
   .chunk-lab .vd-settings { align-items: stretch; }
   .chunk-stats div { padding: 10px; }

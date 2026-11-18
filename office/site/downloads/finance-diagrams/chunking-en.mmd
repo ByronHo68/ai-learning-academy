@@ -1,21 +1,32 @@
 flowchart TD
   n0["n8n NEWS ARRAY"]
-  n1["VALIDATE, SANITIZE, COMMIT"]
-  n2["READ COMMITTED VERSION"]
-  n3["TOKENIZE AND SPLIT"]
-  n4["RECORD MISSING TEXT"]
-  n5["WRITE CHUNK METADATA"]
-  n6["ENCODE E5 PASSAGE"]
-  n7["STORE READY VECTORS"]
-  n8["PIN RETRIEVAL SNAPSHOT"]
-  n9["SEARCH, RERANK, CITE"]
-  n0 -- "One version per article" --> n1
-  n1 -- "New version queued" --> n2
-  n2 -- "Content or summary" --> n3
-  n2 -- "No usable text" --> n4
-  n3 -- "Exact text slices" --> n5
-  n5 -- "After chunk creation" --> n6
-  n6 -- "All expected vectors valid" --> n7
-  n5 -- "Sparse search uses admitted text" --> n8
-  n7 -- "Admitted hybrid only" --> n8
-  n8 -- "Eligible versions and cutoff" --> n9
+  n1["CHECK CONTENT SIZE"]
+  n2["KEEP VALIDATED SUMMARY"]
+  n3["RECORD ACQUISITION GAP"]
+  n4["VALIDATE, SANITIZE, COMMIT"]
+  n5["READ COMMITTED VERSION"]
+  n6["TOKENIZE AND SPLIT"]
+  n7["RECORD MISSING TEXT"]
+  n8["WRITE CHUNK METADATA"]
+  n9["ENCODE E5 BATCH"]
+  n10["SAVE VECTORS AND PROGRESS"]
+  n11["QUEUE REMAINING CHUNKS"]
+  n12["PIN RETRIEVAL SNAPSHOT"]
+  n13["SEARCH, RERANK, CITE"]
+  n0 -- "Response within byte limit" --> n1
+  n0 -- "Response too large" --> n3
+  n1 -- "Content within field limit" --> n4
+  n1 -- "Oversized + usable summary" --> n2
+  n1 -- "Oversized + no usable summary" --> n3
+  n2 -- "Summary coverage recorded" --> n4
+  n4 -- "New version queued" --> n5
+  n5 -- "Content or summary" --> n6
+  n5 -- "No usable text" --> n7
+  n6 -- "Exact text slices" --> n8
+  n8 -- "After chunk creation" --> n9
+  n9 -- "Commit completed batch" --> n10
+  n10 -- "Chunks remain" --> n11
+  n11 -. "Next worker batch" .-> n9
+  n8 -- "Sparse search uses admitted text" --> n12
+  n10 -- "Admitted hybrid only" --> n12
+  n12 -- "Eligible versions and cutoff" --> n13

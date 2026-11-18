@@ -1,0 +1,484 @@
+{
+  "model": "intfloat/multilingual-e5-small",
+  "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+  "policy": "e5-sentence-window-v1",
+  "maxInput": 512,
+  "articles": [
+    {
+      "sourceField": "content",
+      "sourceChars": 8000,
+      "sourceTokens": 1573,
+      "variants": [
+        {
+          "id": "balanced",
+          "target": 320,
+          "overlap": 48,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 1600,
+              "textTokens": 317,
+              "inputTokens": 321,
+              "textSha256": "e54a0dc6a34beb75779009316054b276688c78f92dbfe2a2f0f93f8beec11e07"
+            },
+            {
+              "startChar": 1353,
+              "endChar": 2943,
+              "textTokens": 312,
+              "inputTokens": 316,
+              "textSha256": "7c502296d81780ebda2adfb4ffd7adb2631ff21579bbdf37e91fd4f3349b22b1"
+            },
+            {
+              "startChar": 2708,
+              "endChar": 4323,
+              "textTokens": 319,
+              "inputTokens": 323,
+              "textSha256": "c006eab1601501c2b71e07ee1819e621d2c26cfafeeab7824ed2c3b8e74a1725"
+            },
+            {
+              "startChar": 4066,
+              "endChar": 5652,
+              "textTokens": 310,
+              "inputTokens": 314,
+              "textSha256": "d53cba4f7a89fa4794a3539de8a489df87c5a6f12a30b36bc751296867e30555"
+            },
+            {
+              "startChar": 5417,
+              "endChar": 6984,
+              "textTokens": 314,
+              "inputTokens": 318,
+              "textSha256": "21821014e0be4838facf841e2630b6a66f23e7bbce47eb57aacbcbc8a597178c"
+            },
+            {
+              "startChar": 6749,
+              "endChar": 8000,
+              "textTokens": 245,
+              "inputTokens": 249,
+              "textSha256": "c9c10e38d3f23cc49ae9a6bbb1ae9f6c3ba0571804de91dcab457ebce47775da"
+            }
+          ]
+        },
+        {
+          "id": "no-overlap",
+          "target": 320,
+          "overlap": 0,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 1600,
+              "textTokens": 317,
+              "inputTokens": 321,
+              "textSha256": "e54a0dc6a34beb75779009316054b276688c78f92dbfe2a2f0f93f8beec11e07"
+            },
+            {
+              "startChar": 1600,
+              "endChar": 3247,
+              "textTokens": 319,
+              "inputTokens": 323,
+              "textSha256": "557293c148682e4fb59a3209035bcdeb91da8f57640f73e1320b84e8d1fc1276"
+            },
+            {
+              "startChar": 3247,
+              "endChar": 4819,
+              "textTokens": 314,
+              "inputTokens": 318,
+              "textSha256": "fd855b40875f5828c7de23a2000d024da5a8cf5bd7496b1f67cc2df7952f9e02"
+            },
+            {
+              "startChar": 4819,
+              "endChar": 6407,
+              "textTokens": 315,
+              "inputTokens": 319,
+              "textSha256": "6fe811ba01c05cd5cba2eaf4352ea5b6b9c25d3d831ec4205ab9ce09328f96d2"
+            },
+            {
+              "startChar": 6407,
+              "endChar": 8000,
+              "textTokens": 310,
+              "inputTokens": 314,
+              "textSha256": "59737cfc22768df21045b54bcbf2dc07d460727b7d7d2c46b7ca96b40a544b87"
+            }
+          ]
+        },
+        {
+          "id": "small",
+          "target": 240,
+          "overlap": 36,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 1210,
+              "textTokens": 239,
+              "inputTokens": 243,
+              "textSha256": "ae8c2180f1b63ac27d785f45b6c0b991b92beb46624380b923448930847e7ab7"
+            },
+            {
+              "startChar": 1028,
+              "endChar": 2176,
+              "textTokens": 229,
+              "inputTokens": 233,
+              "textSha256": "3cfe5838e1ab2887dfcaa0721602622c8b5fa67e373a4b984ced1eb8582e3535"
+            },
+            {
+              "startChar": 1997,
+              "endChar": 3180,
+              "textTokens": 229,
+              "inputTokens": 233,
+              "textSha256": "076ef9187ba636752ca60ad21e82f82466ee3091c1ec853279a6460df5dfbaff"
+            },
+            {
+              "startChar": 2979,
+              "endChar": 4093,
+              "textTokens": 220,
+              "inputTokens": 224,
+              "textSha256": "a63f51245d98b002afb6d7493e8955768e704885f47fa0a5d2d5c7d59f1b0fe0"
+            },
+            {
+              "startChar": 3911,
+              "endChar": 5077,
+              "textTokens": 228,
+              "inputTokens": 232,
+              "textSha256": "4ba18e5a2fac040b51d326801a1be251f8a5d7614304b5e0b90dac8f7c98b97f"
+            },
+            {
+              "startChar": 4894,
+              "endChar": 6061,
+              "textTokens": 231,
+              "inputTokens": 235,
+              "textSha256": "7ac98f11237199d38abd2ad79e1598689480c46ecbbd42d902a9b33b9fdb5054"
+            },
+            {
+              "startChar": 5875,
+              "endChar": 6984,
+              "textTokens": 220,
+              "inputTokens": 224,
+              "textSha256": "ac56fcbff53d67f2ae650a7a47dd7445fc1ba7aaa5c2e678bdf45887ac1b7f50"
+            },
+            {
+              "startChar": 6802,
+              "endChar": 8000,
+              "textTokens": 232,
+              "inputTokens": 236,
+              "textSha256": "73b7aa2aeffbf21d98253a422c8d45981804e0f298a3a9bfbdc9b9218a739277"
+            }
+          ]
+        },
+        {
+          "id": "large",
+          "target": 400,
+          "overlap": 60,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 2010,
+              "textTokens": 397,
+              "inputTokens": 401,
+              "textSha256": "0beb6e9141a324faa5c7326c16dd14e83f165b05893f70368ffdde43f653864a"
+            },
+            {
+              "startChar": 1701,
+              "endChar": 3651,
+              "textTokens": 384,
+              "inputTokens": 388,
+              "textSha256": "d30507d1c86aea40dc3244973eb526f76c306c83e26c3cee46a4090c25d408c6"
+            },
+            {
+              "startChar": 3362,
+              "endChar": 5394,
+              "textTokens": 399,
+              "inputTokens": 403,
+              "textSha256": "792f9edc54da37c06e8b7cb8d46fe65a1b771da1463a09d6a7b18db22d1e50d2"
+            },
+            {
+              "startChar": 5079,
+              "endChar": 6984,
+              "textTokens": 378,
+              "inputTokens": 382,
+              "textSha256": "24a461d68f2fe31bc5a4f87f9a23397941e878d0bb8bbb34eeec99021990d2d8"
+            },
+            {
+              "startChar": 6693,
+              "endChar": 8000,
+              "textTokens": 256,
+              "inputTokens": 260,
+              "textSha256": "ddb9ac8f9f3fe84f5c2e41aae6af5a4928837d974f886a57bede2887a0a0563d"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceField": "content",
+      "sourceChars": 2189,
+      "sourceTokens": 1496,
+      "variants": [
+        {
+          "id": "balanced",
+          "target": 320,
+          "overlap": 48,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 396,
+              "textTokens": 273,
+              "inputTokens": 277,
+              "textSha256": "3e9fa6cc13620741ab6d7de96e1c17483a15db138be311233d341a4d325e8182"
+            },
+            {
+              "startChar": 327,
+              "endChar": 789,
+              "textTokens": 319,
+              "inputTokens": 323,
+              "textSha256": "d646615d6fa387b85fd6bac3e3308ed9856ba546ed18190a7dac8b2d3c32c834"
+            },
+            {
+              "startChar": 720,
+              "endChar": 1164,
+              "textTokens": 305,
+              "inputTokens": 309,
+              "textSha256": "6514ea46bf9b924526203cc44546075a247a1bca819e059568169711cce2b7c8"
+            },
+            {
+              "startChar": 1096,
+              "endChar": 1563,
+              "textTokens": 320,
+              "inputTokens": 324,
+              "textSha256": "e0c14f675b0978dd698984e38fb2888c7f9ece9fead83a216a16f7ca3b6bfbea"
+            },
+            {
+              "startChar": 1493,
+              "endChar": 1933,
+              "textTokens": 298,
+              "inputTokens": 302,
+              "textSha256": "e4bac71af05c31f194ff7d037dfd73a7b7a1e5b83248bf3109b628698a61e38a"
+            },
+            {
+              "startChar": 1860,
+              "endChar": 2189,
+              "textTokens": 225,
+              "inputTokens": 229,
+              "textSha256": "28ee887541665e7382e4eec44572a5de9f951316fa7971e34e8f3cab14d6a964"
+            }
+          ]
+        },
+        {
+          "id": "no-overlap",
+          "target": 320,
+          "overlap": 0,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 396,
+              "textTokens": 273,
+              "inputTokens": 277,
+              "textSha256": "3e9fa6cc13620741ab6d7de96e1c17483a15db138be311233d341a4d325e8182"
+            },
+            {
+              "startChar": 396,
+              "endChar": 792,
+              "textTokens": 273,
+              "inputTokens": 277,
+              "textSha256": "7150603b00be72af4ea26235e10e2f565b2b53703e8fc0373da6abbb5aadf3c0"
+            },
+            {
+              "startChar": 792,
+              "endChar": 1191,
+              "textTokens": 273,
+              "inputTokens": 277,
+              "textSha256": "254ff97bc4c9e3c30a06dba7b98ac6fb01dcd8dfa785d5bfdc419e1eb66d3b0f"
+            },
+            {
+              "startChar": 1191,
+              "endChar": 1591,
+              "textTokens": 273,
+              "inputTokens": 277,
+              "textSha256": "a6b236f5ae78df7c7be6f5cd4c62a6d61ddccad0529480b8b4bf1b1da83fe7ab"
+            },
+            {
+              "startChar": 1591,
+              "endChar": 1991,
+              "textTokens": 273,
+              "inputTokens": 277,
+              "textSha256": "3c017c1407611ee37f36b5c366b858551c11dc5142b541797f3b9dba89c50a92"
+            },
+            {
+              "startChar": 1991,
+              "endChar": 2189,
+              "textTokens": 136,
+              "inputTokens": 140,
+              "textSha256": "26ca8ead3000b2b5526505458ea4ecd262adb6a5c6b537f88ea713480216cddb"
+            }
+          ]
+        },
+        {
+          "id": "small",
+          "target": 240,
+          "overlap": 36,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 297,
+              "textTokens": 205,
+              "inputTokens": 209,
+              "textSha256": "17403428cf1ba6271489b48027fd5249fb14bbfee544fab8b1fcb2a6b27c3ec7"
+            },
+            {
+              "startChar": 246,
+              "endChar": 591,
+              "textTokens": 239,
+              "inputTokens": 243,
+              "textSha256": "27f5c496182e1db45fcf1c73b9f833f31fb40169e35d3abe1945a9fdbe63f58b"
+            },
+            {
+              "startChar": 541,
+              "endChar": 864,
+              "textTokens": 225,
+              "inputTokens": 229,
+              "textSha256": "15df4462d3dff3f43bf45e2e9afc08f8046d85a8666d0f95a8ce385a42af2f55"
+            },
+            {
+              "startChar": 812,
+              "endChar": 1163,
+              "textTokens": 240,
+              "inputTokens": 244,
+              "textSha256": "df3050aa3b33636fdabd76bcc267471b8cd9172dd1ec90bcfbbaa4dce6bc5ae7"
+            },
+            {
+              "startChar": 1111,
+              "endChar": 1433,
+              "textTokens": 219,
+              "inputTokens": 223,
+              "textSha256": "452b4ca3e55a7770792c30cf24c53333a1437879454fb96a84d63293fc4f7063"
+            },
+            {
+              "startChar": 1378,
+              "endChar": 1691,
+              "textTokens": 214,
+              "inputTokens": 218,
+              "textSha256": "0618fa3eb42c3a584a1419a2b035f01a4d03f9c7c3ed6cb342f6c2d42b477273"
+            },
+            {
+              "startChar": 1640,
+              "endChar": 1988,
+              "textTokens": 239,
+              "inputTokens": 243,
+              "textSha256": "c6d36db09a1d4645a376d319152b040e2f8b7486beca022a41b632898f9dafc1"
+            },
+            {
+              "startChar": 1938,
+              "endChar": 2189,
+              "textTokens": 174,
+              "inputTokens": 178,
+              "textSha256": "7855e5360db5a3705e49c1e0f386de61f35467d143df91d92aa034b7a2760342"
+            }
+          ]
+        },
+        {
+          "id": "large",
+          "target": 400,
+          "overlap": 60,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 495,
+              "textTokens": 341,
+              "inputTokens": 345,
+              "textSha256": "7dde8220014af9d0b19ff5e13603cb5f3e0d7360cd5e0dd8d2975aa10928a268"
+            },
+            {
+              "startChar": 408,
+              "endChar": 988,
+              "textTokens": 399,
+              "inputTokens": 403,
+              "textSha256": "93e66e6792c7b21a72f53ad762b89a8e68ad328c70183e6c0d9f1570dd1edb62"
+            },
+            {
+              "startChar": 901,
+              "endChar": 1464,
+              "textTokens": 385,
+              "inputTokens": 389,
+              "textSha256": "fb45b02e06d0078c3c18c33f88d06e6eb6787f24299a1befeb30b0a1a4c81c9a"
+            },
+            {
+              "startChar": 1375,
+              "endChar": 1891,
+              "textTokens": 351,
+              "inputTokens": 355,
+              "textSha256": "aa58fa983d1aa8a6a7b216c24bab2b8dd7ff5acc3e5d8c4badeb22d6bef6de8c"
+            },
+            {
+              "startChar": 1804,
+              "endChar": 2189,
+              "textTokens": 264,
+              "inputTokens": 268,
+              "textSha256": "3b26f3bb5312c32e8a5ec6d93e2da63f41e21459c42da95487501af39a126409"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceField": "summary",
+      "sourceChars": 115,
+      "sourceTokens": 22,
+      "variants": [
+        {
+          "id": "balanced",
+          "target": 320,
+          "overlap": 48,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 115,
+              "textTokens": 22,
+              "inputTokens": 26,
+              "textSha256": "9948472f97cbc0187644728f64b34482a75550b1248ab4a22d186b13fe9e714f"
+            }
+          ]
+        },
+        {
+          "id": "no-overlap",
+          "target": 320,
+          "overlap": 0,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 115,
+              "textTokens": 22,
+              "inputTokens": 26,
+              "textSha256": "9948472f97cbc0187644728f64b34482a75550b1248ab4a22d186b13fe9e714f"
+            }
+          ]
+        },
+        {
+          "id": "small",
+          "target": 240,
+          "overlap": 36,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 115,
+              "textTokens": 22,
+              "inputTokens": 26,
+              "textSha256": "9948472f97cbc0187644728f64b34482a75550b1248ab4a22d186b13fe9e714f"
+            }
+          ]
+        },
+        {
+          "id": "large",
+          "target": 400,
+          "overlap": 60,
+          "chunks": [
+            {
+              "startChar": 0,
+              "endChar": 115,
+              "textTokens": 22,
+              "inputTokens": 26,
+              "textSha256": "9948472f97cbc0187644728f64b34482a75550b1248ab4a22d186b13fe9e714f"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

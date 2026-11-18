@@ -1,4 +1,5 @@
 import { openRouterCalls, openRouterGuide, openRouterReferences } from '../lib/finance-openrouter';
+import { chunkConcepts, chunkEncoderExample, chunkMeasurements, chunkMetadataGuide, chunkReferences } from '../lib/finance-chunking';
 import { rerankConcepts, hnswSettings, rerankProjectSteps, rerankReferences } from '../lib/finance-rerank';
 import { rerankExampleCommands, rerankPythonExample, rerankSqlSettings, rerankTutorialQuery, rerankTutorialSchema } from '../lib/finance-rerank-code';
 import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
@@ -27,6 +28,7 @@ import { financeCompanies, financeDeferred, financeEngineeringWorkflows, finance
 import { financeComposeDesign, financeDeploymentNotes, financeInterviewCases, financeLocalCommands, financePlan, financeRuntimeLimits } from '../lib/finance-proposal';
 
 const root = new URL('../', import.meta.url);
+const chunkExample = await readFile(new URL('integrations/n8n_stock_news/chunk_example.py', root), 'utf8');
 const openRouterReadme = await readFile(new URL('integrations/finance_openrouter/README.md', root), 'utf8');
 const openRouterClient = await readFile(new URL('integrations/finance_openrouter/client.py', root), 'utf8');
 const openRouterNodes = await readFile(new URL('integrations/finance_openrouter/nodes.py', root), 'utf8');
@@ -249,7 +251,30 @@ const mcpGuide = [
   '## Version compatibility / 版本相容\n\n' + both(mcpVersionNote),
   '## References / 官方參考\n\n' + mcpReferences.map(item => `- [${item.title}](${item.url})`).join('\n'),
 ].join('\n\n') + '\n';
+const chunkGuide = [
+  '# News chunking and metadata / 新聞切段及中繼資料',
+  'Open `/finance-project/chunking` to play the example. It uses fictional news in the project’s n8n response format and precomputed measurements from the pinned E5 tokenizer.\n\n開啟 `/finance-project/chunking` 播放示範。新聞是虛構內容，使用項目的 n8n 回傳格式及固定 E5 tokenizer 的實測結果。',
+  '## Mind map / 心智圖',
+  ...chunkConcepts.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Measure your text / 量度你的文字',
+  ...chunkMeasurements.articles.map((item, index) =>
+    `- news[${index}] · ${item.sourceField} · ${item.sourceChars} Unicode characters · ${item.sourceTokens} E5 tokens · ${item.variants[0].chunks.length} chunks at the 320 / 48 preset.`),
+  'If the article is 8,000 tokens, the fixed 320-token window with 48-token overlap gives 30 windows. The sentence-aware splitter can produce a different count.\n\n若文章是 8,000 token，320 token 固定窗口與 48 token 重疊共 30 段。按句尾優先切段時，結果可有不同。',
+  '## Store metadata / 儲存中繼資料',
+  ...chunkMetadataGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
+  '## Run the tokenizer example / 執行 tokenizer 例子',
+  '[Three-article news response](stock-research-chunk-news.json) · [Tokenizer example](stock-research-chunk-example.py) · [Workflow SVG](finance-diagrams/chunking-en.svg) · [繁中 SVG](finance-diagrams/chunking-zh.svg)',
+  `\`\`\`sh\npython3 -m pip install tokenizers\ncurl -fL 'https://huggingface.co/${chunkMeasurements.model}/resolve/${chunkMeasurements.revision}/tokenizer.json' -o tokenizer.json\npython3 stock-research-chunk-example.py stock-research-chunk-news.json tokenizer.json\n\`\`\``,
+  '## Encode a passage and query / 編碼段落及查詢',
+  'Set `chunk_text` to the validated excerpt, then run this example with Sentence Transformers. The lesson measures tokenization. Model inference and PostgreSQL indexing are separate steps.\n\n將 `chunk_text` 設為已核對原文，再用 Sentence Transformers 執行。教材量度分詞；模型推論及 PostgreSQL 索引是獨立步驟。',
+  `\`\`\`python\n${chunkEncoderExample}\`\`\``,
+  ...chunkReferences.map(reference => `- [${reference.title}](${reference.url})`),
+].join('\n\n') + '\n';
+
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_CHUNKING_GUIDE.md', chunkGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/').replaceAll('](stock-research-chunk-', '](../public/downloads/stock-research-chunk-')],
+  ['public/downloads/stock-research-chunking-guide.md', chunkGuide],
+  ['public/downloads/stock-research-chunk-example.py', chunkExample],
   ['docs/FINANCE_OPENROUTER_GUIDE.md', openRouterMarkdown.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-openrouter-guide.md', openRouterMarkdown],
   ['public/downloads/finance-openrouter-client.py', openRouterClient],

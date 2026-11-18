@@ -1,0 +1,21 @@
+flowchart TD
+  n0["n8n NEWS ARRAY"]
+  n1["VALIDATE, SANITIZE, COMMIT"]
+  n2["READ COMMITTED VERSION"]
+  n3["TOKENIZE AND SPLIT"]
+  n4["RECORD MISSING TEXT"]
+  n5["WRITE CHUNK METADATA"]
+  n6["ENCODE E5 PASSAGE"]
+  n7["STORE READY VECTORS"]
+  n8["PIN RETRIEVAL SNAPSHOT"]
+  n9["SEARCH, RERANK, CITE"]
+  n0 -- "One version per article" --> n1
+  n1 -- "New version queued" --> n2
+  n2 -- "Content or summary" --> n3
+  n2 -- "No usable text" --> n4
+  n3 -- "Exact text slices" --> n5
+  n5 -- "After chunk creation" --> n6
+  n6 -- "All expected vectors valid" --> n7
+  n5 -- "Sparse search uses admitted text" --> n8
+  n7 -- "Admitted hybrid only" --> n8
+  n8 -- "Eligible versions and cutoff" --> n9

@@ -1,0 +1,21 @@
+flowchart TD
+  n0["n8n NEWS ARRAY"]
+  n1["VALIDATE, SANITIZE, COMMIT"]
+  n2["READ COMMITTED VERSION"]
+  n3["TOKENIZE AND SPLIT"]
+  n4["RECORD MISSING TEXT"]
+  n5["WRITE CHUNK METADATA"]
+  n6["ENCODE E5 PASSAGE"]
+  n7["STORE READY VECTORS"]
+  n8["PIN RETRIEVAL SNAPSHOT"]
+  n9["SEARCH, RERANK, CITE"]
+  n0 -- "每篇獨立版本" --> n1
+  n1 -- "新版本入列" --> n2
+  n2 -- "全文或摘要" --> n3
+  n2 -- "無可用文字" --> n4
+  n3 -- "確實原文範圍" --> n5
+  n5 -- "切段後編碼" --> n6
+  n6 -- "全部預期向量有效" --> n7
+  n5 -- "全文搜尋用已准入原文" --> n8
+  n7 -- "只限已准入混合" --> n8
+  n8 -- "合資格版本及截止" --> n9

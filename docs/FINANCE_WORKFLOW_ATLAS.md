@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 20 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 21 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及20 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及21 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -1038,6 +1038,74 @@ flowchart TD
 - **prior → pool** — Original age + failure status / 原年齡＋失敗狀態
   Original age + failure status
   原年齡＋失敗狀態
+
+## From n8n news to searchable passages / 由 n8n 新聞到可檢索段落
+
+[English SVG](../public/downloads/finance-diagrams/chunking-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/chunking-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["n8n NEWS ARRAY"]
+  n1["VALIDATE, SANITIZE, COMMIT"]
+  n2["READ COMMITTED VERSION"]
+  n3["TOKENIZE AND SPLIT"]
+  n4["RECORD MISSING TEXT"]
+  n5["WRITE CHUNK METADATA"]
+  n6["ENCODE E5 PASSAGE"]
+  n7["STORE READY VECTORS"]
+  n8["PIN RETRIEVAL SNAPSHOT"]
+  n9["SEARCH, RERANK, CITE"]
+  n0 -- "One version per article" --> n1
+  n1 -- "New version queued" --> n2
+  n2 -- "Content or summary" --> n3
+  n2 -- "No usable text" --> n4
+  n3 -- "Exact text slices" --> n5
+  n5 -- "After chunk creation" --> n6
+  n6 -- "All expected vectors valid" --> n7
+  n5 -- "Sparse search uses admitted text" --> n8
+  n7 -- "Admitted hybrid only" --> n8
+  n8 -- "Eligible versions and cutoff" --> n9
+```
+
+- **payload → commit** — One version per article / 每篇獨立版本
+  One version per article
+  每篇獨立版本
+
+- **commit → outbox** — New version queued / 新版本入列
+  New version queued
+  新版本入列
+
+- **outbox → split** — Content or summary / 全文或摘要
+  Content or summary
+  全文或摘要
+
+- **outbox → empty** — No usable text / 無可用文字
+  No usable text
+  無可用文字
+
+- **split → metadata** — Exact text slices / 確實原文範圍
+  Exact text slices
+  確實原文範圍
+
+- **metadata → embed** — After chunk creation / 切段後編碼
+  After chunk creation
+  切段後編碼
+
+- **embed → ready** — All expected vectors valid / 全部預期向量有效
+  All expected vectors valid
+  全部預期向量有效
+
+- **metadata → snapshot** — Sparse search uses admitted text / 全文搜尋用已准入原文
+  Sparse search uses admitted text
+  全文搜尋用已准入原文
+
+- **ready → snapshot** — Admitted hybrid only / 只限已准入混合
+  Admitted hybrid only
+  只限已准入混合
+
+- **snapshot → retrieve** — Eligible versions and cutoff / 合資格版本及截止
+  Eligible versions and cutoff
+  合資格版本及截止
 
 ## Where document and question embeddings happen / 文件及問題在哪一步 embedding
 

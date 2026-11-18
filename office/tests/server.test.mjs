@@ -35,6 +35,10 @@ test('office package serves every exported page and asset on Node without depend
   assert(exported.includes('finance-project/vector-db.html'));
   assert(exported.includes('finance-project/rerank-hnsw.html'));
   assert(exported.includes('finance-project/openrouter.html'));
+  assert(exported.includes('finance-project/chunking.html'));
+  assert(exported.includes('downloads/stock-research-chunk-news.json'));
+  assert(exported.includes('downloads/stock-research-chunk-example.py'));
+  assert(exported.includes('downloads/finance-diagrams/chunking-en.svg'));
   assert(exported.includes('downloads/finance-openrouter-client.py'));
   assert(exported.includes('downloads/finance-openrouter.env.example'));
   assert(exported.includes('downloads/finance-diagrams/openrouter-en.svg'));

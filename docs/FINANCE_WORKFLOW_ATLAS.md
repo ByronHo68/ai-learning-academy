@@ -1046,30 +1046,61 @@ flowchart TD
 ```mermaid
 flowchart TD
   n0["n8n NEWS ARRAY"]
-  n1["VALIDATE, SANITIZE, COMMIT"]
-  n2["READ COMMITTED VERSION"]
-  n3["TOKENIZE AND SPLIT"]
-  n4["RECORD MISSING TEXT"]
-  n5["WRITE CHUNK METADATA"]
-  n6["ENCODE E5 PASSAGE"]
-  n7["STORE READY VECTORS"]
-  n8["PIN RETRIEVAL SNAPSHOT"]
-  n9["SEARCH, RERANK, CITE"]
-  n0 -- "One version per article" --> n1
-  n1 -- "New version queued" --> n2
-  n2 -- "Content or summary" --> n3
-  n2 -- "No usable text" --> n4
-  n3 -- "Exact text slices" --> n5
-  n5 -- "After chunk creation" --> n6
-  n6 -- "All expected vectors valid" --> n7
-  n5 -- "Sparse search uses admitted text" --> n8
-  n7 -- "Admitted hybrid only" --> n8
-  n8 -- "Eligible versions and cutoff" --> n9
+  n1["CHECK CONTENT SIZE"]
+  n2["KEEP VALIDATED SUMMARY"]
+  n3["RECORD ACQUISITION GAP"]
+  n4["VALIDATE, SANITIZE, COMMIT"]
+  n5["READ COMMITTED VERSION"]
+  n6["TOKENIZE AND SPLIT"]
+  n7["RECORD MISSING TEXT"]
+  n8["WRITE CHUNK METADATA"]
+  n9["ENCODE E5 BATCH"]
+  n10["SAVE VECTORS AND PROGRESS"]
+  n11["QUEUE REMAINING CHUNKS"]
+  n12["PIN RETRIEVAL SNAPSHOT"]
+  n13["SEARCH, RERANK, CITE"]
+  n0 -- "Response within byte limit" --> n1
+  n0 -- "Response too large" --> n3
+  n1 -- "Content within field limit" --> n4
+  n1 -- "Oversized + usable summary" --> n2
+  n1 -- "Oversized + no usable summary" --> n3
+  n2 -- "Summary coverage recorded" --> n4
+  n4 -- "New version queued" --> n5
+  n5 -- "Content or summary" --> n6
+  n5 -- "No usable text" --> n7
+  n6 -- "Exact text slices" --> n8
+  n8 -- "After chunk creation" --> n9
+  n9 -- "Commit completed batch" --> n10
+  n10 -- "Chunks remain" --> n11
+  n11 -. "Next worker batch" .-> n9
+  n8 -- "Sparse search uses admitted text" --> n12
+  n10 -- "Admitted hybrid only" --> n12
+  n12 -- "Eligible versions and cutoff" --> n13
 ```
 
-- **payload → commit** — One version per article / 每篇獨立版本
-  One version per article
-  每篇獨立版本
+- **payload → intake** — Response within byte limit / 回應符合位元組上限
+  Response within byte limit
+  回應符合位元組上限
+
+- **payload → skip** — Response too large / 回應超大
+  Response too large
+  回應超大
+
+- **intake → commit** — Content within field limit / 正文符合欄位上限
+  Content within field limit
+  正文符合欄位上限
+
+- **intake → summary** — Oversized + usable summary / 超長且有可用摘要
+  Oversized + usable summary
+  超長且有可用摘要
+
+- **intake → skip** — Oversized + no usable summary / 超長且無可用摘要
+  Oversized + no usable summary
+  超長且無可用摘要
+
+- **summary → commit** — Summary coverage recorded / 已記錄摘要覆蓋
+  Summary coverage recorded
+  已記錄摘要覆蓋
 
 - **commit → outbox** — New version queued / 新版本入列
   New version queued
@@ -1091,9 +1122,17 @@ flowchart TD
   After chunk creation
   切段後編碼
 
-- **embed → ready** — All expected vectors valid / 全部預期向量有效
-  All expected vectors valid
-  全部預期向量有效
+- **embed → ready** — Commit completed batch / 提交已完成的一批
+  Commit completed batch
+  提交已完成的一批
+
+- **ready → queue** — Chunks remain / 尚有餘下段落
+  Chunks remain
+  尚有餘下段落
+
+- **queue → embed** — Next worker batch / 下一批處理
+  Next worker batch
+  下一批處理
 
 - **metadata → snapshot** — Sparse search uses admitted text / 全文搜尋用已准入原文
   Sparse search uses admitted text

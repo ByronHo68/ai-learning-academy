@@ -1,5 +1,6 @@
 import { openRouterCalls, openRouterGuide, openRouterReferences } from '../lib/finance-openrouter';
 import { chunkConcepts, chunkEncoderExample, chunkMeasurements, chunkMetadataGuide, chunkReferences } from '../lib/finance-chunking';
+import { chunkLimitCases, chunkLimitExample, chunkLimitSettings, chunkLimitStatus } from '../lib/finance-chunk-limits';
 import { rerankConcepts, hnswSettings, rerankProjectSteps, rerankReferences } from '../lib/finance-rerank';
 import { rerankExampleCommands, rerankPythonExample, rerankSqlSettings, rerankTutorialQuery, rerankTutorialSchema } from '../lib/finance-rerank-code';
 import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
@@ -260,6 +261,12 @@ const chunkGuide = [
   ...chunkMeasurements.articles.map((item, index) =>
     `- news[${index}] · ${item.sourceField} · ${item.sourceChars} Unicode characters · ${item.sourceTokens} E5 tokens · ${item.variants[0].chunks.length} chunks at the 320 / 48 preset.`),
   'If the article is 8,000 tokens, the fixed 320-token window with 48-token overlap gives 30 windows. The sentence-aware splitter can produce a different count.\n\n若文章是 8,000 token，320 token 固定窗口與 48 token 重疊共 30 段。按句尾優先切段時，結果可有不同。',
+  '## Apply limits / 設定上限',
+  both(chunkLimitStatus),
+  ...chunkLimitSettings.map(item =>
+    `### ${item.title.en} / ${item.title.zh}\n\n${item.amount.en} ${item.unit.en}\n\n${item.amount.zh} ${item.unit.zh}\n\n${both(item.body)}`),
+  ...chunkLimitCases.map(item =>
+    `### ${item.title.en} / ${item.title.zh}\n\n${both(item.detail)}\n\n${both(item.report)}\n\n\`\`\`json\n${JSON.stringify(chunkLimitExample(item, false), null, 2)}\n\`\`\``),
   '## Store metadata / 儲存中繼資料',
   ...chunkMetadataGuide.map(item => `### ${item.title.en} / ${item.title.zh}\n\n${both(item.body)}`),
   '## Run the tokenizer example / 執行 tokenizer 例子',

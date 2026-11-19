@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg17
+    environment:
+      POSTGRES_USER: stock_admin
+      POSTGRES_PASSWORD: ${STOCK_ADMIN_PASSWORD:?Set STOCK_ADMIN_PASSWORD in the local .env file}
+      POSTGRES_DB: stock_research
+    ports:
+      - "127.0.0.1:${STOCK_PG_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "stock_admin", "-d", "stock_research"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:

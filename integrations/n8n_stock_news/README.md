@@ -128,6 +128,8 @@ Read [DESIGN.md](DESIGN.md) for embedding, snapshots, profile updates, forecast 
 
 Use the [Cursor application build plan](../../docs/CURSOR_STOCK_RESEARCH_BUILD_PLAN.md) to build the complete application stage by stage. It covers the research API, database admission, checkpoints, OpenRouter, review UI, evaluated retrieval, and release checks beyond these collection templates.
 
+Use the [PostgreSQL and RAG setup](../stock_research_db/README.md) to take completed batches into source versions, searchable chunks, embeddings, and report snapshots.
+
 ## Official references
 
 - [n8n standalone MCP Client](https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-langchain.mcpclient/)

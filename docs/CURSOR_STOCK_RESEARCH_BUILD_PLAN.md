@@ -149,6 +149,7 @@ evals/finance/                   # Retain frozen starter; add versioned live dat
 docs/stock-research/              # ADRs, operations, API references, test evidence
 docs/stock-research-progress.md   # Current verified status and next stage
 integrations/n8n_stock_news/      # Owns reusable n8n template sources and exports
+integrations/stock_research_db/    # PostgreSQL setup and tested RAG storage SQL
 ```
 
 Keep the application stack small: FastAPI, LangGraph, PostgreSQL, the existing integrations, and one live frontend. A PostgreSQL-backed work queue is sufficient initially. Do not add Redis, Kafka, Kubernetes, or a second backend framework without a concrete requirement.
@@ -312,8 +313,8 @@ Tasks:
 
 1. Add a private local Compose configuration for PostgreSQL and n8n using reviewed fixed images. Persist data and the n8n encryption key; keep secrets out of the file.
 2. Provision research, checkpoint, and n8n metadata databases with distinct roles. Bind local administrative ports to loopback or a private network.
-3. Add ordered migrations for research runs, reservations, acquisition metadata, admitted evidence, profiles, snapshots, selections, reports, and job/outbox tables. Add optional pgvector only when Stage 11 begins.
-4. Reuse staging `schema.sql` through a tracked migration rather than installing competing collection tables.
+3. Add ordered migrations for research runs, reservations, acquisition metadata, admitted evidence, profiles, snapshots, selections, reports, and job/outbox tables. Add the embedding worker in Stage 11.
+4. Reuse staging `schema.sql` and the [PostgreSQL/RAG setup](../integrations/stock_research_db/README.md) through tracked migrations. The supplied setup installs pgvector to provision the vector table. Keep sparse as the active runtime path until the retrieval gates pass.
 5. Provide migration status, upgrade, blank-database bootstrap, and backup commands. Use schema-owner credentials only for migration.
 6. Keep readiness checks bounded and free of provider/model requests.
 

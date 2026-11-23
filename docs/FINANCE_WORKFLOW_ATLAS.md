@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 21 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 22 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及21 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及22 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -1388,6 +1388,103 @@ flowchart TD
 - **fallback → review** — Working sparse, same budget / Sparse 可用，原預算
   Working sparse, same budget
   Sparse 可用，原預算
+
+## Stock research RAG from news to citation / 股票研究 RAG：由新聞到引用
+
+[English SVG](../public/downloads/finance-diagrams/rag_story-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/rag_story-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["FETCH"]
+  n1["ADMIT"]
+  n2["CHUNK"]
+  n3["SEND TEXT"]
+  n4["READ VECTORS"]
+  n5["JOIN"]
+  n6["STORE"]
+  n7["FREEZE"]
+  n8["RETRIEVE"]
+  n9["RERANK"]
+  n10["REVIEW"]
+  n11["GENERATE"]
+  n12["VALIDATE"]
+  n13["INSUFFICIENT EVIDENCE"]
+  n0 -- "Validated n8n receipt" --> n1
+  n1 -- "Admitted source" --> n2
+  n2 -- "Sanitized excerpts" --> n3
+  n3 -- "Embedding response" --> n4
+  n4 -- "Model, indexes, vectors" --> n5
+  n5 -- "All vectors validated" --> n6
+  n5 -- "Invalid batch → full-text" --> n7
+  n6 -- "Pin compatible ready vectors" --> n7
+  n7 -- "Scope, cutoff and allowed IDs" --> n8
+  n8 -- "Admitted hybrid" --> n9
+  n8 -- "Default full-text" --> n10
+  n9 -- "Ranked passages" --> n10
+  n10 -- "Enough evidence" --> n11
+  n10 -- "Missing support after checks" --> n13
+  n11 -- "Draft and citations" --> n12
+```
+
+- **fetch → admit** — Validated n8n receipt / 已驗證 n8n 收據
+  Validated n8n receipt
+  已驗證 n8n 收據
+
+- **admit → chunk** — Admitted source / 已接納來源
+  Admitted source
+  已接納來源
+
+- **chunk → request** — Sanitized excerpts / 已清理節錄
+  Sanitized excerpts
+  已清理節錄
+
+- **request → response** — Embedding response / Embedding 回應
+  Embedding response
+  Embedding 回應
+
+- **response → join** — Model, indexes, vectors / 模型、索引及向量
+  Model, indexes, vectors
+  模型、索引及向量
+
+- **join → store** — All vectors validated / 所有向量通過驗證
+  All vectors validated
+  所有向量通過驗證
+
+- **join → snapshot** — Invalid batch → full-text / 無效批次 → 全文
+  Invalid batch → full-text
+  無效批次 → 全文
+
+- **store → snapshot** — Pin compatible ready vectors / 固定相容已就緒向量
+  Pin compatible ready vectors
+  固定相容已就緒向量
+
+- **snapshot → retrieve** — Scope, cutoff and allowed IDs / 範圍、截止及准許 ID
+  Scope, cutoff and allowed IDs
+  範圍、截止及准許 ID
+
+- **retrieve → rerank** — Admitted hybrid / 混合已獲准
+  Admitted hybrid
+  混合已獲准
+
+- **retrieve → review** — Default full-text / 預設全文
+  Default full-text
+  預設全文
+
+- **rerank → review** — Ranked passages / 已排序段落
+  Ranked passages
+  已排序段落
+
+- **review → generate** — Enough evidence / 證據足夠
+  Enough evidence
+  證據足夠
+
+- **review → gap** — Missing support after checks / 核對後支持不足
+  Missing support after checks
+  核對後支持不足
+
+- **generate → validate** — Draft and citations / 草稿及引用
+  Draft and citations
+  草稿及引用
 
 ## Every generative call uses one OpenRouter boundary / 每次生成呼叫共用 OpenRouter 邊界
 

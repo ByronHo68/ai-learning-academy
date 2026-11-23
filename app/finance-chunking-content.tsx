@@ -217,6 +217,7 @@ export default function FinanceChunkingContent({ lang }: { lang: Lang }) {
 
     <ChunkDemo lang={lang}/>
     <ChunkLimits lang={lang}/>
+    <p><Link href="/finance-project/rag#rag-animation">{zh ? '切段之後：看 OpenRouter 向量如何配對 metadata →' : 'After chunking: see how OpenRouter vectors join your metadata →'}</Link></p>
 
     <section className="finance-section" id="chunk-mindmap">
       <h2>{zh ? '心智圖：每段文字需要甚麼？' : 'Mind map for a searchable chunk'}</h2>

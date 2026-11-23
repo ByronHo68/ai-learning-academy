@@ -7,6 +7,7 @@ import { openRouterDiagram } from './finance-openrouter';
 import { rerankHnswDiagram } from './finance-rerank';
 import { financeChunkDiagram } from './finance-chunking';
 import { ragWorkflow } from './finance-rag-story';
+import { reportLessonDiagram } from './finance-report-lesson';
 import { financePrivacyDiagram } from './finance-privacy';
 import { vectorStorageDiagram } from './finance-vector-lesson';
 import { checkpointArchitectureDiagram, checkpointRecoveryDiagram } from './finance-checkpoints';
@@ -97,7 +98,7 @@ export function financeFunctionDiagram(id: FinanceFunctionId): FinanceDiagram {
 export const financeDiagrams: FinanceDiagram[] = [
   financeOverallDiagram,
   ...[...financeFunctions, ...financeEngineeringWorkflows].map(guide => financeFunctionDiagram(guide.id)),
-  financeN8nDailyDiagram, financeChunkDiagram, financeEmbeddingDiagram, vectorStorageDiagram, rerankHnswDiagram, ragWorkflow, openRouterDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
+  financeN8nDailyDiagram, financeChunkDiagram, financeEmbeddingDiagram, vectorStorageDiagram, rerankHnswDiagram, ragWorkflow, reportLessonDiagram, openRouterDiagram, financePrivacyDiagram, checkpointArchitectureDiagram, checkpointRecoveryDiagram,
 ];
 export const financeDiagramIds = financeDiagrams.map(diagram => diagram.id);
 

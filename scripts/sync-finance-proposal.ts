@@ -5,6 +5,11 @@ import {
   joinRagEmbeddings, ragAnswer, ragArticle, ragChunks, ragContext, ragEmbedding, ragEmbeddingRequest,
   ragExampleResponse, ragHostedStorage, ragLinks, ragModelChoices, ragNews, ragQueryRequest, ragStoryPath,
 } from '../lib/finance-rag-story';
+import {
+  reportLessonConcepts, reportLessonDraft, reportLessonHistory, reportLessonHistoryMeta,
+  reportLessonInput, reportLessonMarkdown, reportLessonPrompt, reportLessonQuote,
+  reportLessonSteps, reportLessonStories,
+} from '../lib/finance-report-lesson';
 import { rerankConcepts, hnswSettings, rerankProjectSteps, rerankReferences } from '../lib/finance-rerank';
 import { rerankExampleCommands, rerankPythonExample, rerankSqlSettings, rerankTutorialQuery, rerankTutorialSchema } from '../lib/finance-rerank-code';
 import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
@@ -319,7 +324,28 @@ const ragStoryGuide = [
   ...ragLinks.map(link => `- [${link.label}](${link.href})`),
 ].join('\n\n') + '\n';
 
+const reportDesignGuide = [
+  '# Stock research report design / 股票研究報告設計',
+  'Open `/finance-project/report` for the three storylines, mind map, and format previews. The examples use fictional data. The quote-only route, history route, and PDF exporter are proposed.\n\n開啟 `/finance-project/report` 查看三條故事路線、心智圖及格式預覽。例子使用虛構資料。純報價、歷史價格及 PDF 匯出仍是建議功能。',
+  '[Workflow SVG](finance-diagrams/report_story-en.svg) · [繁中 SVG](finance-diagrams/report_story-zh.svg) · [Markdown sample](stock-research-report-example.md)',
+  '## Design mind map / 設計心智圖',
+  ...reportLessonConcepts.map(concept => `### ${concept.title.en} / ${concept.title.zh}\n\n${both(concept.body)}`),
+  '## Follow the three paths / 追蹤三條路線',
+  ...reportLessonStories.map(story => `### ${story.title.en} / ${story.title.zh}\n\n${both(story.question)}\n\n${story.path.map((id, index) => `${index + 1}. ${reportLessonSteps[id].title.en} / ${reportLessonSteps[id].title.zh}`).join('\n')}`),
+  '## OpenRouter examples / OpenRouter 範例',
+  '### System message / 系統訊息', reportLessonPrompt,
+  '### User message data / 使用者訊息資料', ragJson(reportLessonInput),
+  '### Simulated JSON draft / 模擬 JSON 草稿', ragJson(reportLessonDraft),
+  '## Market observations / 市場觀測值',
+  '### Quote response / 報價回應', ragJson(reportLessonQuote),
+  '### Validated series for the chart / 已驗證繪圖序列', ragJson({ ...reportLessonHistoryMeta, prices: reportLessonHistory }),
+  '- [OpenRouter structured outputs](https://openrouter.ai/docs/guides/features/structured-outputs)\n- [YFinance price history](https://ranaroussi.github.io/yfinance/reference/api/yfinance.Ticker.history.html)',
+].join('\n\n') + '\n';
+
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_REPORT_DESIGN.md', reportDesignGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/').replaceAll('](stock-research-report-example.md)', '](../public/downloads/stock-research-report-example.md)')],
+  ['public/downloads/stock-research-report-design.md', reportDesignGuide],
+  ['public/downloads/stock-research-report-example.md', reportLessonMarkdown],
   ['docs/FINANCE_RAG_STORY.md', ragStoryGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
   ['public/downloads/stock-research-rag-story.md', ragStoryGuide],
   ['docs/FINANCE_CHUNKING_GUIDE.md', chunkGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/').replaceAll('](stock-research-chunk-', '](../public/downloads/stock-research-chunk-')],

@@ -1,0 +1,20 @@
+flowchart TD
+  n0["ROUTE QUESTION"]
+  n1["REVIEW EVIDENCE"]
+  n2["BUILD CONTEXT"]
+  n3["GENERATE JSON DRAFT"]
+  n4["VALIDATE AND SAVE"]
+  n5["VALIDATE QUOTE"]
+  n6["VALIDATE PRICE HISTORY"]
+  n7["RENDER RESULT"]
+  n8["SHOW EVIDENCE GAP"]
+  n0 -- "公司研究" --> n1
+  n0 -- "純報價（建議）" --> n5
+  n0 -- "純圖表（建議）" --> n6
+  n1 -- "證據充足" --> n2
+  n1 -- "證據仍然不足" --> n8
+  n2 -- "已清理 JSON" --> n3
+  n3 -- "草稿及來源 ID" --> n4
+  n4 -- "已驗證報告" --> n7
+  n5 -- "有日期的觀測值" --> n7
+  n6 -- "已排序的觀測值" --> n7

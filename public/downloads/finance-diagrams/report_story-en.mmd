@@ -1,0 +1,20 @@
+flowchart TD
+  n0["ROUTE QUESTION"]
+  n1["REVIEW EVIDENCE"]
+  n2["BUILD CONTEXT"]
+  n3["GENERATE JSON DRAFT"]
+  n4["VALIDATE AND SAVE"]
+  n5["VALIDATE QUOTE"]
+  n6["VALIDATE PRICE HISTORY"]
+  n7["RENDER RESULT"]
+  n8["SHOW EVIDENCE GAP"]
+  n0 -- "Company research" --> n1
+  n0 -- "Price only (proposed)" --> n5
+  n0 -- "Chart only (proposed)" --> n6
+  n1 -- "Evidence sufficient" --> n2
+  n1 -- "Evidence still insufficient" --> n8
+  n2 -- "Sanitized JSON" --> n3
+  n3 -- "Draft and source IDs" --> n4
+  n4 -- "Validated report" --> n7
+  n5 -- "Dated observation" --> n7
+  n6 -- "Ordered observations" --> n7

@@ -1,0 +1,50 @@
+.report-question {
+  padding: 12px 16px;
+  border-inline-start: 4px solid var(--vd-accent);
+  background: #edf5f1;
+}
+.report-question strong { margin-inline-end: 8px; }
+.report-story-stage { min-width: 0; }
+.report-story-stage > h3 { font-size: clamp(1.25rem, 2.3vw, 1.7rem); }
+.report-chart, .report-sample, .report-json {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #bfd4ca;
+  border-radius: 12px;
+  background: #fff;
+}
+.report-chart-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.report-chart-heading h4, .report-chart-heading p { margin: 0; }
+.report-chart-heading strong { color: #126b70; font-size: 1.45rem; }
+.report-chart-heading p { color: #526964; font-size: .85rem; }
+.report-chart svg { display: block; width: 100%; max-width: 760px; margin: 12px auto 0; }
+.report-chart svg text { fill: #526964; font-size: 12px; font-variant-numeric: tabular-nums; }
+.report-chart-rule { stroke: #d8e4dd; stroke-dasharray: 4 5; }
+.report-chart-line { fill: none; stroke: #126b70; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.report-chart-point { fill: #f8faf9; stroke: #126b70; stroke-width: 2; }
+.vd-page .report-chart table { min-width: 0; }
+.report-quote-fields, .report-scenario {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr));
+  gap: 12px;
+}
+.report-quote-fields dt, .report-scenario dt { font-weight: 700; }
+.report-quote-fields dd, .report-scenario dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.report-sample-header { border-bottom: 1px solid #d4e1da; margin-bottom: 12px; }
+.report-sample-header h4 { font-size: 1.4rem; margin: 6px 0; }
+.report-sample h5 { color: #285b56; font-size: 1rem; margin: 18px 0 6px; }
+.report-sample p { margin: 8px 0 12px; }
+.report-scenario { padding: 12px; border-radius: 8px; background: #edf5f1; }
+.report-sample[data-format='pdf'] {
+  max-width: 760px;
+  margin-inline: auto;
+  padding: clamp(20px, 5vw, 48px);
+  border-radius: 0;
+  box-shadow: 0 10px 22px #183b3516;
+}

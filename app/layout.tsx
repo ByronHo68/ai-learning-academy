@@ -12,6 +12,7 @@ import './finance-n8n.css';
 import './finance-checkpoints.css';
 import './finance-vector.css';
 import './finance-chunking.css';
+import './finance-rag.css';
 import './finance-rerank.css';
 import './finance-diagram.css';
 

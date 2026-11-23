@@ -1,6 +1,10 @@
 import { openRouterCalls, openRouterGuide, openRouterReferences } from '../lib/finance-openrouter';
 import { chunkConcepts, chunkEncoderExample, chunkMeasurements, chunkMetadataGuide, chunkReferences } from '../lib/finance-chunking';
 import { chunkLimitCases, chunkLimitExample, chunkLimitSettings, chunkLimitStatus } from '../lib/finance-chunk-limits';
+import {
+  joinRagEmbeddings, ragAnswer, ragArticle, ragChunks, ragContext, ragEmbedding, ragEmbeddingRequest,
+  ragExampleResponse, ragHostedStorage, ragLinks, ragModelChoices, ragNews, ragQueryRequest, ragStoryPath,
+} from '../lib/finance-rag-story';
 import { rerankConcepts, hnswSettings, rerankProjectSteps, rerankReferences } from '../lib/finance-rerank';
 import { rerankExampleCommands, rerankPythonExample, rerankSqlSettings, rerankTutorialQuery, rerankTutorialSchema } from '../lib/finance-rerank-code';
 import { financePrivacyGuide, financePrivacyMiddlewareExample, financePrivacyReferences } from '../lib/finance-privacy';
@@ -278,7 +282,46 @@ const chunkGuide = [
   ...chunkReferences.map(reference => `- [${reference.title}](${reference.url})`),
 ].join('\n\n') + '\n';
 
+const ragReplyPreview = ragExampleResponse(false);
+const ragJoinedReply = joinRagEmbeddings(ragReplyPreview, ragChunks.map(chunk => chunk.chunk_id));
+if (ragJoinedReply.kind !== 'validated') throw new Error('RAG lesson fixture could not be joined');
+const firstRagVector = ragJoinedReply.rows[0];
+const ragJson = (payload: unknown) => `\`\`\`json\n${JSON.stringify(payload, null, 2)}\n\`\`\``;
+const ragStoryGuide = [
+  '# Stock research RAG storyline / 股票研究 RAG 故事',
+  'Open `/finance-project/rag` to play the bilingual walkthrough. The data and vectors below are fictional. The animation runs the response checks and index join locally.\n\n開啟 `/finance-project/rag` 播放雙語示範。以下資料及向量均為虛構。動畫在本機執行回應驗證及 index 配對。',
+  '[Workflow SVG](finance-diagrams/rag_story-en.svg) · [繁中 SVG](finance-diagrams/rag_story-zh.svg)',
+  '## Follow the data / 跟著資料走',
+  ...ragStoryPath('hybrid').map((stage, index) => `### ${index + 1}. ${stage.title.en} / ${stage.title.zh}\n\n${both(stage.detail)}`),
+  '## Inspect the JSON / 檢視 JSON',
+  '### YFinance MCP response / YFinance MCP 回應', ragJson(ragNews),
+  '### App-owned source and chunks / App 保存的來源及段落', ragJson({ source: ragArticle, chunks: ragChunks }),
+  `### OpenRouter request / OpenRouter 請求\n\n` + '`POST ' + ragEmbedding.endpoint + '`', ragJson(ragEmbeddingRequest),
+  '### Simulated response / 模擬回應',
+  'The preview displays three values per vector. The full simulated reply has 1,536 dimensions per vector. The worker matches `inputChunkIds[0]` to `data` item with `index: 0`, even though that item appears second.\n\n預覽只展示每個向量三個值。完整模擬回應每個向量有 1,536 維。即使 index 0 排在第二項，worker 仍會將其對應 inputChunkIds[0]。',
+  ragJson({ ...ragReplyPreview, data: ragReplyPreview.data.map(item => ({ ...item, embedding: item.embedding.slice(0, 3) })) }),
+  '### Joined view assembled by your app / App 組合的檢視資料',
+  ragJson({
+    chunk: ragChunks[0],
+    source: ragArticle,
+    vector: {
+      chunk_id: firstRagVector.chunk_id,
+      model_key: firstRagVector.model_key,
+      dimensions: firstRagVector.embedding.length,
+      embedding_preview: firstRagVector.embedding.slice(0, 3),
+    },
+  }),
+  '### Query embedding and report context / 問題向量及報告 context',
+  ragJson(ragQueryRequest), ragJson(ragContext), both(ragAnswer),
+  '## Choose the embedding model / 選擇 embedding 模型',
+  ...ragModelChoices.map(model => `### ${model.title}\n\n${both(model.badge)}\n\n${both(model.body)}`),
+  both(ragHostedStorage),
+  ...ragLinks.map(link => `- [${link.label}](${link.href})`),
+].join('\n\n') + '\n';
+
 const outputs: Array<[string, string]> = [
+  ['docs/FINANCE_RAG_STORY.md', ragStoryGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/')],
+  ['public/downloads/stock-research-rag-story.md', ragStoryGuide],
   ['docs/FINANCE_CHUNKING_GUIDE.md', chunkGuide.replaceAll('](finance-diagrams/', '](../public/downloads/finance-diagrams/').replaceAll('](stock-research-chunk-', '](../public/downloads/stock-research-chunk-')],
   ['public/downloads/stock-research-chunking-guide.md', chunkGuide],
   ['public/downloads/stock-research-chunk-example.py', chunkExample],

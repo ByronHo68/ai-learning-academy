@@ -1,8 +1,8 @@
 # Stock research workflow atlas / 股票研究流程圖集
 
-Open `/finance-project/workflows` for the interactive mind map and 22 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
+Open `/finance-project/workflows` for the interactive mind map and 23 connected diagrams, including OpenRouter call routing, HNSW/reranking, PII boundaries, Alpha Vantage daily news, embeddings and checkpoint architecture/recovery. These are proposed designs and offline teaching paths, not live service runs. Node names match the technical contracts; edge conditions and explanations are bilingual.
 
-開啟 `/finance-project/workflows` 查看互動心智圖及22 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
+開啟 `/finance-project/workflows` 查看互動心智圖及23 張連線圖，包含 OpenRouter 呼叫路由、HNSW／重排、PII 邊界、每日新聞、embedding 及 checkpoint 架構／恢復。這些是建議設計及離線教學路徑，並非真實服務執行；節點名稱沿用技術合約，條件及解說提供雙語。
 
 Per run: 1 news refresh, 2 searches including failures, 6 source reads, at most 3 LLM calls and 60s active processing plus a 15-minute review window. No retry or resume resets the budget. Purple = bounded refinement/resume; amber = fallback; red = stop; teal = continue.
 
@@ -1485,6 +1485,73 @@ flowchart TD
 - **generate → validate** — Draft and citations / 草稿及引用
   Draft and citations
   草稿及引用
+
+## Choose the data and render the report / 選擇資料並呈現報告
+
+[English SVG](../public/downloads/finance-diagrams/report_story-en.svg) · [繁體中文 SVG](../public/downloads/finance-diagrams/report_story-zh.svg)
+
+```mermaid
+flowchart TD
+  n0["ROUTE QUESTION"]
+  n1["REVIEW EVIDENCE"]
+  n2["BUILD CONTEXT"]
+  n3["GENERATE JSON DRAFT"]
+  n4["VALIDATE AND SAVE"]
+  n5["VALIDATE QUOTE"]
+  n6["VALIDATE PRICE HISTORY"]
+  n7["RENDER RESULT"]
+  n8["SHOW EVIDENCE GAP"]
+  n0 -- "Company research" --> n1
+  n0 -- "Price only (proposed)" --> n5
+  n0 -- "Chart only (proposed)" --> n6
+  n1 -- "Evidence sufficient" --> n2
+  n1 -- "Evidence still insufficient" --> n8
+  n2 -- "Sanitized JSON" --> n3
+  n3 -- "Draft and source IDs" --> n4
+  n4 -- "Validated report" --> n7
+  n5 -- "Dated observation" --> n7
+  n6 -- "Ordered observations" --> n7
+```
+
+- **scope → evidence** — Company research / 公司研究
+  Company research
+  公司研究
+
+- **scope → quote** — Price only (proposed) / 純報價（建議）
+  Price only (proposed)
+  純報價（建議）
+
+- **scope → history** — Chart only (proposed) / 純圖表（建議）
+  Chart only (proposed)
+  純圖表（建議）
+
+- **evidence → context** — Evidence sufficient / 證據充足
+  Evidence sufficient
+  證據充足
+
+- **evidence → gap** — Evidence still insufficient / 證據仍然不足
+  Evidence still insufficient
+  證據仍然不足
+
+- **context → generate** — Sanitized JSON / 已清理 JSON
+  Sanitized JSON
+  已清理 JSON
+
+- **generate → validate** — Draft and source IDs / 草稿及來源 ID
+  Draft and source IDs
+  草稿及來源 ID
+
+- **validate → render** — Validated report / 已驗證報告
+  Validated report
+  已驗證報告
+
+- **quote → render** — Dated observation / 有日期的觀測值
+  Dated observation
+  有日期的觀測值
+
+- **history → render** — Ordered observations / 已排序的觀測值
+  Ordered observations
+  已排序的觀測值
 
 ## Every generative call uses one OpenRouter boundary / 每次生成呼叫共用 OpenRouter 邊界
 

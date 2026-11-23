@@ -172,7 +172,7 @@ export default function FinanceRagContent({ lang }: { lang: Lang }) {
       <h2>{zh ? '工作流程：建索引與回答問題' : 'The indexing and question workflows'}</h2>
       <p>{zh ? '文件向量由背景 worker 建立。收到問題時，LangGraph 固定已接納證據及已就緒向量，再進行檢索。圖中的兩段流程可在不同時間執行。' : 'A background worker builds document vectors. On an accepted question, LangGraph pins eligible evidence and ready vectors before searching. These two parts of the workflow can run at different times.'}</p>
       <FinanceDiagramCanvas diagram={ragWorkflow} lang={lang}/>
-      <p><Link href="/finance-project/n8n">n8n</Link> · <Link href="/finance-project/chunking">{zh ? '切段及 metadata' : 'Chunking and metadata'}</Link> · <Link href="/finance-project/rerank-hnsw">{zh ? '重排與 HNSW' : 'Reranking and HNSW'}</Link></p>
+      <p><Link href="/finance-project/n8n">n8n</Link> · <Link href="/finance-project/chunking">{zh ? '切段及 metadata' : 'Chunking and metadata'}</Link> · <Link href="/finance-project/rerank-hnsw">{zh ? '重排與 HNSW' : 'Reranking and HNSW'}</Link> · <Link href="/finance-project/report#report-story">{zh ? '報告設計與匯出' : 'Report design and export'}</Link></p>
     </section>
     <section className="finance-section" id="rag-models">
       <h2>{zh ? '選擇 embedding 模型' : 'Choose an embedding model'}</h2>

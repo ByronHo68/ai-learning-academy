@@ -1,0 +1,30 @@
+flowchart TD
+  n0["FETCH"]
+  n1["ADMIT"]
+  n2["CHUNK"]
+  n3["SEND TEXT"]
+  n4["READ VECTORS"]
+  n5["JOIN"]
+  n6["STORE"]
+  n7["FREEZE"]
+  n8["RETRIEVE"]
+  n9["RERANK"]
+  n10["REVIEW"]
+  n11["GENERATE"]
+  n12["VALIDATE"]
+  n13["INSUFFICIENT EVIDENCE"]
+  n0 -- "Validated n8n receipt" --> n1
+  n1 -- "Admitted source" --> n2
+  n2 -- "Sanitized excerpts" --> n3
+  n3 -- "Embedding response" --> n4
+  n4 -- "Model, indexes, vectors" --> n5
+  n5 -- "All vectors validated" --> n6
+  n5 -- "Invalid batch → full-text" --> n7
+  n6 -- "Pin compatible ready vectors" --> n7
+  n7 -- "Scope, cutoff and allowed IDs" --> n8
+  n8 -- "Admitted hybrid" --> n9
+  n8 -- "Default full-text" --> n10
+  n9 -- "Ranked passages" --> n10
+  n10 -- "Enough evidence" --> n11
+  n10 -- "Missing support after checks" --> n13
+  n11 -- "Draft and citations" --> n12

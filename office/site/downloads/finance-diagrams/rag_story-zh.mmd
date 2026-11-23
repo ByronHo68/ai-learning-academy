@@ -1,0 +1,30 @@
+flowchart TD
+  n0["FETCH"]
+  n1["ADMIT"]
+  n2["CHUNK"]
+  n3["SEND TEXT"]
+  n4["READ VECTORS"]
+  n5["JOIN"]
+  n6["STORE"]
+  n7["FREEZE"]
+  n8["RETRIEVE"]
+  n9["RERANK"]
+  n10["REVIEW"]
+  n11["GENERATE"]
+  n12["VALIDATE"]
+  n13["INSUFFICIENT EVIDENCE"]
+  n0 -- "已驗證 n8n 收據" --> n1
+  n1 -- "已接納來源" --> n2
+  n2 -- "已清理節錄" --> n3
+  n3 -- "Embedding 回應" --> n4
+  n4 -- "模型、索引及向量" --> n5
+  n5 -- "所有向量通過驗證" --> n6
+  n5 -- "無效批次 → 全文" --> n7
+  n6 -- "固定相容已就緒向量" --> n7
+  n7 -- "範圍、截止及准許 ID" --> n8
+  n8 -- "混合已獲准" --> n9
+  n8 -- "預設全文" --> n10
+  n9 -- "已排序段落" --> n10
+  n10 -- "證據足夠" --> n11
+  n10 -- "核對後支持不足" --> n13
+  n11 -- "草稿及引用" --> n12
